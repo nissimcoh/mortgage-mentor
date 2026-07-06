@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Heebo } from "next/font/google";
 import { notFound } from "next/navigation";
 import { getDirection, isValidLocale, locales } from "@/lib/i18n/config";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { getDictionary } from "./dictionaries";
 import "../globals.css";
 
@@ -45,7 +46,10 @@ export default async function LocaleLayout({
       dir={getDirection(locale)}
       className={`${heebo.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <LanguageSwitcher />
+        {children}
+      </body>
     </html>
   );
 }
