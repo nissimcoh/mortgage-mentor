@@ -1,0 +1,29 @@
+{
+  "metadata": {
+    "title": "MortgageMentor | Mortgage Simulator",
+    "description": "A smart simulation tool for understanding mortgages in Israel"
+  },
+  "home": {
+    "devBadge": "Early development version",
+    "title": "MortgageMentor",
+    "tagline": "A smart simulation tool for understanding mortgages in Israel",
+    "description": "The goal of this app is to help couples and individuals understand how much mortgage they need, what their expected monthly payment will be, how different loan tracks affect risk, and which questions to ask before approaching the bank.",
+    "calculatorCta": "Mortgage calculator",
+    "comingSoon": "Coming soon",
+    "aboutCta": "What will this app do?",
+    "features": [
+      {
+        "title": "Monthly payment calculation",
+        "description": "An initial monthly payment estimate based on loan amount, interest rate, and term."
+      },
+      {
+        "title": "Track mix comparison",
+        "description": "Later we will add comparisons between fixed unlinked, prime, variable, and CPI-linked tracks."
+      },
+      {
+        "title": "Risk simulation",
+        "description": "We will explore what happens to your payment if interest rates rise or the CPI changes."
+      }
+    ]
+  }
+}
