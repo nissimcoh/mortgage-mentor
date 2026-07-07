@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   annualPercentToMonthlyRate,
+  nominalAnnualPercentToEffectiveAnnualPercent,
   calculateMonthlyPaymentForSpitzer,
   calculateScenarioSummary,
   calculateTrackSummary,
@@ -92,6 +93,21 @@ describe("interest rate input modes", () => {
       interestRateInputMode: "effectiveAnnual",
     });
     expect(effective).toBeLessThan(nominal);
+  });
+
+  it("converts a nominal annual percent to an effective annual percent", () => {
+    expect(nominalAnnualPercentToEffectiveAnnualPercent(4.8)).toBeCloseTo(
+      (Math.pow(1 + 0.048 / 12, 12) - 1) * 100,
+      10,
+    );
+    expect(nominalAnnualPercentToEffectiveAnnualPercent(4.8)).toBeCloseTo(
+      4.907,
+      3,
+    );
+    expect(nominalAnnualPercentToEffectiveAnnualPercent(0)).toBe(0);
+    expect(() => nominalAnnualPercentToEffectiveAnnualPercent(-1)).toThrow(
+      /negative/,
+    );
   });
 
   it("defaults to nominalAnnual when the mode is omitted", () => {

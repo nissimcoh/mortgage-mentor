@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isValidLocale } from "@/lib/i18n/config";
 import { getDictionary } from "./dictionaries";
@@ -33,15 +34,12 @@ export default async function Home({
         </p>
 
         <div className="flex flex-col gap-4 sm:flex-row">
-          <span
-            aria-disabled="true"
-            className="flex cursor-default items-center justify-center gap-2 rounded-xl bg-slate-900 px-6 py-3 text-center text-white opacity-80"
+          <Link
+            href={`/${locale}/calculator`}
+            className="rounded-xl bg-slate-900 px-6 py-3 text-center text-white transition hover:bg-slate-700"
           >
             {t.calculatorCta}
-            <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs">
-              {t.comingSoon}
-            </span>
-          </span>
+          </Link>
 
           <a
             href="#about"

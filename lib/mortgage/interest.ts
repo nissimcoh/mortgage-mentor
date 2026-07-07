@@ -53,3 +53,22 @@ export function annualPercentToMonthlyRate(
     }
   }
 }
+
+/**
+ * Convert a bank-quoted nominal annual percent into the effective annual
+ * percent actually paid once monthly compounding is taken into account:
+ *
+ *   ((1 + rate / 100 / 12)^12 - 1) * 100
+ *
+ * E.g. 4.8% nominal → ~4.91% effective. The calculator UI shows this as
+ * educational information next to the results.
+ */
+export function nominalAnnualPercentToEffectiveAnnualPercent(
+  annualInterestRatePercent: number,
+): number {
+  const monthlyRate = annualPercentToMonthlyRate(
+    annualInterestRatePercent,
+    "nominalAnnual",
+  );
+  return (Math.pow(1 + monthlyRate, MONTHS_PER_YEAR) - 1) * 100;
+}

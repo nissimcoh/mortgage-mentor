@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   defaultLocale,
   isValidLocale,
@@ -17,17 +17,23 @@ const localeLabels: Record<Locale, string> = {
   en: "English",
 };
 
-function getPathForLocale(pathname: string, locale: Locale): string {
+function getPathForLocale(
+  pathname: string,
+  locale: Locale,
+  queryString: string,
+): string {
   const segments = pathname.split("/");
-  if (isValidLocale(segments[1])) {
-    segments[1] = locale;
-    return segments.join("/");
-  }
-  return `/${locale}${pathname === "/" ? "" : pathname}`;
+  const path = isValidLocale(segments[1])
+    ? [segments[0], locale, ...segments.slice(2)].join("/")
+    : `/${locale}${pathname === "/" ? "" : pathname}`;
+  // Keep query params (e.g. calculator inputs) across language switches.
+  return queryString ? `${path}?${queryString}` : path;
 }
 
 export default function LanguageSwitcher() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const queryString = searchParams.toString();
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -99,7 +105,7 @@ export default function LanguageSwitcher() {
               <Link
                 key={locale}
                 role="menuitem"
-                href={getPathForLocale(pathname, locale)}
+                href={getPathForLocale(pathname, locale, queryString)}
                 lang={locale}
                 aria-current={isActive ? "page" : undefined}
                 onClick={() => setOpen(false)}

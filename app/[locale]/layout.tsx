@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Heebo } from "next/font/google";
 import { notFound } from "next/navigation";
@@ -47,7 +48,11 @@ export default async function LocaleLayout({
       className={`${heebo.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <LanguageSwitcher />
+        {/* Suspense is required around useSearchParams consumers on
+            statically prerendered pages. */}
+        <Suspense fallback={null}>
+          <LanguageSwitcher />
+        </Suspense>
         {children}
       </body>
     </html>

@@ -8,8 +8,7 @@
     "title": "MortgageMentor",
     "tagline": "A smart simulation tool for understanding mortgages in Israel",
     "description": "The goal of this app is to help couples and individuals understand how much mortgage they need, what their expected monthly payment will be, how different loan tracks affect risk, and which questions to ask before approaching the bank.",
-    "calculatorCta": "Mortgage calculator",
-    "comingSoon": "Coming soon",
+    "calculatorCta": "Try the mortgage calculator",
     "aboutCta": "What will this app do?",
     "features": [
       {
@@ -25,5 +24,55 @@
         "description": "We will explore what happens to your payment if interest rates rise or the CPI changes."
       }
     ]
+  },
+  "calculator": {
+    "title": "Mortgage Calculator",
+    "subtitle": "Monthly payment calculation for a fixed-rate unlinked track, using the Spitzer (annuity) method.",
+    "spitzerHelp": "With the Spitzer method the monthly payment stays constant for the whole term: at first it is mostly interest, and over time the principal share grows.",
+    "trackHeading": "Track 1",
+    "loanAmountLabel": "Loan amount",
+    "loanAmountHelp": "The amount you borrow from the bank — not the apartment price.",
+    "trackTypeLabel": "Track type",
+    "trackTypeFixedUnlinked": "Fixed, unlinked",
+    "trackTypeHelp": "The track type determines how the interest behaves. In a fixed unlinked track the rate is constant and the principal is not CPI-linked, so the payment is known in advance.",
+    "repaymentMethodLabel": "Repayment method",
+    "repaymentMethodSpitzer": "Spitzer",
+    "repaymentMethodHelp": "How the loan is repaid over time. Spitzer is the common method: a constant monthly payment.",
+    "yearsLabel": "Loan duration",
+    "yearsSelectPlaceholder": "Select duration",
+    "yearSingular": "year",
+    "yearsPlural": "years",
+    "yearsHelp": "A longer duration lowers the monthly payment but increases the total interest.",
+    "interestRateLabel": "Annual interest rate",
+    "interestRateHelp": "The nominal annual rate exactly as the bank quotes it in the offer.",
+    "fieldHelpTitle": "What does each field mean?",
+    "calculateButton": "Calculate",
+    "invalidInput": "Invalid input. Make sure the amount, rate, and term are positive.",
+    "monthlyPayment": "Monthly payment",
+    "monthlyPaymentHelp": "What you pay the bank every month.",
+    "totalPayment": "Total payment",
+    "totalPaymentHelp": "All payments combined: the borrowed principal plus all the interest.",
+    "totalInterest": "Total interest",
+    "totalInterestHelp": "How much you pay the bank on top of what you borrowed, over the whole term.",
+    "numberOfPayments": "Number of payments",
+    "effectiveRateLabel": "Estimated effective annual rate",
+    "effectiveRateHelp": "The annual rate you effectively pay once monthly interest charging (compounding) is taken into account.",
+    "scheduleTitle": "Amortization schedule",
+    "scheduleIntro": [
+      "Every monthly payment is split in two: principal and interest. The principal is the part that reduces your loan balance; the interest is the price you pay the bank for the money.",
+      "With the Spitzer method the monthly payment is nearly constant, but its composition changes: early payments are mostly interest, while later payments mostly reduce the principal.",
+      "The remaining balance after each month is the principal you still owe the bank following that payment."
+    ],
+    "firstPaymentLabel": "First payment",
+    "lastPaymentLabel": "Final payment",
+    "principalLabel": "Principal",
+    "interestLabel": "Interest",
+    "monthHeader": "Month",
+    "paymentHeader": "Payment",
+    "remainingBalanceHeader": "Remaining balance",
+    "showFullSchedule": "Show full amortization schedule",
+    "showLess": "Show less",
+    "disclaimer": "This is a monthly simulation for illustration only, not a binding bank offer.",
+    "backToHome": "Back to home"
   }
 }
