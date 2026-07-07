@@ -70,8 +70,6 @@
     "monthHeader": "Month",
     "paymentHeader": "Payment",
     "remainingBalanceHeader": "Remaining balance",
-    "showFullSchedule": "Show full amortization schedule",
-    "showLess": "Show less",
     "disclaimer": "This is a monthly simulation for illustration only, not a binding bank offer.",
     "backToHome": "Back to home"
   }

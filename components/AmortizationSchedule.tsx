@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import type { Locale } from "@/lib/i18n/config";
 // Type-only import: erased at compile time, keeps the server-only
 // dictionary module out of the client bundle.
@@ -8,8 +7,6 @@ import type { Dictionary } from "@/app/[locale]/dictionaries";
 import type { AmortizationEntry } from "@/lib/mortgage";
 
 type CalculatorLabels = Dictionary["calculator"];
-
-const COLLAPSED_MONTHS = 12;
 
 interface AmortizationScheduleProps {
   /** The schedule as returned by the mortgage engine — no math happens here. */
@@ -86,8 +83,6 @@ export default function AmortizationSchedule({
   labels,
   locale,
 }: AmortizationScheduleProps) {
-  const [expanded, setExpanded] = useState(false);
-
   const intlLocale = locale === "he" ? "he-IL" : "en-US";
   const currencyFormat = new Intl.NumberFormat(intlLocale, {
     style: "currency",
@@ -103,10 +98,12 @@ export default function AmortizationSchedule({
 
   const firstEntry = schedule[0];
   const lastEntry = schedule[schedule.length - 1];
-  // Rows beyond the first year are only rendered after the user expands.
-  const visibleRows = expanded ? schedule : schedule.slice(0, COLLAPSED_MONTHS);
 
-  const numericHeader = "px-4 py-3 text-end font-medium text-slate-600";
+  // Sticky header cells need their own background and bottom border because
+  // they detach from their row while the body scrolls beneath them.
+  const stickyHeader =
+    "sticky top-0 z-10 border-b border-slate-200 bg-slate-50 px-4 py-3 font-medium text-slate-600";
+  const numericHeader = `${stickyHeader} text-end`;
   const numericCell = "px-4 py-2.5 text-end whitespace-nowrap text-slate-700";
 
   return (
@@ -137,11 +134,11 @@ export default function AmortizationSchedule({
         />
       </div>
 
-      <div className="mt-6 overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="mt-6 max-h-[500px] overflow-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
         <table className="w-full min-w-[560px] text-sm">
           <thead>
-            <tr className="border-b border-slate-200 bg-slate-50">
-              <th scope="col" className="px-4 py-3 text-start font-medium text-slate-600">
+            <tr>
+              <th scope="col" className={`${stickyHeader} text-start`}>
                 {labels.monthHeader}
               </th>
               <th scope="col" className={numericHeader}>
@@ -159,7 +156,7 @@ export default function AmortizationSchedule({
             </tr>
           </thead>
           <tbody>
-            {visibleRows.map((entry) => (
+            {schedule.map((entry) => (
               <tr
                 key={entry.month}
                 className="border-b border-slate-100 last:border-0"
@@ -182,16 +179,6 @@ export default function AmortizationSchedule({
           </tbody>
         </table>
       </div>
-
-      {schedule.length > COLLAPSED_MONTHS && (
-        <button
-          type="button"
-          onClick={() => setExpanded((value) => !value)}
-          className="mt-4 rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm text-slate-700 transition hover:bg-slate-100"
-        >
-          {expanded ? labels.showLess : labels.showFullSchedule}
-        </button>
-      )}
     </section>
   );
 }
