@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isValidLocale } from "@/lib/i18n/config";
+import { getMarketSnapshot } from "@/lib/market-data/get-market-snapshot";
+import MarketSnapshotCards from "@/components/MarketSnapshotCards";
 import { getDictionary } from "./dictionaries";
 
 export default async function Home({
@@ -13,6 +15,8 @@ export default async function Home({
 
   const dict = await getDictionary(locale);
   const t = dict.home;
+  // Never throws: source failures degrade to dated fallback values.
+  const marketSnapshot = await getMarketSnapshot();
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900">
@@ -59,6 +63,14 @@ export default async function Home({
               <p className="leading-7 text-slate-600">{feature.description}</p>
             </div>
           ))}
+        </div>
+
+        <div className="mt-16 w-full">
+          <MarketSnapshotCards
+            snapshot={marketSnapshot}
+            labels={dict.market}
+            locale={locale}
+          />
         </div>
       </section>
     </main>
