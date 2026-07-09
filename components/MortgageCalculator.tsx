@@ -7,11 +7,28 @@ import type { Locale } from "@/lib/i18n/config";
 // module is never bundled into this Client Component.
 import type { Dictionary } from "@/app/[locale]/dictionaries";
 import {
-  calculateTrackSummary,
+  calculateScenarioSummary,
   nominalAnnualPercentToEffectiveAnnualPercent,
-  type TrackSummary,
+  type MortgageTrackInput,
+  type ScenarioSummary,
 } from "@/lib/mortgage";
+import {
+  applyTracksToQuery,
+  createTrackDraft,
+  duplicateTrackDraft,
+  formatAmountForDisplay,
+  MAX_TRACKS,
+  MIN_TRACKS,
+  parseAllTrackDrafts,
+  parseTracksFromQuery,
+  sumEnteredTrackAmounts,
+  type TrackDraft,
+} from "@/lib/mortgage/scenario-form";
 import AmortizationSchedule from "./AmortizationSchedule";
+import MortgageTrackCard from "./MortgageTrackCard";
+import ScheduleSelector from "./ScheduleSelector";
+
+const COMBINED_SCHEDULE_ID = "combined";
 
 type CalculatorLabels = Dictionary["calculator"];
 
@@ -20,109 +37,21 @@ interface MortgageCalculatorProps {
   labels: CalculatorLabels;
 }
 
-// The form exposes exactly one option per select for now. Keeping the
-// supported values in one place keeps the selects, the URL parsing, and the
-// engine call in sync when more tracks/methods are added.
-const SUPPORTED_TRACK_TYPE = "fixedUnlinked";
-const SUPPORTED_REPAYMENT_METHOD = "spitzer";
-const DURATION_YEARS = Array.from({ length: 30 }, (_, index) => index + 1);
-
-interface FormValues {
-  loanAmount: string;
-  ratePercent: string;
-  years: string;
-  trackType: string;
-  repaymentMethod: string;
+/** A successfully calculated mix: the inputs it was computed from + result. */
+interface SubmittedScenario {
+  inputs: MortgageTrackInput[];
+  summary: ScenarioSummary;
 }
 
-const EMPTY_VALUES: FormValues = {
-  loanAmount: "",
-  ratePercent: "",
-  years: "",
-  trackType: SUPPORTED_TRACK_TYPE,
-  repaymentMethod: SUPPORTED_REPAYMENT_METHOD,
-};
-
-/**
- * Parse a loan amount typed by a user: whole shekels only, commas and
- * spaces allowed ("800000", "800,000"). Returns null when invalid.
- */
-function parseLoanAmount(raw: string): number | null {
-  const digits = raw.replace(/[\s,₪]/g, "");
-  if (!/^\d+$/.test(digits)) return null;
-  const value = Number(digits);
-  return value > 0 ? value : null;
-}
-
-/**
- * Parse an annual rate typed by a user: non-negative decimal, accepting
- * both "4.8" and "4,8". Returns null when invalid.
- */
-function parseRatePercent(raw: string): number | null {
-  const normalized = raw.trim().replace(",", ".").replace(/%$/, "");
-  if (!/^\d+(\.\d+)?$/.test(normalized)) return null;
-  return Number(normalized);
-}
-
-/** Thousands separators for display; the URL always stores plain digits. */
-function formatLoanAmountForDisplay(value: number): string {
-  return value.toLocaleString("en-US");
-}
-
-function tryCalculate(values: FormValues): TrackSummary | null {
-  if (
-    values.trackType !== SUPPORTED_TRACK_TYPE ||
-    values.repaymentMethod !== SUPPORTED_REPAYMENT_METHOD
-  ) {
-    return null;
-  }
-
-  const loanAmount = parseLoanAmount(values.loanAmount);
-  const ratePercent = parseRatePercent(values.ratePercent);
-  if (loanAmount === null || ratePercent === null) return null;
-
+function tryCalculateScenario(
+  inputs: MortgageTrackInput[],
+): ScenarioSummary | null {
   try {
-    return calculateTrackSummary({
-      type: SUPPORTED_TRACK_TYPE,
-      repaymentMethod: SUPPORTED_REPAYMENT_METHOD,
-      loanAmount,
-      annualInterestRatePercent: ratePercent,
-      // The public calculator keeps input simple: the entered rate is always
-      // treated as the bank-quoted nominal annual rate. The engine's
-      // "effectiveAnnual" input mode remains available for advanced use.
-      interestRateInputMode: "nominalAnnual",
-      years: Number(values.years),
-    });
+    return calculateScenarioSummary({ tracks: inputs });
   } catch {
     return null;
   }
 }
-
-/** Read form values from the URL (shared links, language switching). */
-function readValuesFromQuery(searchParams: URLSearchParams): FormValues | null {
-  const loanAmount = searchParams.get("loanAmount");
-  const ratePercent = searchParams.get("annualInterestRatePercent");
-  const years = searchParams.get("years");
-  if (loanAmount === null || ratePercent === null || years === null) {
-    return null;
-  }
-  return {
-    loanAmount,
-    ratePercent,
-    years,
-    // Older shared URLs predate these two params; default to the only
-    // supported options so those links keep working.
-    trackType: searchParams.get("trackType") ?? SUPPORTED_TRACK_TYPE,
-    repaymentMethod:
-      searchParams.get("repaymentMethod") ?? SUPPORTED_REPAYMENT_METHOD,
-  };
-}
-
-const labelClass = "mb-1 block text-sm font-medium text-slate-700";
-const fieldClass =
-  "w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-slate-500";
-const unitClass =
-  "pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-sm text-slate-400";
 
 export default function MortgageCalculator({
   locale,
@@ -132,43 +61,38 @@ export default function MortgageCalculator({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // Initialize once from the URL, so opening a link with valid query params
-  // (e.g. after switching language) restores both inputs and result.
+  // Initialize once from the URL (indexed multi-track format, or the legacy
+  // single-track params from old shared links). A fully valid URL restores
+  // the calculated result as well.
   const [initial] = useState(() => {
-    const values = readValuesFromQuery(searchParams);
-    if (!values) return null;
-    const summary = tryCalculate(values);
-    if (!summary) return null;
-    const loanAmount = parseLoanAmount(values.loanAmount);
+    const drafts = parseTracksFromQuery(searchParams) ?? [createTrackDraft()];
+    const inputs = parseAllTrackDrafts(drafts);
+    const summary = inputs ? tryCalculateScenario(inputs) : null;
     return {
-      values: {
-        ...values,
-        loanAmount:
-          loanAmount === null
-            ? values.loanAmount
-            : formatLoanAmountForDisplay(loanAmount),
-      },
-      summary,
-      ratePercent: parseRatePercent(values.ratePercent),
+      drafts,
+      submitted: inputs && summary ? { inputs, summary } : null,
     };
   });
 
-  const [values, setValues] = useState<FormValues>(
-    initial?.values ?? EMPTY_VALUES,
+  const [drafts, setDrafts] = useState<TrackDraft[]>(initial.drafts);
+  const [submitted, setSubmitted] = useState<SubmittedScenario | null>(
+    initial.submitted,
   );
-  const [summary, setSummary] = useState<TrackSummary | null>(
-    initial?.summary ?? null,
-  );
-  const [submittedRatePercent, setSubmittedRatePercent] = useState<
-    number | null
-  >(initial?.ratePercent ?? null);
   const [hasError, setHasError] = useState(false);
+  // Which schedule the amortization table shows; purely local view state.
+  const [selectedScheduleId, setSelectedScheduleId] =
+    useState(COMBINED_SCHEDULE_ID);
 
   const intlLocale = locale === "he" ? "he-IL" : "en-US";
   const currencyFormat = new Intl.NumberFormat(intlLocale, {
     style: "currency",
     currency: "ILS",
     maximumFractionDigits: 2,
+  });
+  const wholeCurrencyFormat = new Intl.NumberFormat(intlLocale, {
+    style: "currency",
+    currency: "ILS",
+    maximumFractionDigits: 0,
   });
   const numberFormat = new Intl.NumberFormat(intlLocale);
   const percentFormat = new Intl.NumberFormat(intlLocale, {
@@ -177,85 +101,115 @@ export default function MortgageCalculator({
     maximumFractionDigits: 2,
   });
 
-  function setField(field: keyof FormValues, value: string) {
-    setValues((current) => ({ ...current, [field]: value }));
+  /** Write the current drafts into the URL (removes stale/legacy params). */
+  function syncQuery(nextDrafts: TrackDraft[]) {
+    const query = new URLSearchParams(searchParams.toString());
+    applyTracksToQuery(query, nextDrafts);
+    router.replace(`${pathname}?${query.toString()}`, { scroll: false });
   }
 
-  function handleLoanAmountBlur() {
-    const parsed = parseLoanAmount(values.loanAmount);
-    if (parsed !== null) {
-      setField("loanAmount", formatLoanAmountForDisplay(parsed));
-    }
+  function updateTrack(
+    id: string,
+    field: keyof Omit<TrackDraft, "id">,
+    value: string,
+  ) {
+    setDrafts((current) =>
+      current.map((draft) =>
+        draft.id === id ? { ...draft, [field]: value } : draft,
+      ),
+    );
+  }
+
+  function handleAmountBlur(id: string) {
+    setDrafts((current) =>
+      current.map((draft) =>
+        draft.id === id
+          ? { ...draft, amount: formatAmountForDisplay(draft.amount) }
+          : draft,
+      ),
+    );
+  }
+
+  function addTrack() {
+    if (drafts.length >= MAX_TRACKS) return;
+    const next = [...drafts, createTrackDraft()];
+    setDrafts(next);
+    syncQuery(next);
+  }
+
+  function removeTrack(id: string) {
+    if (drafts.length <= MIN_TRACKS) return;
+    const next = drafts.filter((draft) => draft.id !== id);
+    setDrafts(next);
+    syncQuery(next);
+  }
+
+  function duplicateTrack(id: string) {
+    if (drafts.length >= MAX_TRACKS) return;
+    const index = drafts.findIndex((draft) => draft.id === id);
+    if (index === -1) return;
+    const next = [
+      ...drafts.slice(0, index + 1),
+      duplicateTrackDraft(drafts[index]),
+      ...drafts.slice(index + 1),
+    ];
+    setDrafts(next);
+    syncQuery(next);
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const result = tryCalculate(values);
-    if (!result) {
-      setSummary(null);
-      setSubmittedRatePercent(null);
+    const inputs = parseAllTrackDrafts(drafts);
+    const summary = inputs ? tryCalculateScenario(inputs) : null;
+    if (!inputs || !summary) {
+      setSubmitted(null);
       setHasError(true);
       return;
     }
 
-    // Safe: tryCalculate already succeeded, so both parse.
-    const loanAmount = parseLoanAmount(values.loanAmount)!;
-    const ratePercent = parseRatePercent(values.ratePercent)!;
-
-    setSummary(result);
-    setSubmittedRatePercent(ratePercent);
+    setSubmitted({ inputs, summary });
     setHasError(false);
-
-    // Persist normalized inputs (no commas, dot decimal) in the URL so the
-    // result survives sharing the link and switching languages.
-    const query = new URLSearchParams({
-      loanAmount: String(loanAmount),
-      annualInterestRatePercent: String(ratePercent),
-      years: values.years.trim(),
-      trackType: values.trackType,
-      repaymentMethod: values.repaymentMethod,
-    });
-    router.replace(`${pathname}?${query.toString()}`, { scroll: false });
+    setSelectedScheduleId(COMBINED_SCHEDULE_ID);
+    syncQuery(drafts);
   }
 
-  const results =
-    summary && submittedRatePercent !== null
-      ? [
-          {
-            label: labels.monthlyPayment,
-            value: currencyFormat.format(summary.monthlyPayment),
-            help: labels.monthlyPaymentHelp,
-          },
-          {
-            label: labels.effectiveRateLabel,
-            value: percentFormat.format(
-              nominalAnnualPercentToEffectiveAnnualPercent(
-                submittedRatePercent,
-              ) / 100,
-            ),
-            help: labels.effectiveRateHelp,
-          },
-          {
-            label: labels.totalPayment,
-            value: currencyFormat.format(summary.totalPayment),
-            help: labels.totalPaymentHelp,
-          },
-          {
-            label: labels.totalInterest,
-            value: currencyFormat.format(summary.totalInterest),
-            help: labels.totalInterestHelp,
-          },
-          {
-            label: labels.numberOfPayments,
-            value: numberFormat.format(summary.numberOfPayments),
-            help: undefined,
-          },
-        ]
-      : [];
+  const enteredTotal = sumEnteredTrackAmounts(drafts);
+
+  const combinedResults = submitted
+    ? [
+        {
+          label: labels.totalAmountLabel,
+          value: wholeCurrencyFormat.format(
+            submitted.inputs.reduce((sum, input) => sum + input.loanAmount, 0),
+          ),
+          help: undefined,
+        },
+        {
+          label: labels.combinedFirstPayment,
+          value: currencyFormat.format(submitted.summary.monthlyPayment),
+          help: labels.combinedFirstPaymentHelp,
+        },
+        {
+          label: labels.totalPayment,
+          value: currencyFormat.format(submitted.summary.totalPayment),
+          help: labels.totalPaymentHelp,
+        },
+        {
+          label: labels.totalInterest,
+          value: currencyFormat.format(submitted.summary.totalInterest),
+          help: labels.totalInterestHelp,
+        },
+        {
+          label: labels.numberOfPayments,
+          value: numberFormat.format(submitted.summary.numberOfPayments),
+          help: undefined,
+        },
+      ]
+    : [];
 
   const fieldExplanations = [
-    { term: labels.loanAmountLabel, explanation: labels.loanAmountHelp },
+    { term: labels.trackAmountLabel, explanation: labels.trackAmountHelp },
     { term: labels.trackTypeLabel, explanation: labels.trackTypeHelp },
     {
       term: labels.repaymentMethodLabel,
@@ -265,6 +219,43 @@ export default function MortgageCalculator({
     { term: labels.interestRateLabel, explanation: labels.interestRateHelp },
   ];
 
+  // Which schedule is on display. Falls back to combined if the selection
+  // no longer exists (e.g. fewer tracks after a recalculation).
+  const selectedTrackIndex =
+    submitted && selectedScheduleId !== COMBINED_SCHEDULE_ID
+      ? Number(selectedScheduleId)
+      : null;
+  const selectedTrackSummary =
+    submitted &&
+    selectedTrackIndex !== null &&
+    submitted.summary.trackSummaries[selectedTrackIndex] !== undefined
+      ? submitted.summary.trackSummaries[selectedTrackIndex]
+      : null;
+
+  const isSingleTrack = submitted !== null && submitted.inputs.length === 1;
+  const displayedSchedule = submitted
+    ? isSingleTrack
+      ? submitted.summary.trackSummaries[0].schedule
+      : (selectedTrackSummary?.schedule ?? submitted.summary.combinedSchedule)
+    : [];
+  const scheduleTitle = submitted
+    ? isSingleTrack
+      ? labels.scheduleTitle
+      : selectedTrackSummary !== null && selectedTrackIndex !== null
+        ? `${labels.scheduleTitle} — ${labels.trackLabel} ${selectedTrackIndex + 1}`
+        : labels.scheduleTitleCombined
+    : labels.scheduleTitle;
+
+  const scheduleOptions = submitted
+    ? [
+        { id: COMBINED_SCHEDULE_ID, label: labels.combinedLabel },
+        ...submitted.inputs.map((_, index) => ({
+          id: String(index),
+          label: `${labels.trackLabel} ${index + 1}`,
+        })),
+      ]
+    : [];
+
   return (
     <div className="w-full">
       <form
@@ -272,106 +263,54 @@ export default function MortgageCalculator({
         noValidate
         className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
       >
-        <h2 className="mb-3 text-lg font-bold text-slate-900">
-          {labels.trackHeading}
-        </h2>
-
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[1.3fr_1fr_1fr_1fr_1fr]">
-          <label className="block">
-            <span className={labelClass}>{labels.loanAmountLabel}</span>
-            <span className="relative block">
-              <input
-                type="text"
-                inputMode="numeric"
-                autoComplete="off"
-                placeholder="0"
-                value={values.loanAmount}
-                onChange={(event) => setField("loanAmount", event.target.value)}
-                onBlur={handleLoanAmountBlur}
-                className={`${fieldClass} pe-9`}
-              />
-              <span aria-hidden className={unitClass}>
-                ₪
-              </span>
-            </span>
-          </label>
-
-          <label className="block">
-            <span className={labelClass}>{labels.trackTypeLabel}</span>
-            <select
-              value={values.trackType}
-              onChange={(event) => setField("trackType", event.target.value)}
-              className={fieldClass}
-            >
-              <option value={SUPPORTED_TRACK_TYPE}>
-                {labels.trackTypeFixedUnlinked}
-              </option>
-            </select>
-          </label>
-
-          <label className="block">
-            <span className={labelClass}>{labels.repaymentMethodLabel}</span>
-            <select
-              value={values.repaymentMethod}
-              onChange={(event) =>
-                setField("repaymentMethod", event.target.value)
-              }
-              className={fieldClass}
-            >
-              <option value={SUPPORTED_REPAYMENT_METHOD}>
-                {labels.repaymentMethodSpitzer}
-              </option>
-            </select>
-          </label>
-
-          <label className="block">
-            <span className={labelClass}>{labels.yearsLabel}</span>
-            <select
-              value={values.years}
-              onChange={(event) => setField("years", event.target.value)}
-              className={fieldClass}
-            >
-              <option value="" disabled>
-                {labels.yearsSelectPlaceholder}
-              </option>
-              {DURATION_YEARS.map((years) => (
-                <option key={years} value={String(years)}>
-                  {years === 1
-                    ? labels.yearSingular
-                    : `${years} ${labels.yearsPlural}`}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block">
-            <span className={labelClass}>{labels.interestRateLabel}</span>
-            <span className="relative block">
-              <input
-                type="text"
-                inputMode="decimal"
-                autoComplete="off"
-                placeholder="0"
-                value={values.ratePercent}
-                onChange={(event) =>
-                  setField("ratePercent", event.target.value)
-                }
-                className={`${fieldClass} pe-9`}
-              />
-              <span aria-hidden className={unitClass}>
-                %
-              </span>
-            </span>
-          </label>
+        <div className="mb-4 flex flex-wrap items-baseline gap-x-6 gap-y-1 text-sm text-slate-600">
+          <span>
+            {labels.tracksCountLabel}:{" "}
+            <strong className="text-slate-900">
+              {numberFormat.format(drafts.length)}
+            </strong>
+          </span>
+          <span>
+            {labels.totalAmountLabel}:{" "}
+            <strong className="text-slate-900">
+              {wholeCurrencyFormat.format(enteredTotal)}
+            </strong>
+          </span>
         </div>
 
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-3">
+          {drafts.map((draft, index) => (
+            <MortgageTrackCard
+              key={draft.id}
+              index={index}
+              draft={draft}
+              labels={labels}
+              canRemove={drafts.length > MIN_TRACKS}
+              canDuplicate={drafts.length < MAX_TRACKS}
+              onChange={(field, value) => updateTrack(draft.id, field, value)}
+              onAmountBlur={() => handleAmountBlur(draft.id)}
+              onRemove={() => removeTrack(draft.id)}
+              onDuplicate={() => duplicateTrack(draft.id)}
+            />
+          ))}
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-3">
           <button
             type="submit"
             className="rounded-xl bg-slate-900 px-6 py-2.5 text-white transition hover:bg-slate-700"
           >
             {labels.calculateButton}
           </button>
+          {drafts.length < MAX_TRACKS && (
+            <button
+              type="button"
+              onClick={addTrack}
+              className="rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm text-slate-700 transition hover:bg-slate-100"
+            >
+              {labels.addTrack}
+            </button>
+          )}
         </div>
 
         <details className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
@@ -398,36 +337,160 @@ export default function MortgageCalculator({
         </p>
       )}
 
-      {results.length > 0 && (
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          {results.map((result) => (
-            <div
-              key={result.label}
-              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
-            >
-              <div className="text-sm text-slate-500">{result.label}</div>
-              <div className="mt-1 text-xl font-bold text-slate-900 xl:text-2xl">
-                {result.value}
-              </div>
-              {result.help && (
-                <p className="mt-1.5 text-xs leading-5 text-slate-500">
-                  {result.help}
-                </p>
-              )}
+      {submitted && (
+        <>
+          <section className="mt-6">
+            <h2 className="mb-3 text-2xl font-bold tracking-tight">
+              {labels.combinedResultsTitle}
+            </h2>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {combinedResults.map((result) => (
+                <div
+                  key={result.label}
+                  className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                >
+                  <div className="text-sm text-slate-500">{result.label}</div>
+                  <div className="mt-1 text-xl font-bold text-slate-900">
+                    {result.value}
+                  </div>
+                  {result.help && (
+                    <p className="mt-1.5 text-xs leading-5 text-slate-500">
+                      {result.help}
+                    </p>
+                  )}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      )}
+            <p className="mt-3 text-sm leading-6 text-slate-500">
+              {labels.mixHelp}
+            </p>
+          </section>
 
-      {summary && (
-        <AmortizationSchedule
-          // Remount on a new calculation so the table collapses back to the
-          // first year.
-          key={`${summary.numberOfPayments}-${summary.monthlyPayment}-${summary.totalInterest}`}
-          schedule={summary.schedule}
-          labels={labels}
-          locale={locale}
-        />
+          {!isSingleTrack && (
+            <section className="mt-6">
+              <h2 className="mb-3 text-2xl font-bold tracking-tight">
+                {labels.perTrackResultsTitle}
+              </h2>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {submitted.inputs.map((input, index) => {
+                  const trackSummary = submitted.summary.trackSummaries[index];
+                  const isEqualPrincipal =
+                    input.repaymentMethod === "equalPrincipal";
+                  const rows = [
+                    {
+                      label: labels.trackAmountLabel,
+                      value: wholeCurrencyFormat.format(input.loanAmount),
+                    },
+                    {
+                      label: labels.yearsLabel,
+                      value:
+                        input.years === 1
+                          ? labels.yearSingular
+                          : `${numberFormat.format(input.years)} ${labels.yearsPlural}`,
+                    },
+                    {
+                      label: labels.interestRateLabel,
+                      value: percentFormat.format(
+                        input.annualInterestRatePercent / 100,
+                      ),
+                    },
+                    {
+                      label: labels.effectiveRateLabel,
+                      value: percentFormat.format(
+                        nominalAnnualPercentToEffectiveAnnualPercent(
+                          input.annualInterestRatePercent,
+                        ) / 100,
+                      ),
+                    },
+                    ...(isEqualPrincipal
+                      ? [
+                          {
+                            label: labels.firstPaymentLabel,
+                            value: currencyFormat.format(
+                              trackSummary.firstPayment,
+                            ),
+                          },
+                          {
+                            label: labels.lastPaymentLabel,
+                            value: currencyFormat.format(
+                              trackSummary.lastPayment,
+                            ),
+                          },
+                        ]
+                      : [
+                          {
+                            label: labels.monthlyPayment,
+                            value: currencyFormat.format(
+                              trackSummary.monthlyPayment,
+                            ),
+                          },
+                        ]),
+                    {
+                      label: labels.totalPayment,
+                      value: currencyFormat.format(trackSummary.totalPayment),
+                    },
+                    {
+                      label: labels.totalInterest,
+                      value: currencyFormat.format(trackSummary.totalInterest),
+                    },
+                  ];
+
+                  return (
+                    <div
+                      key={index}
+                      className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                    >
+                      <h3 className="mb-2 text-sm font-bold text-slate-900">
+                        {labels.trackLabel} {index + 1}
+                        <span className="font-normal text-slate-500">
+                          {" · "}
+                          {isEqualPrincipal
+                            ? labels.repaymentMethodEqualPrincipal
+                            : labels.repaymentMethodSpitzer}
+                        </span>
+                      </h3>
+                      <dl className="space-y-1 text-sm">
+                        {rows.map((row) => (
+                          <div
+                            key={row.label}
+                            className="flex items-baseline justify-between gap-2"
+                          >
+                            <dt className="text-slate-500">{row.label}</dt>
+                            <dd className="font-medium text-slate-900">
+                              {row.value}
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          <AmortizationSchedule
+            // Remount on a new calculation or view switch so scroll resets.
+            key={`${selectedScheduleId}-${submitted.summary.numberOfPayments}-${submitted.summary.monthlyPayment}-${submitted.summary.totalInterest}`}
+            schedule={displayedSchedule}
+            labels={labels}
+            locale={locale}
+            title={scheduleTitle}
+            selector={
+              isSingleTrack ? undefined : (
+                <ScheduleSelector
+                  options={scheduleOptions}
+                  selectedId={
+                    selectedTrackSummary !== null && selectedTrackIndex !== null
+                      ? String(selectedTrackIndex)
+                      : COMBINED_SCHEDULE_ID
+                  }
+                  onSelect={setSelectedScheduleId}
+                />
+              )
+            }
+          />
+        </>
       )}
 
       <p className="mt-5 text-sm leading-6 text-slate-500">

@@ -24,6 +24,7 @@ import {
 } from "./types";
 import { annualPercentToMonthlyRate, MONTHS_PER_YEAR } from "./interest";
 import {
+  buildEqualPrincipalSchedule,
   buildSpitzerSchedule,
   roundMoney,
   spitzerMonthlyPaymentRaw,
@@ -92,37 +93,78 @@ export function generateSpitzerSchedule(
 }
 
 /**
+ * Payment statistics derived from an (already rounded) schedule, so that
+ * summaries always agree with the table a user would see.
+ */
+function summarizePayments(schedule: AmortizationEntry[]) {
+  let totalPayment = 0;
+  let maximumPayment = -Infinity;
+  let minimumPayment = Infinity;
+  for (const entry of schedule) {
+    totalPayment += entry.payment;
+    if (entry.payment > maximumPayment) maximumPayment = entry.payment;
+    if (entry.payment < minimumPayment) minimumPayment = entry.payment;
+  }
+  return {
+    totalPayment: roundMoney(totalPayment),
+    firstPayment: schedule[0].payment,
+    lastPayment: schedule[schedule.length - 1].payment,
+    maximumPayment,
+    minimumPayment,
+    finalBalance: schedule[schedule.length - 1].remainingBalance,
+  };
+}
+
+/** Build a track's schedule, dispatching on its repayment method. */
+function buildTrackSchedule(track: MortgageTrackInput): AmortizationEntry[] {
+  if (track.type !== "fixedUnlinked") {
+    throw new Error(
+      `Track type "${track.type}" is not implemented yet; only "fixedUnlinked" is supported so far`,
+    );
+  }
+
+  assertValidLoanTerms(track);
+  const params = {
+    loanAmount: track.loanAmount,
+    monthlyRate: annualPercentToMonthlyRate(
+      track.annualInterestRatePercent,
+      track.interestRateInputMode ?? DEFAULT_INTEREST_RATE_INPUT_MODE,
+    ),
+    numberOfPayments: toNumberOfPayments(track.years),
+  };
+
+  switch (track.repaymentMethod) {
+    case "spitzer":
+      return buildSpitzerSchedule(params);
+    case "equalPrincipal":
+      return buildEqualPrincipalSchedule(params);
+    default:
+      throw new Error(
+        `Repayment method "${track.repaymentMethod}" is not implemented yet; only "spitzer" and "equalPrincipal" are supported so far`,
+      );
+  }
+}
+
+/**
  * Compute the summary for a single track.
  *
  * Throws for track types / repayment methods that are not implemented yet,
  * so callers can never silently get a wrong number.
  */
 export function calculateTrackSummary(track: MortgageTrackInput): TrackSummary {
-  if (track.type !== "fixedUnlinked") {
-    throw new Error(
-      `Track type "${track.type}" is not implemented yet; only "fixedUnlinked" is supported so far`,
-    );
-  }
-  if (track.repaymentMethod !== "spitzer") {
-    throw new Error(
-      `Repayment method "${track.repaymentMethod}" is not implemented yet; only "spitzer" is supported so far`,
-    );
-  }
-
-  const schedule = generateSpitzerSchedule(track);
-
-  // Totals are summed from the (already rounded) schedule rows so that the
-  // summary always agrees with the table a user would see.
-  const totalPayment = roundMoney(
-    schedule.reduce((sum, entry) => sum + entry.payment, 0),
-  );
+  const schedule = buildTrackSchedule(track);
+  const payments = summarizePayments(schedule);
 
   return {
-    monthlyPayment: schedule[0].payment,
-    totalPayment,
-    totalInterest: roundMoney(totalPayment - track.loanAmount),
+    monthlyPayment: payments.firstPayment,
+    totalPayment: payments.totalPayment,
+    totalInterest: roundMoney(payments.totalPayment - track.loanAmount),
     numberOfPayments: schedule.length,
-    finalBalance: schedule[schedule.length - 1].remainingBalance,
+    finalBalance: payments.finalBalance,
+    firstPayment: payments.firstPayment,
+    lastPayment: payments.lastPayment,
+    maximumPayment: payments.maximumPayment,
+    minimumPayment: payments.minimumPayment,
     schedule,
   };
 }
@@ -177,13 +219,18 @@ export function calculateScenarioSummary(
   const totalInterest = roundMoney(
     trackSummaries.reduce((sum, summary) => sum + summary.totalInterest, 0),
   );
+  const combinedPayments = summarizePayments(combinedSchedule);
 
   return {
     monthlyPayment: combinedSchedule[0].payment,
     totalPayment,
     totalInterest,
     numberOfPayments,
-    finalBalance: combinedSchedule[combinedSchedule.length - 1].remainingBalance,
+    finalBalance: combinedPayments.finalBalance,
+    firstPayment: combinedPayments.firstPayment,
+    lastPayment: combinedPayments.lastPayment,
+    maximumPayment: combinedPayments.maximumPayment,
+    minimumPayment: combinedPayments.minimumPayment,
     trackSummaries,
     combinedSchedule,
   };

@@ -30,13 +30,10 @@ export type TrackType =
  * How the principal is repaid over time. Balloon (bullet) and grace are
  * modeled here as repayment methods rather than track types: in practice
  * they modify the payment shape of an underlying interest track.
- *
- * Only "spitzer" (constant total payment, the Israeli default) is
- * implemented so far.
  */
 export type RepaymentMethod =
   | "spitzer" // שפיצר — constant monthly payment (implemented)
-  | "equalPrincipal" // קרן שווה — constant principal, declining payment (not yet)
+  | "equalPrincipal" // קרן שווה — constant principal, declining payment (implemented)
   | "balloon" // בלון — interest only (or nothing) until a final lump sum (not yet)
   | "grace"; // גרייס — deferred period before amortization starts (not yet)
 
@@ -106,7 +103,10 @@ export interface AmortizationEntry {
 
 /** Computed results for a single track. */
 export interface TrackSummary {
-  /** The regular monthly payment (first month's payment). */
+  /**
+   * The first month's payment. For Spitzer this is also the regular
+   * constant payment; for equal principal payments decline over time.
+   */
   monthlyPayment: number;
   /** Sum of all payments over the life of the track. */
   totalPayment: number;
@@ -115,6 +115,10 @@ export interface TrackSummary {
   numberOfPayments: number;
   /** Balance after the last payment; 0 for a fully amortizing track. */
   finalBalance: number;
+  firstPayment: number;
+  lastPayment: number;
+  maximumPayment: number;
+  minimumPayment: number;
   schedule: AmortizationEntry[];
 }
 
@@ -127,6 +131,10 @@ export interface ScenarioSummary {
   /** Length of the longest track, in months. */
   numberOfPayments: number;
   finalBalance: number;
+  firstPayment: number;
+  lastPayment: number;
+  maximumPayment: number;
+  minimumPayment: number;
   /** Per-track results, in input order. */
   trackSummaries: TrackSummary[];
   /**

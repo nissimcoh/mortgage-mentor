@@ -13,6 +13,10 @@ interface AmortizationScheduleProps {
   schedule: AmortizationEntry[];
   labels: CalculatorLabels;
   locale: Locale;
+  /** Section heading, e.g. "לוח סילוקין משולב" or "לוח סילוקין — מסלול 2". */
+  title: string;
+  /** Optional selector (schedule tabs) rendered directly above the table. */
+  selector?: React.ReactNode;
 }
 
 interface PaymentBreakdownCardProps {
@@ -82,6 +86,8 @@ export default function AmortizationSchedule({
   schedule,
   labels,
   locale,
+  title,
+  selector,
 }: AmortizationScheduleProps) {
   const intlLocale = locale === "he" ? "he-IL" : "en-US";
   const currencyFormat = new Intl.NumberFormat(intlLocale, {
@@ -108,9 +114,7 @@ export default function AmortizationSchedule({
 
   return (
     <section className="mt-8">
-      <h2 className="mb-3 text-2xl font-bold tracking-tight">
-        {labels.scheduleTitle}
-      </h2>
+      <h2 className="mb-3 text-2xl font-bold tracking-tight">{title}</h2>
       {labels.scheduleIntro.map((paragraph) => (
         <p key={paragraph} className="mb-2 text-sm leading-6 text-slate-600">
           {paragraph}
@@ -134,7 +138,9 @@ export default function AmortizationSchedule({
         />
       </div>
 
-      <div className="mt-6 max-h-[500px] overflow-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+      {selector && <div className="mt-6">{selector}</div>}
+
+      <div className={`${selector ? "" : "mt-6 "}max-h-[500px] overflow-auto rounded-2xl border border-slate-200 bg-white shadow-sm`}>
         <table className="w-full min-w-[560px] text-sm">
           <thead>
             <tr>

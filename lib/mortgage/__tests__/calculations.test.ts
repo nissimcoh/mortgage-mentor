@@ -185,6 +185,113 @@ describe("unsupported inputs fail loudly", () => {
   });
 });
 
+describe("equal principal", () => {
+  const equalPrincipalTrack: MortgageTrackInput = {
+    ...referenceTrack,
+    repaymentMethod: "equalPrincipal",
+  };
+  const summary = calculateTrackSummary(equalPrincipalTrack);
+
+  it("repays a constant principal except for the final rounding adjustment", () => {
+    const regularPrincipal = 800_000 / 300; // 2,666.67 rounded
+    for (const entry of summary.schedule.slice(0, -1)) {
+      expect(entry.principalPayment).toBeCloseTo(regularPrincipal, 2);
+    }
+  });
+
+  it("starts at principal + first month's interest", () => {
+    // 2,666.67 principal + 800,000 * 0.4% = 3,200 interest
+    expect(summary.firstPayment).toBeCloseTo(5866.67, 2);
+    expect(summary.monthlyPayment).toBe(summary.firstPayment);
+  });
+
+  it("payments strictly decrease while interest is positive", () => {
+    for (let index = 1; index < summary.schedule.length; index++) {
+      expect(summary.schedule[index].payment).toBeLessThan(
+        summary.schedule[index - 1].payment,
+      );
+    }
+    expect(summary.firstPayment).toBeGreaterThan(summary.lastPayment);
+    expect(summary.maximumPayment).toBe(summary.firstPayment);
+    expect(summary.minimumPayment).toBe(summary.lastPayment);
+  });
+
+  it("ends at a balance of exactly 0", () => {
+    expect(summary.finalBalance).toBe(0);
+    expect(summary.numberOfPayments).toBe(300);
+  });
+
+  it("costs less total interest than the comparable Spitzer loan", () => {
+    const spitzer = calculateTrackSummary(referenceTrack);
+    expect(summary.totalInterest).toBeLessThan(spitzer.totalInterest);
+    expect(summary.totalInterest).toBeGreaterThan(0);
+  });
+
+  it("keeps totals consistent with the schedule", () => {
+    const summedPayments = summary.schedule.reduce(
+      (sum, entry) => sum + entry.payment,
+      0,
+    );
+    expect(summary.totalPayment).toBeCloseTo(summedPayments, 2);
+    expect(summary.totalInterest).toBeCloseTo(
+      summary.totalPayment - 800_000,
+      2,
+    );
+  });
+
+  it("handles zero interest: even payments, no interest, exact payoff", () => {
+    const zero = calculateTrackSummary({
+      ...equalPrincipalTrack,
+      annualInterestRatePercent: 0,
+      years: 10,
+    });
+    expect(zero.firstPayment).toBeCloseTo(800_000 / 120, 2);
+    expect(zero.totalInterest).toBe(0);
+    expect(zero.totalPayment).toBeCloseTo(800_000, 2);
+    expect(zero.finalBalance).toBe(0);
+  });
+
+  it("effectiveAnnual mode yields a lower first payment than nominalAnnual", () => {
+    const effective = calculateTrackSummary({
+      ...equalPrincipalTrack,
+      interestRateInputMode: "effectiveAnnual",
+    });
+    expect(effective.firstPayment).toBeLessThan(summary.firstPayment);
+  });
+
+  it("supports scenarios mixing Spitzer and equal-principal tracks", () => {
+    const scenario = calculateScenarioSummary({
+      tracks: [
+        referenceTrack,
+        { ...equalPrincipalTrack, loanAmount: 400_000, years: 10 },
+      ],
+    });
+    const [spitzer, equalPrincipal] = scenario.trackSummaries;
+
+    expect(scenario.monthlyPayment).toBeCloseTo(
+      spitzer.firstPayment + equalPrincipal.firstPayment,
+      1,
+    );
+    expect(scenario.totalPayment).toBeCloseTo(
+      spitzer.totalPayment + equalPrincipal.totalPayment,
+      2,
+    );
+    expect(scenario.totalInterest).toBeCloseTo(
+      spitzer.totalInterest + equalPrincipal.totalInterest,
+      2,
+    );
+    expect(scenario.numberOfPayments).toBe(300);
+    expect(scenario.finalBalance).toBe(0);
+    // Every track summary carries its own full schedule.
+    expect(spitzer.schedule).toHaveLength(300);
+    expect(equalPrincipal.schedule).toHaveLength(120);
+    // The combined payment drops once the 10-year track ends.
+    expect(scenario.combinedSchedule[120].payment).toBeLessThan(
+      scenario.combinedSchedule[119].payment,
+    );
+  });
+});
+
 describe("multi-track scenario", () => {
   const shortTrack: MortgageTrackInput = {
     ...referenceTrack,

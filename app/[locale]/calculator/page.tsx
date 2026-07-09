@@ -46,7 +46,9 @@ export default async function CalculatorPage({
           {t.title}
         </h1>
         <p className="mb-1.5 text-lg leading-8 text-slate-600">{t.subtitle}</p>
-        <p className="mb-6 text-sm leading-6 text-slate-500">{t.spitzerHelp}</p>
+        <p className="mb-6 text-sm leading-6 text-slate-500">
+          {t.repaymentMethodsHelp}
+        </p>
 
         <Suspense fallback={null}>
           <MortgageCalculator locale={locale} labels={t} />

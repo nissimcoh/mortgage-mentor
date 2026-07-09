@@ -14,12 +14,15 @@ export function roundMoney(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
-export interface SpitzerScheduleParams {
+export interface AmortizationParams {
   loanAmount: number;
   /** Monthly rate as a fraction (e.g. 0.004 for 0.4%/month). */
   monthlyRate: number;
   numberOfPayments: number;
 }
+
+/** @deprecated Kept as an alias for the original Spitzer-only name. */
+export type SpitzerScheduleParams = AmortizationParams;
 
 /**
  * The classic Spitzer (annuity) payment:
@@ -34,7 +37,7 @@ export function spitzerMonthlyPaymentRaw({
   loanAmount,
   monthlyRate,
   numberOfPayments,
-}: SpitzerScheduleParams): number {
+}: AmortizationParams): number {
   if (monthlyRate === 0) {
     return loanAmount / numberOfPayments;
   }
@@ -59,7 +62,7 @@ export function buildSpitzerSchedule({
   loanAmount,
   monthlyRate,
   numberOfPayments,
-}: SpitzerScheduleParams): AmortizationEntry[] {
+}: AmortizationParams): AmortizationEntry[] {
   const payment = roundMoney(
     spitzerMonthlyPaymentRaw({
       loanAmount,
@@ -76,6 +79,55 @@ export function buildSpitzerSchedule({
     let principalPayment = payment - interestPayment;
 
     // Last month (or if drift ever overshoots): clear the balance exactly.
+    if (month === numberOfPayments || principalPayment >= balance) {
+      principalPayment = balance;
+    }
+
+    balance -= principalPayment;
+
+    schedule.push({
+      month,
+      payment: roundMoney(principalPayment + interestPayment),
+      principalPayment: roundMoney(principalPayment),
+      interestPayment: roundMoney(interestPayment),
+      remainingBalance: roundMoney(balance),
+    });
+  }
+
+  return schedule;
+}
+
+/**
+ * Build a month-by-month equal-principal (קרן שווה) schedule:
+ *
+ *   principalPayment = loanAmount / numberOfPayments   (constant)
+ *   interestPayment  = openingBalance * monthlyRate
+ *   payment          = principalPayment + interestPayment
+ *
+ * With positive interest the payment starts high and declines every month
+ * as the balance shrinks.
+ *
+ * Precision strategy mirrors the Spitzer builder: the regular principal
+ * payment is fixed at the ROUNDED (agorot) amount, the balance is simulated
+ * exactly against it, and the final month repays whatever balance remains —
+ * absorbing the accumulated rounding difference so the schedule always ends
+ * at a remaining balance of exactly 0.
+ */
+export function buildEqualPrincipalSchedule({
+  loanAmount,
+  monthlyRate,
+  numberOfPayments,
+}: AmortizationParams): AmortizationEntry[] {
+  const regularPrincipal = roundMoney(loanAmount / numberOfPayments);
+
+  const schedule: AmortizationEntry[] = [];
+  let balance = loanAmount;
+
+  for (let month = 1; month <= numberOfPayments; month++) {
+    const interestPayment = balance * monthlyRate;
+    let principalPayment = regularPrincipal;
+
+    // Last month (or if rounding ever overshoots): clear the balance exactly.
     if (month === numberOfPayments || principalPayment >= balance) {
       principalPayment = balance;
     }
