@@ -10,16 +10,40 @@
 import {
   formatThousands,
   parseDecimalRate,
+  parseSignedDecimal,
   parseWholeAmount,
 } from "../forms/numeric";
+import { isPrimeForecastMode, type PrimeForecastMode } from "./forecast";
 import type { MortgageTrackInput } from "./types";
 
 // The values the UI currently exposes.
-export const SUPPORTED_TRACK_TYPE = "fixedUnlinked";
+export const SUPPORTED_TRACK_TYPES = ["fixedUnlinked", "prime"] as const;
+export type SupportedTrackType = (typeof SUPPORTED_TRACK_TYPES)[number];
+export const SUPPORTED_TRACK_TYPE = "fixedUnlinked"; // default track type
 export const SUPPORTED_REPAYMENT_METHODS = ["spitzer", "equalPrincipal"] as const;
 export type SupportedRepaymentMethod =
   (typeof SUPPORTED_REPAYMENT_METHODS)[number];
 export const DEFAULT_REPAYMENT_METHOD: SupportedRepaymentMethod = "spitzer";
+export const DEFAULT_FORECAST_MODE: PrimeForecastMode = "official";
+
+function isSupportedTrackType(
+  value: string | null,
+): value is SupportedTrackType {
+  return (SUPPORTED_TRACK_TYPES as readonly string[]).includes(value ?? "");
+}
+
+/**
+ * The market context prime tracks need at parse time: the current BOI rate
+ * and the available official forecast curves (newest first).
+ */
+export interface MarketContextForParsing {
+  boiRatePercent: number;
+  curves: ReadonlyArray<{
+    id: string;
+    publicationDate: string;
+    nominalZeroYieldsPercent: readonly number[];
+  }>;
+}
 
 function isSupportedRepaymentMethod(
   value: string | null,
@@ -38,10 +62,19 @@ export const MAX_YEARS = 30;
 export interface TrackDraft {
   id: string;
   amount: string;
+  /** Fixed tracks: the quoted annual rate. */
   ratePercent: string;
   years: string;
   trackType: string;
   repaymentMethod: string;
+  /** Prime tracks: the annual rate the bank currently offers. */
+  currentRatePercent: string;
+  /** Prime tracks: "official" | "constant" | "stress". */
+  forecastMode: string;
+  /** Prime tracks, mode "stress": parallel shift in percentage points. */
+  stressShift: string;
+  /** Prime tracks: the official curve the last calculation used. */
+  forecastCurveId: string;
 }
 
 // Deterministic module-level counter: stable keys without pulling in a
@@ -59,6 +92,10 @@ export function createTrackDraft(
     years: "",
     trackType: SUPPORTED_TRACK_TYPE,
     repaymentMethod: DEFAULT_REPAYMENT_METHOD,
+    currentRatePercent: "",
+    forecastMode: DEFAULT_FORECAST_MODE,
+    stressShift: "",
+    forecastCurveId: "",
     ...seed,
   };
 }
@@ -83,24 +120,59 @@ function sanitizeYears(raw: string): string {
 }
 
 /**
+ * Pick the curve a prime draft should use.
+ *
+ * A pinned ID resolves ONLY to that exact curve: when it is unavailable
+ * this returns null (and the calculation stays invalid) rather than
+ * silently substituting the latest curve — the user must explicitly clear
+ * the pin to update to the latest curve. The latest curve is used only
+ * when no ID is pinned.
+ */
+export function resolveForecastCurve(
+  draft: TrackDraft,
+  market: MarketContextForParsing,
+) {
+  if (draft.forecastCurveId !== "") {
+    return (
+      market.curves.find((curve) => curve.id === draft.forecastCurveId) ?? null
+    );
+  }
+  return market.curves[0] ?? null;
+}
+
+/** True when the draft pins a curve ID that is not available. */
+export function isPinnedCurveMissing(
+  draft: TrackDraft,
+  market: MarketContextForParsing,
+): boolean {
+  return (
+    draft.trackType === "prime" &&
+    draft.forecastCurveId !== "" &&
+    !market.curves.some((curve) => curve.id === draft.forecastCurveId)
+  );
+}
+
+/**
  * Convert one draft into an engine input. Returns null when any field is
  * missing/invalid, so callers can never feed the engine a wrong number.
+ * Prime drafts additionally need the market context (BOI rate + curves).
  */
-export function parseTrackDraft(draft: TrackDraft): MortgageTrackInput | null {
+export function parseTrackDraft(
+  draft: TrackDraft,
+  market?: MarketContextForParsing,
+): MortgageTrackInput | null {
   if (
-    draft.trackType !== SUPPORTED_TRACK_TYPE ||
+    !isSupportedTrackType(draft.trackType) ||
     !isSupportedRepaymentMethod(draft.repaymentMethod)
   ) {
     return null;
   }
 
   const loanAmount = parseWholeAmount(draft.amount);
-  const ratePercent = parseDecimalRate(draft.ratePercent);
   const years = Number(draft.years);
   if (
     loanAmount === null ||
     loanAmount <= 0 ||
-    ratePercent === null ||
     !Number.isInteger(years) ||
     years < MIN_YEARS ||
     years > MAX_YEARS
@@ -108,8 +180,45 @@ export function parseTrackDraft(draft: TrackDraft): MortgageTrackInput | null {
     return null;
   }
 
+  if (draft.trackType === "prime") {
+    if (!market) return null;
+    const curve = resolveForecastCurve(draft, market);
+    if (!curve || curve.nominalZeroYieldsPercent.length < years * 12) {
+      return null;
+    }
+    const currentRatePercent = parseDecimalRate(draft.currentRatePercent);
+    if (currentRatePercent === null) return null;
+
+    const forecastMode = isPrimeForecastMode(draft.forecastMode)
+      ? draft.forecastMode
+      : DEFAULT_FORECAST_MODE;
+    let stressShiftPercent = 0;
+    if (forecastMode === "stress") {
+      const shift = parseSignedDecimal(draft.stressShift);
+      if (shift === null) return null;
+      stressShiftPercent = shift;
+    }
+
+    return {
+      type: "prime",
+      repaymentMethod: draft.repaymentMethod,
+      loanAmount,
+      years,
+      currentCustomerRatePercent: currentRatePercent,
+      currentBankOfIsraelRatePercent: market.boiRatePercent,
+      forecastZeroYieldsPercent: curve.nominalZeroYieldsPercent,
+      forecastMode,
+      stressShiftPercent,
+      forecastCurveId: curve.id,
+      forecastCurvePublicationDate: curve.publicationDate,
+    };
+  }
+
+  const ratePercent = parseDecimalRate(draft.ratePercent);
+  if (ratePercent === null) return null;
+
   return {
-    type: SUPPORTED_TRACK_TYPE,
+    type: "fixedUnlinked",
     repaymentMethod: draft.repaymentMethod,
     loanAmount,
     annualInterestRatePercent: ratePercent,
@@ -123,11 +232,12 @@ export function parseTrackDraft(draft: TrackDraft): MortgageTrackInput | null {
 /** All drafts as engine inputs, or null if any draft is invalid. */
 export function parseAllTrackDrafts(
   drafts: TrackDraft[],
+  market?: MarketContextForParsing,
 ): MortgageTrackInput[] | null {
   if (drafts.length === 0) return null;
   const inputs: MortgageTrackInput[] = [];
   for (const draft of drafts) {
-    const input = parseTrackDraft(draft);
+    const input = parseTrackDraft(draft, market);
     if (input === null) return null;
     inputs.push(input);
   }
@@ -180,16 +290,37 @@ export function applyTracksToQuery(
     if (amount !== null && amount > 0) {
       query.set(`${prefix}Amount`, String(amount));
     }
-    const rate = parseDecimalRate(draft.ratePercent);
-    if (rate !== null) {
-      query.set(`${prefix}AnnualInterestRatePercent`, String(rate));
-    }
     const years = sanitizeYears(draft.years);
     if (years !== "") {
       query.set(`${prefix}Years`, years);
     }
     query.set(`${prefix}Type`, draft.trackType);
     query.set(`${prefix}RepaymentMethod`, draft.repaymentMethod);
+
+    if (draft.trackType === "prime") {
+      // Prime-only params; fixed-rate-only params are never written here.
+      const currentRate = parseDecimalRate(draft.currentRatePercent);
+      if (currentRate !== null) {
+        query.set(`${prefix}CurrentRatePercent`, String(currentRate));
+      }
+      const mode = isPrimeForecastMode(draft.forecastMode)
+        ? draft.forecastMode
+        : DEFAULT_FORECAST_MODE;
+      query.set(`${prefix}ForecastMode`, mode);
+      if (mode === "stress") {
+        const shift = parseSignedDecimal(draft.stressShift);
+        query.set(`${prefix}ForecastStressShift`, String(shift ?? 0));
+      }
+      if (draft.forecastCurveId !== "") {
+        query.set(`${prefix}ForecastCurveId`, draft.forecastCurveId);
+      }
+    } else {
+      // Fixed-only params; prime-only params are never written here.
+      const rate = parseDecimalRate(draft.ratePercent);
+      if (rate !== null) {
+        query.set(`${prefix}AnnualInterestRatePercent`, String(rate));
+      }
+    }
   });
 
   return query;
@@ -227,17 +358,34 @@ export function parseTracksFromQuery(
       const prefix = `track${index}`;
       const type = query.get(`${prefix}Type`);
       const method = query.get(`${prefix}RepaymentMethod`);
+      const trackType = isSupportedTrackType(type)
+        ? type
+        : SUPPORTED_TRACK_TYPE;
+      const mode = query.get(`${prefix}ForecastMode`);
       drafts.push(
         createTrackDraft({
           amount: formatAmountForDisplay(query.get(`${prefix}Amount`) ?? ""),
           ratePercent:
-            query.get(`${prefix}AnnualInterestRatePercent`) ?? "",
+            trackType === "prime"
+              ? ""
+              : (query.get(`${prefix}AnnualInterestRatePercent`) ?? ""),
           years: sanitizeYears(query.get(`${prefix}Years`) ?? ""),
-          trackType:
-            type === SUPPORTED_TRACK_TYPE ? type : SUPPORTED_TRACK_TYPE,
+          trackType,
           repaymentMethod: isSupportedRepaymentMethod(method)
             ? method
             : DEFAULT_REPAYMENT_METHOD,
+          currentRatePercent:
+            trackType === "prime"
+              ? (query.get(`${prefix}CurrentRatePercent`) ?? "")
+              : "",
+          forecastMode: isPrimeForecastMode(mode)
+            ? mode
+            : DEFAULT_FORECAST_MODE,
+          stressShift: query.get(`${prefix}ForecastStressShift`) ?? "",
+          forecastCurveId:
+            trackType === "prime"
+              ? (query.get(`${prefix}ForecastCurveId`) ?? "")
+              : "",
         }),
       );
     }

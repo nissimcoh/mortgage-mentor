@@ -16,8 +16,10 @@
 import {
   DEFAULT_INTEREST_RATE_INPUT_MODE,
   type AmortizationEntry,
+  type FixedUnlinkedTrackInput,
   type MortgageScenarioInput,
   type MortgageTrackInput,
+  type PrimeTrackInput,
   type ScenarioSummary,
   type SpitzerPaymentParams,
   type TrackSummary,
@@ -26,9 +28,16 @@ import { annualPercentToMonthlyRate, MONTHS_PER_YEAR } from "./interest";
 import {
   buildEqualPrincipalSchedule,
   buildSpitzerSchedule,
+  buildVariableRateEqualPrincipalSchedule,
+  buildVariableRateSpitzerSchedule,
   roundMoney,
   spitzerMonthlyPaymentRaw,
 } from "./amortization";
+import {
+  buildPrimeRatePathPercent,
+  PRIME_BOI_SPREAD_PERCENT,
+  solveMonthlyIrr,
+} from "./forecast";
 
 function assertValidLoanTerms({
   loanAmount,
@@ -115,14 +124,10 @@ function summarizePayments(schedule: AmortizationEntry[]) {
   };
 }
 
-/** Build a track's schedule, dispatching on its repayment method. */
-function buildTrackSchedule(track: MortgageTrackInput): AmortizationEntry[] {
-  if (track.type !== "fixedUnlinked") {
-    throw new Error(
-      `Track type "${track.type}" is not implemented yet; only "fixedUnlinked" is supported so far`,
-    );
-  }
-
+/** Build a fixed-unlinked track's schedule, dispatching on repayment method. */
+function buildFixedTrackSchedule(
+  track: FixedUnlinkedTrackInput,
+): AmortizationEntry[] {
   assertValidLoanTerms(track);
   const params = {
     loanAmount: track.loanAmount,
@@ -145,15 +150,103 @@ function buildTrackSchedule(track: MortgageTrackInput): AmortizationEntry[] {
   }
 }
 
-/**
- * Compute the summary for a single track.
- *
- * Throws for track types / repayment methods that are not implemented yet,
- * so callers can never silently get a wrong number.
- */
-export function calculateTrackSummary(track: MortgageTrackInput): TrackSummary {
-  const schedule = buildTrackSchedule(track);
+function assertValidPrimeTrack(track: PrimeTrackInput): void {
+  if (!Number.isFinite(track.loanAmount) || track.loanAmount <= 0) {
+    throw new Error(`loanAmount must be positive, got ${track.loanAmount}`);
+  }
+  if (!Number.isFinite(track.years) || track.years <= 0) {
+    throw new Error(`years must be positive, got ${track.years}`);
+  }
+  if (
+    !Number.isFinite(track.currentCustomerRatePercent) ||
+    track.currentCustomerRatePercent < 0
+  ) {
+    throw new Error(
+      `currentCustomerRatePercent cannot be negative, got ${track.currentCustomerRatePercent}`,
+    );
+  }
+  if (
+    !Number.isFinite(track.currentBankOfIsraelRatePercent) ||
+    track.currentBankOfIsraelRatePercent < 0
+  ) {
+    throw new Error(
+      `currentBankOfIsraelRatePercent cannot be negative, got ${track.currentBankOfIsraelRatePercent}`,
+    );
+  }
+  if (
+    track.stressShiftPercent !== undefined &&
+    !Number.isFinite(track.stressShiftPercent)
+  ) {
+    throw new Error(
+      `stressShiftPercent must be a finite number, got ${track.stressShiftPercent}`,
+    );
+  }
+}
+
+function buildVariableSchedule(
+  repaymentMethod: PrimeTrackInput["repaymentMethod"],
+  loanAmount: number,
+  annualRatePercentPath: readonly number[],
+  numberOfPayments: number,
+): AmortizationEntry[] {
+  const params = { loanAmount, annualRatePercentPath, numberOfPayments };
+  switch (repaymentMethod) {
+    case "spitzer":
+      return buildVariableRateSpitzerSchedule(params);
+    case "equalPrincipal":
+      return buildVariableRateEqualPrincipalSchedule(params);
+    default:
+      throw new Error(
+        `Repayment method "${repaymentMethod}" is not implemented yet; only "spitzer" and "equalPrincipal" are supported so far`,
+      );
+  }
+}
+
+function calculatePrimeTrackSummary(track: PrimeTrackInput): TrackSummary {
+  assertValidPrimeTrack(track);
+  const numberOfPayments = toNumberOfPayments(track.years);
+
+  const forecastPath = buildPrimeRatePathPercent({
+    months: numberOfPayments,
+    currentCustomerRatePercent: track.currentCustomerRatePercent,
+    currentBankOfIsraelRatePercent: track.currentBankOfIsraelRatePercent,
+    zeroYieldsPercent: track.forecastZeroYieldsPercent,
+    forecastMode: track.forecastMode,
+    stressShiftPercent: track.stressShiftPercent,
+  });
+  const schedule = buildVariableSchedule(
+    track.repaymentMethod,
+    track.loanAmount,
+    forecastPath,
+    numberOfPayments,
+  );
+
+  // The user-visible "current" first payment: ordinary schedule at the
+  // currently offered rate over the full original term.
+  const currentPath = Array.from(
+    { length: numberOfPayments },
+    () => track.currentCustomerRatePercent,
+  );
+  const currentFirstPayment = buildVariableSchedule(
+    track.repaymentMethod,
+    track.loanAmount,
+    currentPath,
+    numberOfPayments,
+  )[0].payment;
+
   const payments = summarizePayments(schedule);
+  const monthlyIrr = solveMonthlyIrr(
+    track.loanAmount,
+    schedule.map((entry) => entry.payment),
+  );
+
+  let maximumMonth = 1;
+  for (const entry of schedule) {
+    if (entry.payment === payments.maximumPayment) {
+      maximumMonth = entry.month;
+      break;
+    }
+  }
 
   return {
     monthlyPayment: payments.firstPayment,
@@ -166,7 +259,62 @@ export function calculateTrackSummary(track: MortgageTrackInput): TrackSummary {
     maximumPayment: payments.maximumPayment,
     minimumPayment: payments.minimumPayment,
     schedule,
+    forecast: {
+      currentFirstPayment,
+      forecastFirstPayment: payments.firstPayment,
+      forecastMaximumPayment: payments.maximumPayment,
+      monthOfForecastMaximumPayment: maximumMonth,
+      forecastLastPayment: payments.lastPayment,
+      forecastTotalPayment: payments.totalPayment,
+      forecastTotalInterest: roundMoney(
+        payments.totalPayment - track.loanAmount,
+      ),
+      forecastOverallRatePercent:
+        (Math.pow(1 + monthlyIrr, 12) - 1) * 100,
+      customerPrimeMarginPercent:
+        track.currentCustomerRatePercent -
+        (track.currentBankOfIsraelRatePercent + PRIME_BOI_SPREAD_PERCENT),
+      currentPrimeRatePercent:
+        track.currentBankOfIsraelRatePercent + PRIME_BOI_SPREAD_PERCENT,
+      forecastMode: track.forecastMode,
+      stressShiftPercent: track.stressShiftPercent ?? 0,
+      forecastCurveId: track.forecastCurveId ?? null,
+      forecastCurvePublicationDate: track.forecastCurvePublicationDate ?? null,
+    },
   };
+}
+
+/**
+ * Compute the summary for a single track.
+ *
+ * Throws for track types / repayment methods that are not implemented yet,
+ * so callers can never silently get a wrong number.
+ */
+export function calculateTrackSummary(track: MortgageTrackInput): TrackSummary {
+  switch (track.type) {
+    case "prime":
+      return calculatePrimeTrackSummary(track);
+    case "fixedUnlinked": {
+      const schedule = buildFixedTrackSchedule(track);
+      const payments = summarizePayments(schedule);
+      return {
+        monthlyPayment: payments.firstPayment,
+        totalPayment: payments.totalPayment,
+        totalInterest: roundMoney(payments.totalPayment - track.loanAmount),
+        numberOfPayments: schedule.length,
+        finalBalance: payments.finalBalance,
+        firstPayment: payments.firstPayment,
+        lastPayment: payments.lastPayment,
+        maximumPayment: payments.maximumPayment,
+        minimumPayment: payments.minimumPayment,
+        schedule,
+      };
+    }
+    default:
+      throw new Error(
+        `Track type "${(track as { type: string }).type}" is not implemented yet; only "fixedUnlinked" and "prime" are supported so far`,
+      );
+  }
 }
 
 /**

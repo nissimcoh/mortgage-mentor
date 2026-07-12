@@ -6,9 +6,9 @@ import type { Dictionary } from "@/app/[locale]/dictionaries";
 import {
   MAX_YEARS,
   MIN_YEARS,
-  SUPPORTED_TRACK_TYPE,
   type TrackDraft,
 } from "@/lib/mortgage/scenario-form";
+import { parseDecimalRate } from "@/lib/forms/numeric";
 
 type CalculatorLabels = Dictionary["calculator"];
 
@@ -17,10 +17,22 @@ const DURATION_YEARS = Array.from(
   (_, index) => MIN_YEARS + index,
 );
 
+/** Serializable market context the card needs for the prime info line. */
+export interface TrackCardMarketInfo {
+  boiRatePercent: number;
+  primeRatePercent: number;
+  /** e.g. "יוני 2026 · קלנדרי" — formatted by the parent. */
+  curveReferenceLabel: string;
+  curveIsFallback: boolean;
+  /** The draft pins a curve ID that is not available. */
+  curveIsMissing: boolean;
+}
+
 interface MortgageTrackCardProps {
   index: number;
   draft: TrackDraft;
   labels: CalculatorLabels;
+  market: TrackCardMarketInfo;
   canRemove: boolean;
   canDuplicate: boolean;
   onChange: (field: keyof Omit<TrackDraft, "id">, value: string) => void;
@@ -42,6 +54,7 @@ export default function MortgageTrackCard({
   index,
   draft,
   labels,
+  market,
   canRemove,
   canDuplicate,
   onChange,
@@ -49,6 +62,18 @@ export default function MortgageTrackCard({
   onRemove,
   onDuplicate,
 }: MortgageTrackCardProps) {
+  const isPrime = draft.trackType === "prime";
+
+  const enteredRate = isPrime
+    ? parseDecimalRate(draft.currentRatePercent)
+    : null;
+  const marginText =
+    enteredRate === null
+      ? null
+      : `P${enteredRate - market.primeRatePercent >= 0 ? "+" : "−"}${Math.abs(
+          Math.round((enteredRate - market.primeRatePercent) * 100) / 100,
+        )}`;
+
   return (
     <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -96,9 +121,10 @@ export default function MortgageTrackCard({
             onChange={(event) => onChange("trackType", event.target.value)}
             className={fieldClass}
           >
-            <option value={SUPPORTED_TRACK_TYPE}>
+            <option value="fixedUnlinked">
               {labels.trackTypeFixedUnlinked}
             </option>
+            <option value="prime">{labels.trackTypePrime}</option>
           </select>
         </label>
 
@@ -139,15 +165,22 @@ export default function MortgageTrackCard({
         </label>
 
         <label className="block">
-          <span className={labelClass}>{labels.interestRateLabel}</span>
+          <span className={labelClass}>
+            {isPrime ? labels.primeOfferedRateLabel : labels.interestRateLabel}
+          </span>
           <span className="relative block">
             <input
               type="text"
               inputMode="decimal"
               autoComplete="off"
               placeholder="0"
-              value={draft.ratePercent}
-              onChange={(event) => onChange("ratePercent", event.target.value)}
+              value={isPrime ? draft.currentRatePercent : draft.ratePercent}
+              onChange={(event) =>
+                onChange(
+                  isPrime ? "currentRatePercent" : "ratePercent",
+                  event.target.value,
+                )
+              }
               className={`${fieldClass} pe-9`}
             />
             <span aria-hidden className={unitClass}>
@@ -156,6 +189,91 @@ export default function MortgageTrackCard({
           </span>
         </label>
       </div>
+
+      {isPrime && (
+        <>
+          {market.curveIsMissing && (
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+              <p className="text-xs leading-5 text-amber-800">
+                {labels.curveUnavailableNote}
+              </p>
+              <button
+                type="button"
+                onClick={() => onChange("forecastCurveId", "")}
+                className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs text-amber-800 transition hover:bg-amber-100"
+              >
+                {labels.useLatestCurveButton}
+              </button>
+            </div>
+          )}
+          <p className="mt-2 text-xs leading-5 text-slate-500">
+            {labels.primeInfoBoi}: {market.boiRatePercent}% ·{" "}
+            {labels.primeInfoPrime}: {market.primeRatePercent}%
+            {marginText && (
+              <>
+                {" · "}
+                {labels.primeInfoMargin}: {marginText}
+              </>
+            )}
+            {" · "}
+            {labels.primeInfoCurve}: {market.curveReferenceLabel}
+            {market.curveIsFallback && (
+              <span className="text-amber-700">
+                {" "}
+                ({labels.primeForecastFallbackNote})
+              </span>
+            )}
+          </p>
+
+          <details className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-2">
+            <summary className="cursor-pointer text-xs font-medium text-slate-600">
+              {labels.advancedTitle}
+            </summary>
+            <div className="mt-2 grid gap-3 sm:grid-cols-2">
+              <label className="block">
+                <span className={labelClass}>{labels.forecastModeLabel}</span>
+                <select
+                  value={draft.forecastMode}
+                  onChange={(event) =>
+                    onChange("forecastMode", event.target.value)
+                  }
+                  className={fieldClass}
+                >
+                  <option value="official">{labels.forecastModeOfficial}</option>
+                  <option value="constant">{labels.forecastModeConstant}</option>
+                  <option value="stress">{labels.forecastModeStress}</option>
+                </select>
+              </label>
+              {draft.forecastMode === "stress" && (
+                <label className="block">
+                  <span className={labelClass}>{labels.stressShiftLabel}</span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    autoComplete="off"
+                    placeholder="+1"
+                    value={draft.stressShift}
+                    onChange={(event) =>
+                      onChange("stressShift", event.target.value)
+                    }
+                    className={fieldClass}
+                  />
+                </label>
+              )}
+            </div>
+            {draft.forecastMode !== "official" && (
+              <p className="mt-2 text-xs text-amber-700">
+                {labels.stressScenarioNote}
+              </p>
+            )}
+            {draft.forecastMode === "stress" && (
+              <p className="mt-1 text-xs text-slate-500">
+                {labels.negativeRatesNote}
+              </p>
+            )}
+          </details>
+        </>
+      )}
     </div>
   );
 }

@@ -24,6 +24,16 @@ export function parseDecimalRate(raw: string): number | null {
   return Number(normalized);
 }
 
+/**
+ * Parse a signed decimal (e.g. stress shifts like "+1", "-0.5", "2"),
+ * accepting a decimal comma. Returns null when invalid.
+ */
+export function parseSignedDecimal(raw: string): number | null {
+  const normalized = raw.trim().replace(",", ".");
+  if (!/^[+-]?\d+(\.\d+)?$/.test(normalized)) return null;
+  return Number(normalized);
+}
+
 /** Thousands separators for display; URLs always store plain digits. */
 export function formatThousands(value: number): string {
   return value.toLocaleString("en-US");

@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isValidLocale } from "@/lib/i18n/config";
+import { getMarketSnapshot } from "@/lib/market-data/get-market-snapshot";
+import { getMortgageForecastData } from "@/lib/market-data/sources/boi-mortgage-forecast";
 import MortgageCalculator from "@/components/MortgageCalculator";
 import { getDictionary } from "../dictionaries";
 
@@ -23,14 +25,44 @@ export async function generateMetadata({
 
 export default async function CalculatorPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { locale } = await params;
   if (!isValidLocale(locale)) notFound();
 
   const dict = await getDictionary(locale);
   const t = dict.calculator;
+
+  // Curve IDs explicitly pinned in the URL (trackNForecastCurveId). They
+  // are resolved server-side against the FULL workbook history, so shared
+  // links reproduce the exact curve they were calculated with.
+  const query = await searchParams;
+  const requestedCurveIds = Object.entries(query)
+    .filter(([key]) => /^track\d+ForecastCurveId$/.test(key))
+    .flatMap(([, value]) =>
+      typeof value === "string" ? [value] : (value ?? []),
+    );
+
+  // Server-side only: BOI rate + official Directive-451 forecast curves.
+  // Both degrade to dated fallbacks and never throw. Only normalized,
+  // serializable data crosses to the client — the latest curve plus any
+  // explicitly requested historical curves (the real curve stays server-
+  // side until CPI tracks exist).
+  const [marketSnapshot, forecastData] = await Promise.all([
+    getMarketSnapshot(),
+    getMortgageForecastData(requestedCurveIds),
+  ]);
+  const marketData = {
+    boiRatePercent: marketSnapshot.boiRate.ratePercent,
+    curves: forecastData.curves.map((curve) => ({
+      ...curve,
+      realZeroYieldsPercent: [],
+    })),
+    curveStatus: forecastData.status,
+  };
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900">
@@ -51,7 +83,11 @@ export default async function CalculatorPage({
         </p>
 
         <Suspense fallback={null}>
-          <MortgageCalculator locale={locale} labels={t} />
+          <MortgageCalculator
+            locale={locale}
+            labels={t}
+            marketData={marketData}
+          />
         </Suspense>
       </section>
     </main>

@@ -168,8 +168,11 @@ describe("input validation", () => {
 describe("unsupported inputs fail loudly", () => {
   it("throws a clear error for a not-yet-implemented track type", () => {
     expect(() =>
-      calculateTrackSummary({ ...referenceTrack, type: "prime" }),
-    ).toThrow(/"prime" is not implemented yet/);
+      calculateTrackSummary({
+        ...referenceTrack,
+        type: "fixedLinked",
+      } as unknown as MortgageTrackInput),
+    ).toThrow(/"fixedLinked" is not implemented yet/);
   });
 
   it("throws a clear error for a not-yet-implemented repayment method", () => {

@@ -58,11 +58,11 @@ export type InterestRateInputMode = "nominalAnnual" | "effectiveAnnual";
 export const DEFAULT_INTEREST_RATE_INPUT_MODE: InterestRateInputMode =
   "nominalAnnual";
 
-/** Input for a single mortgage track. */
-export interface MortgageTrackInput {
+/** Input for a fixed-rate unlinked (קל"צ) track. */
+export interface FixedUnlinkedTrackInput {
   /** Optional stable identifier, useful once scenarios are persisted. */
   id?: string;
-  type: TrackType;
+  type: "fixedUnlinked";
   repaymentMethod: RepaymentMethod;
   /** Principal borrowed on this track, in ILS. Must be positive. */
   loanAmount: number;
@@ -73,6 +73,35 @@ export interface MortgageTrackInput {
   /** Term in years. Must be positive; fractional years round to months. */
   years: number;
 }
+
+/**
+ * Input for a prime track. The forecast follows Directive 451: expected
+ * anchors are the annualized one-month forwards of the official BOI zero
+ * curve, and the customer's rate keeps its margin over prime
+ * (prime = BOI rate + 1.5). The current BOI rate and the curve arrive as
+ * inputs — the engine never hardcodes market data.
+ */
+export interface PrimeTrackInput {
+  id?: string;
+  type: "prime";
+  repaymentMethod: RepaymentMethod;
+  loanAmount: number;
+  years: number;
+  /** The annual rate the bank currently offers the customer, percent. */
+  currentCustomerRatePercent: number;
+  currentBankOfIsraelRatePercent: number;
+  /** Official zero spot yields, months 1..360, annual percent. */
+  forecastZeroYieldsPercent: readonly number[];
+  forecastMode: "official" | "constant" | "stress";
+  /** Parallel shift in percentage points (mode "stress" only). */
+  stressShiftPercent?: number;
+  /** Provenance of the curve used, for display and URL reproducibility. */
+  forecastCurveId?: string;
+  forecastCurvePublicationDate?: string;
+}
+
+/** Input for a single mortgage track. */
+export type MortgageTrackInput = FixedUnlinkedTrackInput | PrimeTrackInput;
 
 /** Minimal parameter set for the Spitzer payment/schedule helpers. */
 export interface SpitzerPaymentParams {
@@ -99,6 +128,8 @@ export interface AmortizationEntry {
   interestPayment: number;
   /** Balance still owed after this month's payment. */
   remainingBalance: number;
+  /** Annual rate active this month, percent. Present on variable tracks. */
+  activeAnnualRatePercent?: number;
 }
 
 /** Computed results for a single track. */
@@ -120,6 +151,33 @@ export interface TrackSummary {
   maximumPayment: number;
   minimumPayment: number;
   schedule: AmortizationEntry[];
+  /**
+   * Prime-track forecast results (Directive 451). Present only when the
+   * track is a prime track; the schedule above is then the forecast
+   * schedule.
+   */
+  forecast?: PrimeForecastSummary;
+}
+
+/** Forecast results for a prime track. */
+export interface PrimeForecastSummary {
+  /** First payment at the currently offered rate (ordinary calculation). */
+  currentFirstPayment: number;
+  forecastFirstPayment: number;
+  forecastMaximumPayment: number;
+  monthOfForecastMaximumPayment: number;
+  forecastLastPayment: number;
+  forecastTotalPayment: number;
+  forecastTotalInterest: number;
+  /** Annualized IRR of (−loan, forecast payments...), percent. */
+  forecastOverallRatePercent: number;
+  /** customerRate − (BOI rate + 1.5), percent. */
+  customerPrimeMarginPercent: number;
+  currentPrimeRatePercent: number;
+  forecastMode: "official" | "constant" | "stress";
+  stressShiftPercent: number;
+  forecastCurveId: string | null;
+  forecastCurvePublicationDate: string | null;
 }
 
 /** Computed results for a whole scenario (all tracks combined). */

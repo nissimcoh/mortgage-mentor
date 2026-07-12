@@ -97,6 +97,98 @@ export function buildSpitzerSchedule({
   return schedule;
 }
 
+export interface VariableRateScheduleParams {
+  loanAmount: number;
+  /** Annual rate in percent for each month (index 0 = month 1). */
+  annualRatePercentPath: readonly number[];
+  numberOfPayments: number;
+}
+
+/**
+ * Spitzer schedule for a rate that may change every month (prime forecast).
+ *
+ * Per Directive 451: each month the payment is re-derived from the opening
+ * balance, the remaining number of payments, and that month's rate. The
+ * balance is carried at full internal precision, only reported values are
+ * rounded, and the final month repays the remaining balance exactly.
+ */
+export function buildVariableRateSpitzerSchedule({
+  loanAmount,
+  annualRatePercentPath,
+  numberOfPayments,
+}: VariableRateScheduleParams): AmortizationEntry[] {
+  const schedule: AmortizationEntry[] = [];
+  let balance = loanAmount;
+
+  for (let month = 1; month <= numberOfPayments; month++) {
+    const annualRatePercent = annualRatePercentPath[month - 1];
+    const monthlyRate = annualRatePercent / 100 / 12;
+    const remaining = numberOfPayments - month + 1;
+
+    const payment =
+      monthlyRate === 0
+        ? balance / remaining
+        : (balance * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -remaining));
+
+    const interestPayment = balance * monthlyRate;
+    let principalPayment = payment - interestPayment;
+    if (month === numberOfPayments || principalPayment >= balance) {
+      principalPayment = balance;
+    }
+    balance -= principalPayment;
+
+    schedule.push({
+      month,
+      payment: roundMoney(principalPayment + interestPayment),
+      principalPayment: roundMoney(principalPayment),
+      interestPayment: roundMoney(interestPayment),
+      remainingBalance: roundMoney(balance),
+      activeAnnualRatePercent: annualRatePercent,
+    });
+  }
+
+  return schedule;
+}
+
+/**
+ * Equal-principal schedule for a rate that may change every month: the
+ * principal portion follows the standard equal-principal method while the
+ * interest uses the rate active in each month, so the payment changes with
+ * both the falling balance and the forecast rates. Ends at exactly 0.
+ */
+export function buildVariableRateEqualPrincipalSchedule({
+  loanAmount,
+  annualRatePercentPath,
+  numberOfPayments,
+}: VariableRateScheduleParams): AmortizationEntry[] {
+  const regularPrincipal = roundMoney(loanAmount / numberOfPayments);
+  const schedule: AmortizationEntry[] = [];
+  let balance = loanAmount;
+
+  for (let month = 1; month <= numberOfPayments; month++) {
+    const annualRatePercent = annualRatePercentPath[month - 1];
+    const monthlyRate = annualRatePercent / 100 / 12;
+
+    const interestPayment = balance * monthlyRate;
+    let principalPayment = regularPrincipal;
+    if (month === numberOfPayments || principalPayment >= balance) {
+      principalPayment = balance;
+    }
+    balance -= principalPayment;
+
+    schedule.push({
+      month,
+      payment: roundMoney(principalPayment + interestPayment),
+      principalPayment: roundMoney(principalPayment),
+      interestPayment: roundMoney(interestPayment),
+      remainingBalance: roundMoney(balance),
+      activeAnnualRatePercent: annualRatePercent,
+    });
+  }
+
+  return schedule;
+}
+
 /**
  * Build a month-by-month equal-principal (קרן שווה) schedule:
  *

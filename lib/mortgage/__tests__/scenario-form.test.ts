@@ -4,12 +4,37 @@ import {
   applyTracksToQuery,
   createTrackDraft,
   duplicateTrackDraft,
+  isPinnedCurveMissing,
   parseAllTrackDrafts,
   parseTrackDraft,
   parseTracksFromQuery,
   sumEnteredTrackAmounts,
+  type MarketContextForParsing,
   type TrackDraft,
 } from "../scenario-form";
+import { createFallbackForecastCurve } from "../../market-data/mortgage-forecast-fallback";
+
+const CURVE = createFallbackForecastCurve("2026-07-12T00:00:00Z");
+const OLDER_CURVE = {
+  ...CURVE,
+  id: "2026-05-calendar",
+  referenceMonth: 5,
+  publicationDate: "2026-06-02",
+};
+const MARKET: MarketContextForParsing = {
+  boiRatePercent: 3.5,
+  curves: [CURVE, OLDER_CURVE],
+};
+
+function primeDraft(overrides?: Partial<TrackDraft>): TrackDraft {
+  return createTrackDraft({
+    trackType: "prime",
+    amount: "500,000",
+    years: "25",
+    currentRatePercent: "4.5",
+    ...overrides,
+  });
+}
 
 function validDraft(overrides?: Partial<TrackDraft>): TrackDraft {
   return createTrackDraft({
@@ -72,6 +97,124 @@ describe("track draft parsing", () => {
     const { id: _a, ...originalValues } = original;
     const { id: _b, ...copyValues } = copy;
     expect(copyValues).toEqual(originalValues);
+  });
+});
+
+describe("prime drafts", () => {
+  it("parses a prime draft into an engine input using the latest curve", () => {
+    const input = parseTrackDraft(primeDraft(), MARKET);
+    expect(input).not.toBeNull();
+    expect(input!.type).toBe("prime");
+    if (input!.type !== "prime") return;
+    expect(input!.loanAmount).toBe(500_000);
+    expect(input!.currentCustomerRatePercent).toBe(4.5);
+    expect(input!.currentBankOfIsraelRatePercent).toBe(3.5);
+    expect(input!.forecastCurveId).toBe("2026-06-calendar");
+    expect(input!.forecastMode).toBe("official");
+    expect(input!.forecastZeroYieldsPercent).toHaveLength(360);
+  });
+
+  it("pins a historical curve by ID when available", () => {
+    const pinned = parseTrackDraft(
+      primeDraft({ forecastCurveId: "2026-05-calendar" }),
+      MARKET,
+    );
+    if (pinned!.type !== "prime") throw new Error("expected prime");
+    expect(pinned!.forecastCurveId).toBe("2026-05-calendar");
+  });
+
+  it("an unknown explicit curve ID never silently resolves to the latest", () => {
+    const draft = primeDraft({ forecastCurveId: "2020-01-calendar" });
+    // Resolution fails outright — the calculation stays invalid instead of
+    // switching curves behind the user's back.
+    expect(parseTrackDraft(draft, MARKET)).toBeNull();
+    expect(isPinnedCurveMissing(draft, MARKET)).toBe(true);
+
+    // Only an explicit user action (clearing the pin) moves to the latest.
+    const cleared = parseTrackDraft(
+      { ...draft, forecastCurveId: "" },
+      MARKET,
+    );
+    if (cleared!.type !== "prime") throw new Error("expected prime");
+    expect(cleared!.forecastCurveId).toBe("2026-06-calendar");
+  });
+
+  it("uses the latest effective curve only when no ID was requested", () => {
+    const input = parseTrackDraft(primeDraft(), MARKET);
+    if (input!.type !== "prime") throw new Error("expected prime");
+    expect(input!.forecastCurveId).toBe("2026-06-calendar");
+    expect(isPinnedCurveMissing(primeDraft(), MARKET)).toBe(false);
+  });
+
+  it("requires market context and a valid rate", () => {
+    expect(parseTrackDraft(primeDraft())).toBeNull(); // no market
+    expect(
+      parseTrackDraft(primeDraft({ currentRatePercent: "" }), MARKET),
+    ).toBeNull();
+  });
+
+  it("parses stress mode with a signed shift and rejects garbage shifts", () => {
+    const stressed = parseTrackDraft(
+      primeDraft({ forecastMode: "stress", stressShift: "-1,5" }),
+      MARKET,
+    );
+    if (stressed!.type !== "prime") throw new Error("expected prime");
+    expect(stressed!.stressShiftPercent).toBe(-1.5);
+
+    expect(
+      parseTrackDraft(
+        primeDraft({ forecastMode: "stress", stressShift: "abc" }),
+        MARKET,
+      ),
+    ).toBeNull();
+  });
+
+  it("falls back to official mode on unknown forecast modes", () => {
+    const input = parseTrackDraft(
+      primeDraft({ forecastMode: "wild-guess" }),
+      MARKET,
+    );
+    if (input!.type !== "prime") throw new Error("expected prime");
+    expect(input!.forecastMode).toBe("official");
+  });
+});
+
+describe("prime URL round-trip", () => {
+  it("serializes prime-only params and never fixed-only params", () => {
+    const query = applyTracksToQuery(new URLSearchParams(), [
+      primeDraft({
+        forecastMode: "stress",
+        stressShift: "1",
+        forecastCurveId: "2026-06-calendar",
+      }),
+    ]);
+    expect(query.get("track1Type")).toBe("prime");
+    expect(query.get("track1CurrentRatePercent")).toBe("4.5");
+    expect(query.get("track1ForecastMode")).toBe("stress");
+    expect(query.get("track1ForecastStressShift")).toBe("1");
+    expect(query.get("track1ForecastCurveId")).toBe("2026-06-calendar");
+    expect(query.get("track1AnnualInterestRatePercent")).toBeNull();
+  });
+
+  it("fixed tracks never carry prime-only params", () => {
+    const query = applyTracksToQuery(new URLSearchParams(), [validDraft()]);
+    expect(query.get("track1CurrentRatePercent")).toBeNull();
+    expect(query.get("track1ForecastMode")).toBeNull();
+    expect(query.get("track1ForecastCurveId")).toBeNull();
+    expect(query.get("track1AnnualInterestRatePercent")).toBe("4.8");
+  });
+
+  it("round-trips a prime track through the URL", () => {
+    const query = applyTracksToQuery(new URLSearchParams(), [
+      primeDraft({ forecastCurveId: "2026-06-calendar" }),
+    ]);
+    const drafts = parseTracksFromQuery(query);
+    expect(drafts).toHaveLength(1);
+    expect(drafts![0].trackType).toBe("prime");
+    expect(drafts![0].currentRatePercent).toBe("4.5");
+    expect(drafts![0].forecastMode).toBe("official");
+    expect(drafts![0].forecastCurveId).toBe("2026-06-calendar");
+    expect(parseAllTrackDrafts(drafts!, MARKET)).toHaveLength(1);
   });
 });
 
@@ -175,7 +318,7 @@ describe("URL parsing", () => {
 
     const junk = parseTracksFromQuery(
       new URLSearchParams(
-        "trackCount=99&track1Amount=abc&track1Years=99&track1Type=prime&track1RepaymentMethod=balloon",
+        "trackCount=99&track1Amount=abc&track1Years=99&track1Type=cpiLinked&track1RepaymentMethod=balloon",
       ),
     );
     expect(junk).toHaveLength(1);

@@ -104,6 +104,13 @@ export default function AmortizationSchedule({
 
   const firstEntry = schedule[0];
   const lastEntry = schedule[schedule.length - 1];
+  // Variable-rate (prime forecast) schedules carry the active annual rate.
+  const showRateColumn = firstEntry?.activeAnnualRatePercent !== undefined;
+  const rateFormat = new Intl.NumberFormat(intlLocale, {
+    style: "percent",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 
   // Sticky header cells need their own background and bottom border because
   // they detach from their row while the body scrolls beneath them.
@@ -147,6 +154,11 @@ export default function AmortizationSchedule({
               <th scope="col" className={`${stickyHeader} text-start`}>
                 {labels.monthHeader}
               </th>
+              {showRateColumn && (
+                <th scope="col" className={numericHeader}>
+                  {labels.rateHeader}
+                </th>
+              )}
               <th scope="col" className={numericHeader}>
                 {labels.paymentHeader}
               </th>
@@ -170,6 +182,13 @@ export default function AmortizationSchedule({
                 <td className="px-4 py-2.5 text-start text-slate-500">
                   {entry.month}
                 </td>
+                {showRateColumn && (
+                  <td className={numericCell}>
+                    {entry.activeAnnualRatePercent === undefined
+                      ? "—"
+                      : rateFormat.format(entry.activeAnnualRatePercent / 100)}
+                  </td>
+                )}
                 <td className={numericCell}>{formatCurrency(entry.payment)}</td>
                 <td className={numericCell}>
                   {formatCurrency(entry.principalPayment)}

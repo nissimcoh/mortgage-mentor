@@ -4,3 +4,4 @@ export * from "./types";
 export * from "./interest";
 export * from "./amortization";
 export * from "./calculations";
+export * from "./forecast";
