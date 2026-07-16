@@ -14,10 +14,20 @@ import {
   parseWholeAmount,
 } from "../forms/numeric";
 import { isPrimeForecastMode, type PrimeForecastMode } from "./forecast";
+import {
+  isGovernmentBondResetMonths,
+  isGovernmentBondTermValid,
+  isMakamTermValid,
+} from "./product-catalog";
 import type { MortgageTrackInput } from "./types";
 
 // The values the UI currently exposes.
-export const SUPPORTED_TRACK_TYPES = ["fixedUnlinked", "prime"] as const;
+export const SUPPORTED_TRACK_TYPES = [
+  "fixedUnlinked",
+  "prime",
+  "variableGovernmentBond",
+  "variableMakam",
+] as const;
 export type SupportedTrackType = (typeof SUPPORTED_TRACK_TYPES)[number];
 export const SUPPORTED_TRACK_TYPE = "fixedUnlinked"; // default track type
 export const SUPPORTED_REPAYMENT_METHODS = ["spitzer", "equalPrincipal"] as const;
@@ -26,6 +36,15 @@ export type SupportedRepaymentMethod =
 export const DEFAULT_REPAYMENT_METHOD: SupportedRepaymentMethod = "spitzer";
 export const DEFAULT_FORECAST_MODE: PrimeForecastMode = "official";
 
+/** Track types whose future rate comes from the official forecast data. */
+export function isVariableStyleTrackType(value: string): boolean {
+  return (
+    value === "prime" ||
+    value === "variableGovernmentBond" ||
+    value === "variableMakam"
+  );
+}
+
 function isSupportedTrackType(
   value: string | null,
 ): value is SupportedTrackType {
@@ -33,8 +52,9 @@ function isSupportedTrackType(
 }
 
 /**
- * The market context prime tracks need at parse time: the current BOI rate
- * and the available official forecast curves (newest first).
+ * The market context variable-style tracks need at parse time: the current
+ * BOI rate, the available official forecast curves (newest first), and the
+ * available official Makam anchor snapshots (newest first).
  */
 export interface MarketContextForParsing {
   boiRatePercent: number;
@@ -42,6 +62,10 @@ export interface MarketContextForParsing {
     id: string;
     publicationDate: string;
     nominalZeroYieldsPercent: readonly number[];
+  }>;
+  makamSnapshots?: ReadonlyArray<{
+    id: string;
+    anchorPercent: number;
   }>;
 }
 
@@ -67,14 +91,18 @@ export interface TrackDraft {
   years: string;
   trackType: string;
   repaymentMethod: string;
-  /** Prime tracks: the annual rate the bank currently offers. */
+  /** Prime/variable tracks: the annual rate the bank currently offers. */
   currentRatePercent: string;
-  /** Prime tracks: "official" | "constant" | "stress". */
+  /** Gov-bond tracks: reset period in months ("" until chosen). */
+  resetPeriodMonths: string;
+  /** Prime/variable tracks: "official" | "constant" | "stress". */
   forecastMode: string;
-  /** Prime tracks, mode "stress": parallel shift in percentage points. */
+  /** Prime/variable tracks, mode "stress": shift in percentage points. */
   stressShift: string;
-  /** Prime tracks: the official curve the last calculation used. */
+  /** Prime/variable tracks: the official curve the last calculation used. */
   forecastCurveId: string;
+  /** Makam tracks: the anchor snapshot the last calculation used. */
+  makamSnapshotId: string;
 }
 
 // Deterministic module-level counter: stable keys without pulling in a
@@ -93,11 +121,40 @@ export function createTrackDraft(
     trackType: SUPPORTED_TRACK_TYPE,
     repaymentMethod: DEFAULT_REPAYMENT_METHOD,
     currentRatePercent: "",
+    resetPeriodMonths: "",
     forecastMode: DEFAULT_FORECAST_MODE,
     stressShift: "",
     forecastCurveId: "",
+    makamSnapshotId: "",
     ...seed,
   };
+}
+
+/** A gov-bond reset value, or "" when missing/invalid (user must choose). */
+export function sanitizeGovernmentBondReset(raw: string | null): string {
+  const months = Number(raw);
+  return isGovernmentBondResetMonths(months) ? String(months) : "";
+}
+
+/**
+ * A gov-bond term is valid only as an exact catalog option for the chosen
+ * reset frequency; anything else (including a missing frequency) yields ""
+ * so the user must make an explicit valid choice — never a substitution.
+ */
+export function sanitizeGovernmentBondYears(
+  resetRaw: string,
+  yearsRaw: string | null,
+): string {
+  const reset = Number(resetRaw);
+  if (!isGovernmentBondResetMonths(reset)) return "";
+  const years = Number(yearsRaw);
+  return isGovernmentBondTermValid(reset, years) ? String(years) : "";
+}
+
+/** A Makam term (whole years from the catalog), or "". */
+export function sanitizeMakamYears(raw: string | null): string {
+  const years = Number(raw);
+  return isMakamTermValid(years) ? String(years) : "";
 }
 
 /** Copy a track's values under a fresh stable ID. */
@@ -146,9 +203,42 @@ export function isPinnedCurveMissing(
   market: MarketContextForParsing,
 ): boolean {
   return (
-    draft.trackType === "prime" &&
+    isVariableStyleTrackType(draft.trackType) &&
     draft.forecastCurveId !== "" &&
     !market.curves.some((curve) => curve.id === draft.forecastCurveId)
+  );
+}
+
+/**
+ * Pick the Makam anchor snapshot a Makam draft should use. Same strict
+ * pinning semantics as forecast curves: an unknown pinned snapshot ID
+ * yields null, never a silent substitution.
+ */
+export function resolveMakamSnapshot(
+  draft: TrackDraft,
+  market: MarketContextForParsing,
+) {
+  const snapshots = market.makamSnapshots ?? [];
+  if (draft.makamSnapshotId !== "") {
+    return (
+      snapshots.find((snapshot) => snapshot.id === draft.makamSnapshotId) ??
+      null
+    );
+  }
+  return snapshots[0] ?? null;
+}
+
+/** True when the draft pins a Makam snapshot ID that is not available. */
+export function isPinnedMakamSnapshotMissing(
+  draft: TrackDraft,
+  market: MarketContextForParsing,
+): boolean {
+  return (
+    draft.trackType === "variableMakam" &&
+    draft.makamSnapshotId !== "" &&
+    !(market.makamSnapshots ?? []).some(
+      (snapshot) => snapshot.id === draft.makamSnapshotId,
+    )
   );
 }
 
@@ -169,10 +259,22 @@ export function parseTrackDraft(
   }
 
   const loanAmount = parseWholeAmount(draft.amount);
+  if (loanAmount === null || loanAmount <= 0) return null;
+
   const years = Number(draft.years);
-  if (
-    loanAmount === null ||
-    loanAmount <= 0 ||
+  // Years validation is product-specific: catalog options for the two
+  // variable products, whole 1..30 years for fixed/prime.
+  if (draft.trackType === "variableGovernmentBond") {
+    const reset = Number(draft.resetPeriodMonths);
+    if (
+      !isGovernmentBondResetMonths(reset) ||
+      !isGovernmentBondTermValid(reset, years)
+    ) {
+      return null;
+    }
+  } else if (draft.trackType === "variableMakam") {
+    if (!isMakamTermValid(years)) return null;
+  } else if (
     !Number.isInteger(years) ||
     years < MIN_YEARS ||
     years > MAX_YEARS
@@ -180,7 +282,7 @@ export function parseTrackDraft(
     return null;
   }
 
-  if (draft.trackType === "prime") {
+  if (isVariableStyleTrackType(draft.trackType)) {
     if (!market) return null;
     const curve = resolveForecastCurve(draft, market);
     if (!curve || curve.nominalZeroYieldsPercent.length < years * 12) {
@@ -199,18 +301,46 @@ export function parseTrackDraft(
       stressShiftPercent = shift;
     }
 
-    return {
-      type: "prime",
-      repaymentMethod: draft.repaymentMethod,
+    const shared = {
       loanAmount,
       years,
       currentCustomerRatePercent: currentRatePercent,
-      currentBankOfIsraelRatePercent: market.boiRatePercent,
       forecastZeroYieldsPercent: curve.nominalZeroYieldsPercent,
       forecastMode,
       stressShiftPercent,
       forecastCurveId: curve.id,
       forecastCurvePublicationDate: curve.publicationDate,
+    } as const;
+
+    if (draft.trackType === "variableGovernmentBond") {
+      const reset = Number(draft.resetPeriodMonths);
+      if (!isGovernmentBondResetMonths(reset)) return null;
+      return {
+        type: "variableGovernmentBond",
+        repaymentMethod: "spitzer", // preset-verified product method
+        resetPeriodMonths: reset,
+        ...shared,
+      };
+    }
+
+    if (draft.trackType === "variableMakam") {
+      const snapshot = resolveMakamSnapshot(draft, market);
+      if (!snapshot) return null;
+      return {
+        type: "variableMakam",
+        repaymentMethod: "spitzer", // preset-verified product method
+        resetPeriodMonths: 12,
+        currentMakamAnchorPercent: snapshot.anchorPercent,
+        makamSnapshotId: snapshot.id,
+        ...shared,
+      };
+    }
+
+    return {
+      type: "prime",
+      repaymentMethod: draft.repaymentMethod,
+      currentBankOfIsraelRatePercent: market.boiRatePercent,
+      ...shared,
     };
   }
 
@@ -290,18 +420,43 @@ export function applyTracksToQuery(
     if (amount !== null && amount > 0) {
       query.set(`${prefix}Amount`, String(amount));
     }
-    const years = sanitizeYears(draft.years);
+
+    // Years serialization is product-specific: catalog decimals allowed
+    // only for the government-bond product.
+    const years =
+      draft.trackType === "variableGovernmentBond"
+        ? sanitizeGovernmentBondYears(draft.resetPeriodMonths, draft.years)
+        : draft.trackType === "variableMakam"
+          ? sanitizeMakamYears(draft.years)
+          : sanitizeYears(draft.years);
     if (years !== "") {
       query.set(`${prefix}Years`, years);
     }
     query.set(`${prefix}Type`, draft.trackType);
-    query.set(`${prefix}RepaymentMethod`, draft.repaymentMethod);
+    // Preset products are Spitzer-only; never serialize another method.
+    query.set(
+      `${prefix}RepaymentMethod`,
+      draft.trackType === "variableGovernmentBond" ||
+        draft.trackType === "variableMakam"
+        ? "spitzer"
+        : draft.repaymentMethod,
+    );
 
-    if (draft.trackType === "prime") {
-      // Prime-only params; fixed-rate-only params are never written here.
+    if (isVariableStyleTrackType(draft.trackType)) {
+      // Variable-style params; fixed-rate-only params are never written here.
       const currentRate = parseDecimalRate(draft.currentRatePercent);
       if (currentRate !== null) {
         query.set(`${prefix}CurrentRatePercent`, String(currentRate));
+      }
+      if (draft.trackType === "variableGovernmentBond") {
+        // Reset period is gov-bond-only; never written for prime/Makam.
+        const reset = sanitizeGovernmentBondReset(draft.resetPeriodMonths);
+        if (reset !== "") {
+          query.set(`${prefix}ResetPeriodMonths`, reset);
+        }
+      }
+      if (draft.trackType === "variableMakam" && draft.makamSnapshotId !== "") {
+        query.set(`${prefix}MakamSnapshotId`, draft.makamSnapshotId);
       }
       const mode = isPrimeForecastMode(draft.forecastMode)
         ? draft.forecastMode
@@ -315,7 +470,7 @@ export function applyTracksToQuery(
         query.set(`${prefix}ForecastCurveId`, draft.forecastCurveId);
       }
     } else {
-      // Fixed-only params; prime-only params are never written here.
+      // Fixed-only params; variable-style params are never written here.
       const rate = parseDecimalRate(draft.ratePercent);
       if (rate !== null) {
         query.set(`${prefix}AnnualInterestRatePercent`, String(rate));
@@ -356,35 +511,65 @@ export function parseTracksFromQuery(
     const drafts: TrackDraft[] = [];
     for (let index = 1; index <= count; index++) {
       const prefix = `track${index}`;
-      const type = query.get(`${prefix}Type`);
+      const rawType = query.get(`${prefix}Type`);
       const method = query.get(`${prefix}RepaymentMethod`);
-      const trackType = isSupportedTrackType(type)
-        ? type
-        : SUPPORTED_TRACK_TYPE;
+      // MIGRATION: the retired generic "variableUnlinked" type loads as a
+      // government-bond track. Its 24/60-month resets exist in the new
+      // catalog and are kept; a 12-month (or other) reset has no gov-bond
+      // product and is NOT silently reinterpreted (not even as Makam) —
+      // the frequency loads unset and the user must explicitly re-choose.
+      const isLegacyVariable = rawType === "variableUnlinked";
+      const trackType = isLegacyVariable
+        ? "variableGovernmentBond"
+        : isSupportedTrackType(rawType)
+          ? rawType
+          : SUPPORTED_TRACK_TYPE;
+      const isVariableStyle = isVariableStyleTrackType(trackType);
       const mode = query.get(`${prefix}ForecastMode`);
+
+      const resetPeriodMonths =
+        trackType === "variableGovernmentBond"
+          ? sanitizeGovernmentBondReset(
+              query.get(`${prefix}ResetPeriodMonths`),
+            )
+          : "";
+      const yearsRaw = query.get(`${prefix}Years`);
+      const years =
+        trackType === "variableGovernmentBond"
+          ? sanitizeGovernmentBondYears(resetPeriodMonths, yearsRaw)
+          : trackType === "variableMakam"
+            ? sanitizeMakamYears(yearsRaw)
+            : sanitizeYears(yearsRaw ?? "");
+
       drafts.push(
         createTrackDraft({
           amount: formatAmountForDisplay(query.get(`${prefix}Amount`) ?? ""),
-          ratePercent:
-            trackType === "prime"
-              ? ""
-              : (query.get(`${prefix}AnnualInterestRatePercent`) ?? ""),
-          years: sanitizeYears(query.get(`${prefix}Years`) ?? ""),
+          ratePercent: isVariableStyle
+            ? ""
+            : (query.get(`${prefix}AnnualInterestRatePercent`) ?? ""),
+          years,
           trackType,
-          repaymentMethod: isSupportedRepaymentMethod(method)
-            ? method
-            : DEFAULT_REPAYMENT_METHOD,
-          currentRatePercent:
-            trackType === "prime"
-              ? (query.get(`${prefix}CurrentRatePercent`) ?? "")
-              : "",
+          repaymentMethod:
+            trackType === "variableGovernmentBond" ||
+            trackType === "variableMakam"
+              ? "spitzer"
+              : isSupportedRepaymentMethod(method)
+                ? method
+                : DEFAULT_REPAYMENT_METHOD,
+          currentRatePercent: isVariableStyle
+            ? (query.get(`${prefix}CurrentRatePercent`) ?? "")
+            : "",
+          resetPeriodMonths,
           forecastMode: isPrimeForecastMode(mode)
             ? mode
             : DEFAULT_FORECAST_MODE,
           stressShift: query.get(`${prefix}ForecastStressShift`) ?? "",
-          forecastCurveId:
-            trackType === "prime"
-              ? (query.get(`${prefix}ForecastCurveId`) ?? "")
+          forecastCurveId: isVariableStyle
+            ? (query.get(`${prefix}ForecastCurveId`) ?? "")
+            : "",
+          makamSnapshotId:
+            trackType === "variableMakam"
+              ? (query.get(`${prefix}MakamSnapshotId`) ?? "")
               : "",
         }),
       );

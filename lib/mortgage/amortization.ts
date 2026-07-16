@@ -130,6 +130,7 @@ export function buildVariableRateSpitzerSchedule({
         ? balance / remaining
         : (balance * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -remaining));
 
+    const openingBalance = balance;
     const interestPayment = balance * monthlyRate;
     let principalPayment = payment - interestPayment;
     if (month === numberOfPayments || principalPayment >= balance) {
@@ -144,6 +145,59 @@ export function buildVariableRateSpitzerSchedule({
       interestPayment: roundMoney(interestPayment),
       remainingBalance: roundMoney(balance),
       activeAnnualRatePercent: annualRatePercent,
+      openingBalance: roundMoney(openingBalance),
+    });
+  }
+
+  return schedule;
+}
+
+/**
+ * Spitzer schedule for a rate that changes only at block boundaries
+ * (variable-unlinked tracks). The payment is derived once per rate block —
+ * from the opening balance, the block's rate, and the remaining number of
+ * payments — and stays UNCHANGED until the next reset (unlike the monthly
+ * repricing prime uses). Final month clears the balance exactly.
+ */
+export function buildBlockRepricedSpitzerSchedule({
+  loanAmount,
+  annualRatePercentPath,
+  numberOfPayments,
+}: VariableRateScheduleParams): AmortizationEntry[] {
+  const schedule: AmortizationEntry[] = [];
+  let balance = loanAmount;
+  let payment = 0;
+
+  for (let month = 1; month <= numberOfPayments; month++) {
+    const annualRatePercent = annualRatePercentPath[month - 1];
+    const monthlyRate = annualRatePercent / 100 / 12;
+
+    // Reprice only when the active rate changes (a reset boundary).
+    if (month === 1 || annualRatePercent !== annualRatePercentPath[month - 2]) {
+      const remaining = numberOfPayments - month + 1;
+      payment =
+        monthlyRate === 0
+          ? balance / remaining
+          : (balance * monthlyRate) /
+            (1 - Math.pow(1 + monthlyRate, -remaining));
+    }
+
+    const openingBalance = balance;
+    const interestPayment = balance * monthlyRate;
+    let principalPayment = payment - interestPayment;
+    if (month === numberOfPayments || principalPayment >= balance) {
+      principalPayment = balance;
+    }
+    balance -= principalPayment;
+
+    schedule.push({
+      month,
+      payment: roundMoney(principalPayment + interestPayment),
+      principalPayment: roundMoney(principalPayment),
+      interestPayment: roundMoney(interestPayment),
+      remainingBalance: roundMoney(balance),
+      activeAnnualRatePercent: annualRatePercent,
+      openingBalance: roundMoney(openingBalance),
     });
   }
 
@@ -169,6 +223,7 @@ export function buildVariableRateEqualPrincipalSchedule({
     const annualRatePercent = annualRatePercentPath[month - 1];
     const monthlyRate = annualRatePercent / 100 / 12;
 
+    const openingBalance = balance;
     const interestPayment = balance * monthlyRate;
     let principalPayment = regularPrincipal;
     if (month === numberOfPayments || principalPayment >= balance) {
@@ -183,6 +238,7 @@ export function buildVariableRateEqualPrincipalSchedule({
       interestPayment: roundMoney(interestPayment),
       remainingBalance: roundMoney(balance),
       activeAnnualRatePercent: annualRatePercent,
+      openingBalance: roundMoney(openingBalance),
     });
   }
 

@@ -123,6 +123,20 @@ describe("effective-curve selection", () => {
     expect(onJul3[0].id).toBe("2026-06-index");
   });
 
+  it("keeps reference, publication, effective, and fetch dates separate", () => {
+    const [latest] = selectEffectiveCurves(
+      nominalRows, realRows, schedule, new Date("2026-07-12T10:00:00Z"), FETCHED_AT,
+    );
+    expect(latest.referenceYear).toBe(2026);
+    expect(latest.referenceMonth).toBe(6); // observation period: June
+    expect(latest.publicationDate).toBe("2026-07-02");
+    expect(latest.effectiveDate).toBe("2026-07-05");
+    expect(latest.fetchedAt).toBe(FETCHED_AT);
+    // All four are distinct facts.
+    expect(latest.publicationDate).not.toBe(latest.effectiveDate);
+    expect(latest.fetchedAt).not.toBe(latest.publicationDate);
+  });
+
   it("produces valid snapshots with empty real curves allowed", () => {
     const curves = selectEffectiveCurves(
       nominalRows, realRows, schedule, new Date("2026-07-12T10:00:00Z"), FETCHED_AT,

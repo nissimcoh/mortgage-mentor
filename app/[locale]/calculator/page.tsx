@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { isValidLocale } from "@/lib/i18n/config";
 import { getMarketSnapshot } from "@/lib/market-data/get-market-snapshot";
 import { getMortgageForecastData } from "@/lib/market-data/sources/boi-mortgage-forecast";
+import { getMakamAnchorData } from "@/lib/market-data/sources/boi-makam";
 import MortgageCalculator from "@/components/MortgageCalculator";
 import { getDictionary } from "../dictionaries";
 
@@ -45,23 +46,36 @@ export default async function CalculatorPage({
     .flatMap(([, value]) =>
       typeof value === "string" ? [value] : (value ?? []),
     );
+  const requestedMakamIds = Object.entries(query)
+    .filter(([key]) => /^track\d+MakamSnapshotId$/.test(key))
+    .flatMap(([, value]) =>
+      typeof value === "string" ? [value] : (value ?? []),
+    );
 
   // Server-side only: BOI rate + official Directive-451 forecast curves.
   // Both degrade to dated fallbacks and never throw. Only normalized,
   // serializable data crosses to the client — the latest curve plus any
   // explicitly requested historical curves (the real curve stays server-
   // side until CPI tracks exist).
-  const [marketSnapshot, forecastData] = await Promise.all([
+  const [marketSnapshot, forecastData, makamData] = await Promise.all([
     getMarketSnapshot(),
     getMortgageForecastData(requestedCurveIds),
+    getMakamAnchorData(requestedMakamIds),
   ]);
   const marketData = {
     boiRatePercent: marketSnapshot.boiRate.ratePercent,
+    boiRateEffectiveDate: marketSnapshot.boiRate.effectiveDate,
+    boiRateStatus: (marketSnapshot.boiRate.isLive ? "live" : "fallback") as
+      | "live"
+      | "fallback",
+    marketFetchedAt: marketSnapshot.fetchedAt,
     curves: forecastData.curves.map((curve) => ({
       ...curve,
       realZeroYieldsPercent: [],
     })),
     curveStatus: forecastData.status,
+    makamSnapshots: makamData.snapshots,
+    makamStatus: makamData.status,
   };
 
   return (

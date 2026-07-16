@@ -233,6 +233,28 @@ describe("prime in scenarios and modes", () => {
     });
     expect(constant.forecast!.forecastFirstPayment).toBe(2779.16);
     expect(constant.forecast!.forecastMaximumPayment).toBe(2779.16);
+    // Current and forecast first payments coincide, so the UI shows only
+    // one first-payment result (difference below the 0.01 ILS threshold).
+    expect(constant.forecast!.currentFirstPayment).toBe(
+      constant.forecast!.forecastFirstPayment,
+    );
+  });
+
+  it("keeps forecast rates on the schedule unchanged by the display work", () => {
+    const summary = calculateTrackSummary(goldenTrack);
+    const path = buildPrimeRatePathPercent({
+      months: 300,
+      currentCustomerRatePercent: 4.5,
+      currentBankOfIsraelRatePercent: 3.5,
+      zeroYieldsPercent: NOMINAL,
+      forecastMode: "official",
+    });
+    for (let index = 0; index < 300; index++) {
+      expect(summary.schedule[index].activeAnnualRatePercent).toBeCloseTo(
+        path[index],
+        10,
+      );
+    }
   });
 
   it("mixes prime and fixedUnlinked tracks in one scenario", () => {
@@ -259,6 +281,69 @@ describe("prime in scenarios and modes", () => {
     // Combined payment drops after the 10-year fixed track ends.
     expect(scenario.combinedSchedule[120].payment).toBeLessThan(
       scenario.combinedSchedule[119].payment,
+    );
+  });
+
+  it("sums current and forecast month-1 payments separately in a mix", () => {
+    const scenario = calculateScenarioSummary({
+      tracks: [
+        goldenTrack,
+        {
+          type: "fixedUnlinked",
+          repaymentMethod: "spitzer",
+          loanAmount: 300_000,
+          annualInterestRatePercent: 4.8,
+          interestRateInputMode: "nominalAnnual",
+          years: 10,
+        },
+      ],
+    });
+    const fixedFirst = scenario.trackSummaries[1].firstPayment;
+
+    // Current: prime at today's offered 4.5% + fixed first payment.
+    expect(scenario.currentCombinedFirstPayment).toBeCloseTo(
+      2779.16 + fixedFirst,
+      2,
+    );
+    // Forecast: prime month 1 of the official forecast + fixed first payment.
+    expect(scenario.forecastCombinedFirstPayment).toBeCloseTo(
+      2815.3 + fixedFirst,
+      1,
+    );
+    // They differ meaningfully, so the UI shows both.
+    expect(
+      Math.abs(
+        scenario.forecastCombinedFirstPayment -
+          scenario.currentCombinedFirstPayment,
+      ),
+    ).toBeGreaterThanOrEqual(0.01);
+  });
+
+  it("weights the combined month-1 rate across prime and fixed tracks", () => {
+    const scenario = calculateScenarioSummary({
+      tracks: [
+        goldenTrack, // 500k, month-1 rate 4.6269%
+        {
+          type: "fixedUnlinked",
+          repaymentMethod: "spitzer",
+          loanAmount: 300_000,
+          annualInterestRatePercent: 4.8,
+          interestRateInputMode: "nominalAnnual",
+          years: 10,
+        },
+      ],
+    });
+    // (500k·4.6269 + 300k·4.8) / 800k
+    expect(scenario.combinedSchedule[0].activeAnnualRatePercent).toBeCloseTo(
+      (500_000 * 4.6269 + 300_000 * 4.8) / 800_000,
+      6,
+    );
+    // After the fixed track ends, only the prime forecast rate remains.
+    expect(
+      scenario.combinedSchedule[120].activeAnnualRatePercent,
+    ).toBeCloseTo(
+      scenario.trackSummaries[0].schedule[120].activeAnnualRatePercent!,
+      10,
     );
   });
 });

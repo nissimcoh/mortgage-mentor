@@ -69,6 +69,14 @@ describe("fixedUnlinked + spitzer reference example", () => {
       2,
     );
   });
+
+  it("stamps the constant annual rate on every schedule row", () => {
+    expect(
+      summary.schedule.every(
+        (entry) => entry.activeAnnualRatePercent === 4.8,
+      ),
+    ).toBe(true);
+  });
 });
 
 describe("interest rate input modes", () => {
@@ -342,5 +350,43 @@ describe("multi-track scenario", () => {
       2,
     );
     expect(scenario.finalBalance).toBe(0);
+  });
+
+  it("weights the combined month-1 rate by original balances", () => {
+    // (800k·4.8 + 400k·3.9) / 1.2M = 4.5
+    expect(scenario.combinedSchedule[0].activeAnnualRatePercent).toBeCloseTo(
+      4.5,
+      10,
+    );
+  });
+
+  it("re-weights later months as balances amortize differently", () => {
+    const [long, short] = scenario.trackSummaries;
+    const month = 60;
+    const longOpening = long.schedule[month - 2].remainingBalance;
+    const shortOpening = short.schedule[month - 2].remainingBalance;
+    const expected =
+      (longOpening * 4.8 + shortOpening * 3.9) / (longOpening + shortOpening);
+    expect(
+      scenario.combinedSchedule[month - 1].activeAnnualRatePercent,
+    ).toBeCloseTo(expected, 10);
+    // The 10-year track amortizes faster, so the mix drifts toward 4.8.
+    expect(expected).toBeGreaterThan(4.5);
+  });
+
+  it("includes only active tracks after a shorter track ends", () => {
+    // From month 121 only the 25-year 4.8% track remains.
+    expect(
+      scenario.combinedSchedule[120].activeAnnualRatePercent,
+    ).toBeCloseTo(4.8, 10);
+  });
+
+  it("current and forecast combined first payments coincide for fixed-only mixes", () => {
+    expect(scenario.currentCombinedFirstPayment).toBe(
+      scenario.forecastCombinedFirstPayment,
+    );
+    expect(scenario.forecastCombinedFirstPayment).toBe(
+      scenario.combinedSchedule[0].payment,
+    );
   });
 });

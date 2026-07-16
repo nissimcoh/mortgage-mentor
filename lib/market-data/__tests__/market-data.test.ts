@@ -229,6 +229,31 @@ describe("snapshot assembly and fallback behavior", () => {
     expect(validateMarketSnapshot(snapshot)).toBe(true);
   });
 
+  it("keeps the CPI reference month and fetchedAt as separate facts", () => {
+    // Observed month: May 2026. Assembled (fetched): July 2026. The
+    // snapshot must never conflate "when we checked" with "what month the
+    // observation describes".
+    const snapshot = assembleSnapshot(
+      { boi: liveBoi, cpi: liveCpi, errors: [] },
+      NOW,
+    );
+    expect(snapshot.cpi.referenceYear).toBe(2026);
+    expect(snapshot.cpi.referenceMonth).toBe(5);
+    expect(snapshot.fetchedAt).toBe(NOW.toISOString());
+    expect(snapshot.fetchedAt.startsWith("2026-07")).toBe(true);
+  });
+
+  it("fallback market data is never labeled live", () => {
+    const snapshot = assembleSnapshot(
+      { boi: null, cpi: null, errors: [] },
+      NOW,
+    );
+    expect(snapshot.status).toBe("fallback");
+    expect(snapshot.boiRate.isLive).toBe(false);
+    expect(snapshot.cpi.isLive).toBe(false);
+    expect(snapshot.primeRate.isLive).toBe(false);
+  });
+
   it("marks live-but-old observations as stale", () => {
     const snapshot = assembleSnapshot(
       {

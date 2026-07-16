@@ -24,6 +24,10 @@ const OLDER_CURVE = {
 const MARKET: MarketContextForParsing = {
   boiRatePercent: 3.5,
   curves: [CURVE, OLDER_CURVE],
+  makamSnapshots: [
+    { id: "2026-06", anchorPercent: 3.2644 },
+    { id: "2026-05", anchorPercent: 3.6297 },
+  ],
 };
 
 function primeDraft(overrides?: Partial<TrackDraft>): TrackDraft {
@@ -176,6 +180,201 @@ describe("prime drafts", () => {
     );
     if (input!.type !== "prime") throw new Error("expected prime");
     expect(input!.forecastMode).toBe("official");
+  });
+});
+
+describe("government-bond drafts and URL round-trip", () => {
+  function governmentBondDraft(
+    overrides?: Partial<TrackDraft>,
+  ): TrackDraft {
+    return createTrackDraft({
+      trackType: "variableGovernmentBond",
+      amount: "200,000",
+      years: "20",
+      currentRatePercent: "4",
+      resetPeriodMonths: "24",
+      ...overrides,
+    });
+  }
+
+  it("parses a gov-bond draft with its reset period, Spitzer-forced", () => {
+    const input = parseTrackDraft(governmentBondDraft(), MARKET);
+    expect(input).not.toBeNull();
+    if (input!.type !== "variableGovernmentBond") throw new Error("expected gov-bond");
+    expect(input!.resetPeriodMonths).toBe(24);
+    expect(input!.repaymentMethod).toBe("spitzer");
+    expect(input!.currentCustomerRatePercent).toBe(4);
+    expect(input!.forecastCurveId).toBe("2026-06-calendar");
+  });
+
+  it("rejects non-catalog reset periods and off-catalog terms", () => {
+    expect(
+      parseTrackDraft(governmentBondDraft({ resetPeriodMonths: "17" }), MARKET),
+    ).toBeNull();
+    expect(
+      parseTrackDraft(governmentBondDraft({ resetPeriodMonths: "" }), MARKET),
+    ).toBeNull();
+    // 13 years is not an option of the 24-month product.
+    expect(
+      parseTrackDraft(governmentBondDraft({ years: "13" }), MARKET),
+    ).toBeNull();
+    // 7.5 years belongs only to the 30-month product.
+    expect(
+      parseTrackDraft(governmentBondDraft({ years: "7.5" }), MARKET),
+    ).toBeNull();
+    const halfYear = parseTrackDraft(
+      governmentBondDraft({ resetPeriodMonths: "30", years: "7.5" }),
+      MARKET,
+    );
+    expect(halfYear).not.toBeNull();
+  });
+
+  it("enforces strict curve pinning for gov-bond tracks too", () => {
+    const draft = governmentBondDraft({ forecastCurveId: "2020-01-calendar" });
+    expect(parseTrackDraft(draft, MARKET)).toBeNull();
+    expect(isPinnedCurveMissing(draft, MARKET)).toBe(true);
+  });
+
+  it("serializes gov-bond params, including decimal years", () => {
+    const query = applyTracksToQuery(new URLSearchParams(), [
+      governmentBondDraft({
+        resetPeriodMonths: "30",
+        years: "7.5",
+        forecastCurveId: "2026-06-calendar",
+      }),
+    ]);
+    expect(query.get("track1Type")).toBe("variableGovernmentBond");
+    expect(query.get("track1CurrentRatePercent")).toBe("4");
+    expect(query.get("track1ResetPeriodMonths")).toBe("30");
+    expect(query.get("track1Years")).toBe("7.5");
+    expect(query.get("track1RepaymentMethod")).toBe("spitzer");
+    expect(query.get("track1ForecastCurveId")).toBe("2026-06-calendar");
+    expect(query.get("track1AnnualInterestRatePercent")).toBeNull();
+    expect(query.get("track1MakamSnapshotId")).toBeNull();
+  });
+
+  it("never writes reset-period params for prime or fixed tracks", () => {
+    const primeQuery = applyTracksToQuery(new URLSearchParams(), [
+      primeDraft(),
+    ]);
+    expect(primeQuery.get("track1ResetPeriodMonths")).toBeNull();
+    const fixedQuery = applyTracksToQuery(new URLSearchParams(), [
+      validDraft(),
+    ]);
+    expect(fixedQuery.get("track1ResetPeriodMonths")).toBeNull();
+    expect(fixedQuery.get("track1CurrentRatePercent")).toBeNull();
+  });
+
+  it("round-trips a gov-bond track with decimal years through the URL", () => {
+    const query = applyTracksToQuery(new URLSearchParams(), [
+      governmentBondDraft({
+        resetPeriodMonths: "30",
+        years: "12.5",
+        forecastCurveId: "2026-06-calendar",
+      }),
+    ]);
+    const drafts = parseTracksFromQuery(query);
+    expect(drafts).toHaveLength(1);
+    expect(drafts![0].trackType).toBe("variableGovernmentBond");
+    expect(drafts![0].resetPeriodMonths).toBe("30");
+    expect(drafts![0].years).toBe("12.5");
+    expect(parseAllTrackDrafts(drafts!, MARKET)).toHaveLength(1);
+  });
+});
+
+describe("Makam drafts and URL round-trip", () => {
+  function makamDraft(overrides?: Partial<TrackDraft>): TrackDraft {
+    return createTrackDraft({
+      trackType: "variableMakam",
+      amount: "150,000",
+      years: "12",
+      currentRatePercent: "4.1",
+      ...overrides,
+    });
+  }
+
+  it("parses a Makam draft with the latest anchor snapshot", () => {
+    const input = parseTrackDraft(makamDraft(), MARKET);
+    expect(input).not.toBeNull();
+    if (input!.type !== "variableMakam") throw new Error("expected makam");
+    expect(input!.resetPeriodMonths).toBe(12);
+    expect(input!.repaymentMethod).toBe("spitzer");
+    expect(input!.currentMakamAnchorPercent).toBeCloseTo(3.2644, 4);
+    expect(input!.makamSnapshotId).toBe("2026-06");
+  });
+
+  it("pins a historical anchor snapshot; unknown IDs never substitute", () => {
+    const pinned = parseTrackDraft(
+      makamDraft({ makamSnapshotId: "2026-05" }),
+      MARKET,
+    );
+    if (pinned!.type !== "variableMakam") throw new Error("expected makam");
+    expect(pinned!.currentMakamAnchorPercent).toBeCloseTo(3.6297, 4);
+
+    const unknown = makamDraft({ makamSnapshotId: "2020-01" });
+    expect(parseTrackDraft(unknown, MARKET)).toBeNull();
+  });
+
+  it("rejects off-catalog Makam terms", () => {
+    expect(parseTrackDraft(makamDraft({ years: "3" }), MARKET)).toBeNull();
+    expect(parseTrackDraft(makamDraft({ years: "12.5" }), MARKET)).toBeNull();
+  });
+
+  it("serializes Makam params without a reset-period param", () => {
+    const query = applyTracksToQuery(new URLSearchParams(), [
+      makamDraft({
+        forecastCurveId: "2026-06-calendar",
+        makamSnapshotId: "2026-06",
+      }),
+    ]);
+    expect(query.get("track1Type")).toBe("variableMakam");
+    expect(query.get("track1ResetPeriodMonths")).toBeNull();
+    expect(query.get("track1MakamSnapshotId")).toBe("2026-06");
+    expect(query.get("track1RepaymentMethod")).toBe("spitzer");
+    expect(query.get("track1AnnualInterestRatePercent")).toBeNull();
+
+    const drafts = parseTracksFromQuery(query);
+    expect(drafts![0].trackType).toBe("variableMakam");
+    expect(drafts![0].makamSnapshotId).toBe("2026-06");
+    expect(parseAllTrackDrafts(drafts!, MARKET)).toHaveLength(1);
+  });
+});
+
+describe("legacy variableUnlinked URL migration", () => {
+  it("migrates 24/60-month resets to the gov-bond product, keeping valid terms", () => {
+    const drafts = parseTracksFromQuery(
+      new URLSearchParams(
+        "trackCount=1&track1Amount=200000&track1Type=variableUnlinked&track1RepaymentMethod=spitzer&track1Years=20&track1CurrentRatePercent=4&track1ResetPeriodMonths=24&track1ForecastMode=official",
+      ),
+    );
+    expect(drafts![0].trackType).toBe("variableGovernmentBond");
+    expect(drafts![0].resetPeriodMonths).toBe("24");
+    expect(drafts![0].years).toBe("20"); // 20 is in the 24-month catalog
+    expect(drafts![0].currentRatePercent).toBe("4");
+  });
+
+  it("clears a migrated term that is not in the new product catalog", () => {
+    const drafts = parseTracksFromQuery(
+      new URLSearchParams(
+        "trackCount=1&track1Amount=200000&track1Type=variableUnlinked&track1Years=13&track1ResetPeriodMonths=24",
+      ),
+    );
+    expect(drafts![0].resetPeriodMonths).toBe("24");
+    expect(drafts![0].years).toBe(""); // 13 is not an option — never substituted
+  });
+
+  it("loads an old 12-month reset with frequency and term unset (explicit re-selection)", () => {
+    const drafts = parseTracksFromQuery(
+      new URLSearchParams(
+        "trackCount=1&track1Amount=200000&track1Type=variableUnlinked&track1Years=15&track1CurrentRatePercent=4&track1ResetPeriodMonths=12",
+      ),
+    );
+    expect(drafts![0].trackType).toBe("variableGovernmentBond"); // never Makam
+    expect(drafts![0].resetPeriodMonths).toBe("");
+    expect(drafts![0].years).toBe("");
+    expect(drafts![0].currentRatePercent).toBe("4"); // carried over
+    // Not calculable until the user explicitly picks frequency + term.
+    expect(parseTrackDraft(drafts![0], MARKET)).toBeNull();
   });
 });
 

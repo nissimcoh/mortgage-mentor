@@ -8,25 +8,40 @@ import type { Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/app/[locale]/dictionaries";
 import {
   calculateScenarioSummary,
+  combinedStabilityScore,
   nominalAnnualPercentToEffectiveAnnualPercent,
+  paymentMonthParts,
+  stabilityColorState,
+  stabilityKeyForTrackType,
+  stabilityLevel,
+  trackStabilityScore,
   type MortgageTrackInput,
   type ScenarioSummary,
+  type StabilityColorState,
+  type StabilityLevel,
 } from "@/lib/mortgage";
+import {
+  isGovernmentBondResetMonths,
+  isGovernmentBondTermValid,
+} from "@/lib/mortgage/product-catalog";
 import {
   applyTracksToQuery,
   createTrackDraft,
   duplicateTrackDraft,
   formatAmountForDisplay,
   isPinnedCurveMissing,
+  isPinnedMakamSnapshotMissing,
   MAX_TRACKS,
   MIN_TRACKS,
   parseAllTrackDrafts,
   parseTracksFromQuery,
   resolveForecastCurve,
+  resolveMakamSnapshot,
   sumEnteredTrackAmounts,
   type MarketContextForParsing,
   type TrackDraft,
 } from "@/lib/mortgage/scenario-form";
+import type { MakamAnchorSnapshot } from "@/lib/market-data/mortgage-forecast-types";
 import type { MortgageForecastCurveSnapshot } from "@/lib/market-data/mortgage-forecast-types";
 import AmortizationSchedule from "./AmortizationSchedule";
 import MortgageTrackCard, {
@@ -41,9 +56,17 @@ type CalculatorLabels = Dictionary["calculator"];
 /** Normalized serializable market data the page passes down. */
 export interface CalculatorMarketData {
   boiRatePercent: number;
+  /** ISO date the current BOI rate took effect. */
+  boiRateEffectiveDate: string;
+  boiRateStatus: "live" | "fallback";
+  /** When the BOI-rate/CPI market snapshot was assembled (ISO). */
+  marketFetchedAt: string;
   /** Effective official forecast curves, newest first. */
   curves: MortgageForecastCurveSnapshot[];
   curveStatus: "live" | "fallback";
+  /** Official Makam anchor snapshots, newest first. */
+  makamSnapshots: MakamAnchorSnapshot[];
+  makamStatus: "live" | "fallback";
 }
 
 interface MortgageCalculatorProps {
@@ -80,6 +103,7 @@ export default function MortgageCalculator({
   const market: MarketContextForParsing = {
     boiRatePercent: marketData.boiRatePercent,
     curves: marketData.curves,
+    makamSnapshots: marketData.makamSnapshots,
   };
 
   // Initialize once from the URL (indexed multi-track format, or the legacy
@@ -139,6 +163,10 @@ export default function MortgageCalculator({
 
   function marketInfoForDraft(draft: TrackDraft): TrackCardMarketInfo {
     const curve = resolveForecastCurve(draft, market);
+    const makamSnapshot =
+      draft.trackType === "variableMakam"
+        ? (resolveMakamSnapshot(draft, market) as MakamAnchorSnapshot | null)
+        : null;
     return {
       boiRatePercent: marketData.boiRatePercent,
       primeRatePercent:
@@ -150,7 +178,28 @@ export default function MortgageCalculator({
         marketData.curveStatus === "fallback" ||
         (curve as MortgageForecastCurveSnapshot | null)?.status === "fallback",
       curveIsMissing: isPinnedCurveMissing(draft, market),
+      makamAnchorLabel: makamSnapshot
+        ? `${Math.round(makamSnapshot.anchorPercent * 100) / 100}% (${monthYearFormat.format(
+            new Date(
+              Date.UTC(
+                makamSnapshot.referenceYear,
+                makamSnapshot.referenceMonth - 1,
+                1,
+              ),
+            ),
+          )})`
+        : null,
+      makamAnchorIsMissing: isPinnedMakamSnapshotMissing(draft, market),
     };
+  }
+
+  /** Fills the localized "Month {m} — year {y}, month {my}" template. */
+  function formatMaxMonth(month: number): string {
+    const parts = paymentMonthParts(month);
+    return labels.maxMonthTemplate
+      .replace("{m}", numberFormat.format(parts.month))
+      .replace("{y}", numberFormat.format(parts.year))
+      .replace("{my}", numberFormat.format(parts.monthOfYear));
   }
 
   /** Write the current drafts into the URL (removes stale/legacy params). */
@@ -166,9 +215,37 @@ export default function MortgageCalculator({
     value: string,
   ) {
     setDrafts((current) =>
-      current.map((draft) =>
-        draft.id === id ? { ...draft, [field]: value } : draft,
-      ),
+      current.map((draft) => {
+        if (draft.id !== id) return draft;
+        const next = { ...draft, [field]: value };
+        // A term stays selected only if it is an exact option of the new
+        // product/frequency; otherwise it clears and the user must make an
+        // explicit valid choice — never a silent substitution.
+        if (field === "resetPeriodMonths") {
+          const reset = Number(value);
+          if (
+            !isGovernmentBondResetMonths(reset) ||
+            !isGovernmentBondTermValid(reset, Number(next.years))
+          ) {
+            next.years = "";
+          }
+        }
+        if (field === "trackType") {
+          if (value === "variableGovernmentBond") {
+            next.resetPeriodMonths = "";
+            next.years = "";
+          } else if (value === "variableMakam") {
+            next.resetPeriodMonths = "";
+            if (!Number.isInteger(Number(next.years)) || next.years === "") {
+              next.years = "";
+            }
+          }
+          if (value === "variableGovernmentBond" || value === "variableMakam") {
+            next.repaymentMethod = "spitzer";
+          }
+        }
+        return next;
+      }),
     );
   }
 
@@ -220,13 +297,21 @@ export default function MortgageCalculator({
       return;
     }
 
-    // Stamp the curve each prime track actually used, so the URL pins it
-    // and a shared link reproduces this exact calculation.
+    // Stamp the curve/anchor each variable-style track actually used, so
+    // the URL pins them and a shared link reproduces this calculation.
     const stamped = drafts.map((draft, index) => {
       const input = inputs[index];
-      return input.type === "prime"
-        ? { ...draft, forecastCurveId: input.forecastCurveId ?? "" }
-        : draft;
+      if (input.type === "variableMakam") {
+        return {
+          ...draft,
+          forecastCurveId: input.forecastCurveId ?? "",
+          makamSnapshotId: input.makamSnapshotId ?? "",
+        };
+      }
+      if (input.type === "prime" || input.type === "variableGovernmentBond") {
+        return { ...draft, forecastCurveId: input.forecastCurveId ?? "" };
+      }
+      return draft;
     });
 
     setDrafts(stamped);
@@ -238,6 +323,52 @@ export default function MortgageCalculator({
 
   const enteredTotal = sumEnteredTrackAmounts(drafts);
 
+  const stabilityLevelLabels: Record<StabilityLevel, string> = {
+    veryHigh: labels.stabilityVeryHigh,
+    high: labels.stabilityHigh,
+    medium: labels.stabilityMedium,
+    low: labels.stabilityLow,
+    veryLow: labels.stabilityVeryLow,
+  };
+  const formatStability = (score: number) =>
+    `${numberFormat.format(Math.round(score))}/100 · ${stabilityLevelLabels[stabilityLevel(score)]}`;
+  // Accessible, low-saturation tones + a non-color glyph per state, so the
+  // meaning never relies on color alone. Green ≠ cheaper; red ≠ "never".
+  const stabilityTone: Record<
+    StabilityColorState,
+    { badge: string; icon: string }
+  > = {
+    stable: {
+      badge: "border-emerald-200 bg-emerald-50 text-emerald-800",
+      icon: "●",
+    },
+    moderate: {
+      badge: "border-amber-200 bg-amber-50 text-amber-800",
+      icon: "◐",
+    },
+    unstable: { badge: "border-red-200 bg-red-50 text-red-800", icon: "○" },
+  };
+  const StabilityBadge = ({ score }: { score: number }) => {
+    const tone = stabilityTone[stabilityColorState(score)];
+    return (
+      <span
+        className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${tone.badge}`}
+      >
+        <span aria-hidden>{tone.icon}</span> {formatStability(score)}
+      </span>
+    );
+  };
+
+  const scenarioStability = submitted
+    ? combinedStabilityScore(
+        submitted.inputs.map((input) => ({
+          trackType: stabilityKeyForTrackType(input.type),
+          loanAmount: input.loanAmount,
+        })),
+      )
+    : 0;
+
+  const scenarioTone = stabilityTone[stabilityColorState(scenarioStability)];
   const combinedResults = submitted
     ? [
         {
@@ -246,26 +377,66 @@ export default function MortgageCalculator({
             submitted.inputs.reduce((sum, input) => sum + input.loanAmount, 0),
           ),
           help: undefined,
+          tone: undefined as string | undefined,
+          icon: undefined as string | undefined,
         },
         {
-          label: labels.combinedFirstPayment,
-          value: currencyFormat.format(submitted.summary.monthlyPayment),
-          help: labels.combinedFirstPaymentHelp,
+          // Always today's-rate payment: the single, beginner-friendly
+          // first-payment number (forecast month 1 stays engine-internal).
+          label: labels.firstMonthlyPaymentLabel,
+          value: currencyFormat.format(
+            submitted.summary.currentCombinedFirstPayment,
+          ),
+          help: undefined,
+          tone: undefined,
+          icon: undefined,
         },
         {
-          label: labels.totalPayment,
+          label: labels.forecastMaxPaymentLabel,
+          value: currencyFormat.format(submitted.summary.maximumPayment),
+          help: formatMaxMonth(submitted.summary.monthOfMaximumPayment),
+          tone: undefined,
+          icon: undefined,
+        },
+        {
+          label: labels.forecastTotalPaymentLabel,
           value: currencyFormat.format(submitted.summary.totalPayment),
           help: labels.totalPaymentHelp,
+          tone: undefined,
+          icon: undefined,
         },
         {
-          label: labels.totalInterest,
+          label: labels.forecastTotalInterestLabel,
           value: currencyFormat.format(submitted.summary.totalInterest),
           help: labels.totalInterestHelp,
+          tone: undefined,
+          icon: undefined,
+        },
+        {
+          label: labels.forecastOverallRateLabel,
+          value: percentFormat.format(
+            submitted.summary.forecastOverallRatePercent / 100,
+          ),
+          help: undefined,
+          tone: undefined,
+          icon: undefined,
         },
         {
           label: labels.numberOfPayments,
           value: numberFormat.format(submitted.summary.numberOfPayments),
           help: undefined,
+          tone: undefined,
+          icon: undefined,
+        },
+        {
+          label:
+            submitted.inputs.length > 1
+              ? labels.stabilityCombinedLabel
+              : labels.stabilityTrackLabel,
+          value: formatStability(scenarioStability),
+          help: labels.stabilityDimensionsHelp,
+          tone: scenarioTone.badge,
+          icon: scenarioTone.icon,
         },
       ]
     : [];
@@ -281,11 +452,12 @@ export default function MortgageCalculator({
     { term: labels.interestRateLabel, explanation: labels.interestRateHelp },
   ];
 
-  const hasPrimeTrack =
-    submitted?.inputs.some((input) => input.type === "prime") ?? false;
+  const hasVariableStyleTrack =
+    submitted?.inputs.some((input) => input.type !== "fixedUnlinked") ?? false;
   const hasScenarioOverride =
     submitted?.inputs.some(
-      (input) => input.type === "prime" && input.forecastMode !== "official",
+      (input) =>
+        input.type !== "fixedUnlinked" && input.forecastMode !== "official",
     ) ?? false;
 
   // Which schedule is on display. Falls back to combined if the selection
@@ -307,13 +479,64 @@ export default function MortgageCalculator({
       ? submitted.summary.trackSummaries[0].schedule
       : (selectedTrackSummary?.schedule ?? submitted.summary.combinedSchedule)
     : [];
+
+  // A prime/variable track in official/stress mode: its schedule is a
+  // forecast and gets the BOI-curve title; constant mode stays ordinary.
+  const isForecastSensitive = (input: MortgageTrackInput) =>
+    input.type !== "fixedUnlinked" && input.forecastMode !== "constant";
+  const displayedTrackInput = submitted
+    ? isSingleTrack
+      ? submitted.inputs[0]
+      : selectedTrackSummary !== null && selectedTrackIndex !== null
+        ? submitted.inputs[selectedTrackIndex]
+        : null
+    : null;
+  const displayedIsForecast =
+    displayedTrackInput !== null && isForecastSensitive(displayedTrackInput);
+  const displayedIsCombined =
+    submitted !== null && !isSingleTrack && selectedTrackSummary === null;
+  const scenarioHasForecastTrack =
+    submitted?.inputs.some(isForecastSensitive) ?? false;
+
+  const trackScheduleBaseTitle = displayedIsForecast
+    ? labels.forecastScheduleTitle
+    : labels.scheduleTitle;
   const scheduleTitle = submitted
     ? isSingleTrack
-      ? labels.scheduleTitle
+      ? trackScheduleBaseTitle
       : selectedTrackSummary !== null && selectedTrackIndex !== null
-        ? `${labels.scheduleTitle} — ${labels.trackLabel} ${selectedTrackIndex + 1}`
+        ? `${trackScheduleBaseTitle} — ${labels.trackLabel} ${selectedTrackIndex + 1}`
         : labels.scheduleTitleCombined
     : labels.scheduleTitle;
+
+  // The forecast note appears only when the displayed schedule's month 1
+  // actually differs from the visible first payment (≥ 1 agora), and never
+  // repeats the forecast month-1 amount.
+  const displayedFirstDiffers =
+    submitted !== null &&
+    displayedSchedule.length > 0 &&
+    Math.abs(
+      displayedSchedule[0].payment -
+        (displayedIsCombined
+          ? submitted.summary.currentCombinedFirstPayment
+          : (submitted.summary.trackSummaries[
+              isSingleTrack ? 0 : (selectedTrackIndex ?? 0)
+            ]?.forecast?.currentFirstPayment ??
+            submitted.summary.trackSummaries[
+              isSingleTrack ? 0 : (selectedTrackIndex ?? 0)
+            ]?.variableForecast?.currentFirstPayment ??
+            displayedSchedule[0].payment)),
+    ) >= 0.01;
+  const scheduleNotes = displayedIsCombined
+    ? [
+        labels.weightedRateNote,
+        ...(scenarioHasForecastTrack && displayedFirstDiffers
+          ? [labels.forecastScheduleNote]
+          : []),
+      ]
+    : displayedIsForecast && displayedFirstDiffers
+      ? [labels.forecastScheduleNote]
+      : [];
 
   const scheduleOptions = submitted
     ? [
@@ -326,7 +549,7 @@ export default function MortgageCalculator({
     : [];
 
   const showPerTrackSection =
-    submitted !== null && (!isSingleTrack || hasPrimeTrack);
+    submitted !== null && (!isSingleTrack || hasVariableStyleTrack);
 
   return (
     <div className="w-full">
@@ -420,10 +643,13 @@ export default function MortgageCalculator({
               {combinedResults.map((result) => (
                 <div
                   key={result.label}
-                  className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                  className={`rounded-2xl border p-4 shadow-sm ${
+                    result.tone ?? "border-slate-200 bg-white"
+                  }`}
                 >
                   <div className="text-sm text-slate-500">{result.label}</div>
                   <div className="mt-1 text-xl font-bold text-slate-900">
+                    {result.icon && <span aria-hidden>{result.icon} </span>}
                     {result.value}
                   </div>
                   {result.help && (
@@ -442,11 +668,9 @@ export default function MortgageCalculator({
             <p className="mt-3 text-sm leading-6 text-slate-500">
               {labels.mixHelp}
             </p>
-            {hasPrimeTrack && (
-              <p className="mt-2 text-sm leading-6 text-slate-500">
-                {labels.primeForecastExplanation}
-              </p>
-            )}
+            <p className="mt-2 text-xs leading-5 text-slate-500">
+              {labels.stabilityDisclaimer}
+            </p>
           </section>
 
           {showPerTrackSection && (
@@ -477,8 +701,13 @@ export default function MortgageCalculator({
                     },
                   ];
 
+                  // Prime and variable-unlinked share the forecast row
+                  // layout; the visible first payment is ALWAYS the
+                  // today's-rate payment (forecast month 1 stays internal).
+                  const forecastResults =
+                    trackSummary.forecast ?? trackSummary.variableForecast;
                   const rows =
-                    input.type === "prime" && trackSummary.forecast
+                    input.type !== "fixedUnlinked" && forecastResults
                       ? [
                           ...commonRows,
                           {
@@ -487,38 +716,66 @@ export default function MortgageCalculator({
                               input.currentCustomerRatePercent / 100,
                             ),
                           },
+                          ...(input.type === "variableGovernmentBond"
+                            ? [
+                                {
+                                  label: labels.resetPeriodLabel,
+                                  value:
+                                    {
+                                      24: labels.resetEvery2Years,
+                                      30: labels.resetEvery2HalfYears,
+                                      36: labels.resetEvery3Years,
+                                      60: labels.resetEvery5Years,
+                                      84: labels.resetEvery7Years,
+                                      120: labels.resetEvery10Years,
+                                    }[input.resetPeriodMonths] ??
+                                    String(input.resetPeriodMonths),
+                                },
+                              ]
+                            : []),
+                          ...(input.type === "variableMakam" &&
+                          trackSummary.variableForecast?.makamAnchorPercent !==
+                            undefined
+                            ? [
+                                {
+                                  label: labels.makamAnchorLabel,
+                                  value: percentFormat.format(
+                                    trackSummary.variableForecast
+                                      .makamAnchorPercent / 100,
+                                  ),
+                                },
+                              ]
+                            : []),
                           {
-                            label: labels.currentFirstPaymentLabel,
+                            label: labels.firstMonthlyPaymentLabel,
                             value: currencyFormat.format(
-                              trackSummary.forecast.currentFirstPayment,
+                              forecastResults.currentFirstPayment,
                             ),
                           },
                           {
                             label: labels.forecastMaxPaymentLabel,
                             value: `${currencyFormat.format(
-                              trackSummary.forecast.forecastMaximumPayment,
-                            )} (${labels.inMonthPrefix}${numberFormat.format(
-                              trackSummary.forecast
-                                .monthOfForecastMaximumPayment,
+                              forecastResults.forecastMaximumPayment,
+                            )} (${formatMaxMonth(
+                              forecastResults.monthOfForecastMaximumPayment,
                             )})`,
                           },
                           {
                             label: labels.forecastTotalPaymentLabel,
                             value: currencyFormat.format(
-                              trackSummary.forecast.forecastTotalPayment,
+                              forecastResults.forecastTotalPayment,
                             ),
                           },
                           {
                             label: labels.forecastTotalInterestLabel,
                             value: currencyFormat.format(
-                              trackSummary.forecast.forecastTotalInterest,
+                              forecastResults.forecastTotalInterest,
                             ),
                           },
                           {
                             label: labels.forecastOverallRateLabel,
                             value: percentFormat.format(
-                              trackSummary.forecast.forecastOverallRatePercent /
-                                100,
+                              forecastResults.forecastOverallRatePercent / 100,
                             ),
                           },
                         ]
@@ -559,7 +816,7 @@ export default function MortgageCalculator({
                               ]
                             : [
                                 {
-                                  label: labels.monthlyPayment,
+                                  label: labels.firstMonthlyPaymentLabel,
                                   value: currencyFormat.format(
                                     trackSummary.monthlyPayment,
                                   ),
@@ -588,9 +845,15 @@ export default function MortgageCalculator({
                         {labels.trackLabel} {index + 1}
                         <span className="font-normal text-slate-500">
                           {" · "}
-                          {input.type === "prime"
-                            ? labels.trackTypePrime
-                            : labels.trackTypeFixedUnlinked}
+                          {
+                            {
+                              prime: labels.trackTypePrime,
+                              variableGovernmentBond:
+                                labels.trackTypeGovernmentBond,
+                              variableMakam: labels.trackTypeMakam,
+                              fixedUnlinked: labels.trackTypeFixedUnlinked,
+                            }[input.type]
+                          }
                           {" · "}
                           {methodLabel}
                         </span>
@@ -608,6 +871,19 @@ export default function MortgageCalculator({
                           </div>
                         ))}
                       </dl>
+                      <div className="mt-2 border-t border-slate-100 pt-2">
+                        <div className="text-xs font-medium text-slate-700">
+                          {labels.stabilityTrackLabel}:{" "}
+                          <StabilityBadge
+                            score={trackStabilityScore(
+                              stabilityKeyForTrackType(input.type),
+                            )}
+                          />
+                        </div>
+                        <p className="mt-0.5 text-xs leading-5 text-slate-500">
+                          {labels.stabilityDimensionsHelp}
+                        </p>
+                      </div>
                     </div>
                   );
                 })}
@@ -615,6 +891,8 @@ export default function MortgageCalculator({
             </section>
           )}
 
+          {/* The schedule is always visible right after the results — there
+              is no meaningful content below it, so nothing is collapsed. */}
           <AmortizationSchedule
             // Remount on a new calculation or view switch so scroll resets.
             key={`${selectedScheduleId}-${submitted.summary.numberOfPayments}-${submitted.summary.monthlyPayment}-${submitted.summary.totalInterest}`}
@@ -622,6 +900,12 @@ export default function MortgageCalculator({
             labels={labels}
             locale={locale}
             title={scheduleTitle}
+            rateColumnHeader={
+              displayedIsCombined
+                ? labels.weightedRateHeader
+                : labels.rateHeader
+            }
+            notes={scheduleNotes}
             selector={
               isSingleTrack ? undefined : (
                 <ScheduleSelector
@@ -639,7 +923,62 @@ export default function MortgageCalculator({
         </>
       )}
 
-      <p className="mt-5 text-sm leading-6 text-slate-500">
+      {/* Compact, audit-friendly freshness of every external data source.
+          Each entry keeps the observation period, publication/effective
+          dates, and fetch time as SEPARATE facts. */}
+      <details className="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+        <summary className="cursor-pointer text-xs font-medium text-slate-600">
+          {labels.freshnessTitle}
+        </summary>
+        <dl className="mt-2 space-y-2 text-xs leading-5 text-slate-600">
+          <div>
+            <dt className="font-medium text-slate-700">
+              {labels.freshnessBoiRate}: {marketData.boiRatePercent}% ·{" "}
+              {marketData.boiRateStatus === "live"
+                ? labels.freshnessStatusLive
+                : labels.freshnessStatusFallback}
+            </dt>
+            <dd>
+              {labels.freshnessEffective}: {marketData.boiRateEffectiveDate} ·{" "}
+              {labels.freshnessChecked}: {marketData.marketFetchedAt}
+            </dd>
+          </div>
+          {marketData.curves.map((curve) => (
+            <div key={curve.id}>
+              <dt className="font-medium text-slate-700">
+                {labels.freshnessCurve}: {curve.id} ·{" "}
+                {curve.status === "live"
+                  ? labels.freshnessStatusLive
+                  : labels.freshnessStatusFallback}
+              </dt>
+              <dd>
+                {labels.freshnessReference}:{" "}
+                {curveReferenceLabel(curve as MortgageForecastCurveSnapshot)} ·{" "}
+                {labels.freshnessPublished}: {curve.publicationDate || "—"} ·{" "}
+                {labels.freshnessEffective}: {curve.effectiveDate || "—"} ·{" "}
+                {labels.freshnessChecked}: {curve.fetchedAt}
+              </dd>
+            </div>
+          ))}
+          {marketData.makamSnapshots.map((snapshot) => (
+            <div key={snapshot.id}>
+              <dt className="font-medium text-slate-700">
+                {labels.freshnessMakam}: {snapshot.id} ·{" "}
+                {snapshot.status === "live"
+                  ? labels.freshnessStatusLive
+                  : labels.freshnessStatusFallback}
+              </dt>
+              <dd>
+                {Math.round(snapshot.anchorPercent * 10000) / 10000}% ·{" "}
+                {labels.freshnessChecked}: {snapshot.fetchedAt} ·{" "}
+                {labels.freshnessSource}: {snapshot.sourceId}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </details>
+
+      <p className="mt-3 text-sm leading-6 text-slate-500">
         {labels.disclaimer}
       </p>
     </div>

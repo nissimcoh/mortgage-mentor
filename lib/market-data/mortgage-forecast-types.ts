@@ -27,6 +27,31 @@ export interface MortgageForecastCurveSnapshot {
   sourceId: "boi-directive-451-forecast-workbook";
 }
 
+/**
+ * One month of the official Makam anchor (monthly-average 12-month Makam
+ * yield-to-maturity, BOI SDMX SECDWH series TSB_BAGR_MAKAM_12M.M).
+ */
+export interface MakamAnchorSnapshot {
+  /** e.g. "2026-06" — the reference month, also the pinning ID. */
+  id: string;
+  referenceYear: number;
+  referenceMonth: number;
+  /** Monthly-average 12-month Makam yield, annual percent. */
+  anchorPercent: number;
+  fetchedAt: string;
+  status: "live" | "fallback";
+  sourceId: "boi-secdwh-makam-12m";
+}
+
+export interface MakamAnchorData {
+  /** Newest first; `snapshots[0]` is used when no ID is pinned. */
+  snapshots: MakamAnchorSnapshot[];
+  /** Pinned snapshot IDs that could not be resolved (never substituted). */
+  missingSnapshotIds: string[];
+  status: "live" | "fallback";
+  errors: { sourceId: string; message: string }[];
+}
+
 export interface MortgageForecastData {
   /**
    * `curves[0]` is the latest effective curve (used when no curve ID was

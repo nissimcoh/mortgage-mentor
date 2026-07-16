@@ -17,6 +17,10 @@ interface AmortizationScheduleProps {
   title: string;
   /** Optional selector (schedule tabs) rendered directly above the table. */
   selector?: React.ReactNode;
+  /** Header for the rate column; defaults to the plain annual-rate label. */
+  rateColumnHeader?: string;
+  /** Short explanations rendered directly above the table. */
+  notes?: string[];
 }
 
 interface PaymentBreakdownCardProps {
@@ -88,6 +92,8 @@ export default function AmortizationSchedule({
   locale,
   title,
   selector,
+  rateColumnHeader,
+  notes,
 }: AmortizationScheduleProps) {
   const intlLocale = locale === "he" ? "he-IL" : "en-US";
   const currencyFormat = new Intl.NumberFormat(intlLocale, {
@@ -147,7 +153,17 @@ export default function AmortizationSchedule({
 
       {selector && <div className="mt-6">{selector}</div>}
 
-      <div className={`${selector ? "" : "mt-6 "}max-h-[500px] overflow-auto rounded-2xl border border-slate-200 bg-white shadow-sm`}>
+      {notes && notes.length > 0 && (
+        <div className={selector ? "mb-3" : "mt-6 mb-3"}>
+          {notes.map((note) => (
+            <p key={note} className="text-xs leading-5 text-slate-500">
+              {note}
+            </p>
+          ))}
+        </div>
+      )}
+
+      <div className={`${selector || (notes && notes.length > 0) ? "" : "mt-6 "}max-h-[500px] overflow-auto rounded-2xl border border-slate-200 bg-white shadow-sm`}>
         <table className="w-full min-w-[560px] text-sm">
           <thead>
             <tr>
@@ -156,7 +172,7 @@ export default function AmortizationSchedule({
               </th>
               {showRateColumn && (
                 <th scope="col" className={numericHeader}>
-                  {labels.rateHeader}
+                  {rateColumnHeader ?? labels.rateHeader}
                 </th>
               )}
               <th scope="col" className={numericHeader}>

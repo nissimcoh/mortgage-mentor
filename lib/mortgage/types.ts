@@ -100,8 +100,68 @@ export interface PrimeTrackInput {
   forecastCurvePublicationDate?: string;
 }
 
+import type { GovernmentBondResetMonths } from "./product-catalog";
+
+/**
+ * Government-bond variable-unlinked product (משתנה לא צמודה על בסיס אג"ח
+ * ממשלתי): rate fixed for `resetPeriodMonths`, then resets to the official
+ * forward anchor (Directive-451 nominal zero curve) plus the customer's
+ * structural margin over A_V. Principal not CPI-linked. Preset-verified as
+ * a Spitzer product; equal-principal engine capability exists but is not
+ * exposed for this product.
+ */
+export interface VariableGovernmentBondTrackInput {
+  id?: string;
+  type: "variableGovernmentBond";
+  repaymentMethod: "spitzer";
+  loanAmount: number;
+  /** From the product catalog; may be x.5 only where the catalog permits. */
+  years: number;
+  /** The annual rate the bank currently offers the customer, percent. */
+  currentCustomerRatePercent: number;
+  resetPeriodMonths: GovernmentBondResetMonths;
+  /** Official zero spot yields, months 1..360, annual percent. */
+  forecastZeroYieldsPercent: readonly number[];
+  forecastMode: "official" | "constant" | "stress";
+  stressShiftPercent?: number;
+  forecastCurveId?: string;
+  forecastCurvePublicationDate?: string;
+}
+
+/**
+ * Annual-Makam variable-unlinked product (משתנה לא צמודה כל שנה על בסיס
+ * מק"מ): rate resets every 12 months. The contractual margin is derived
+ * from the official Makam anchor (monthly-average 12-month Makam yield);
+ * future resets are forecast from the nominal zero curve per the
+ * Directive-451 reference table. Principal not CPI-linked. Spitzer preset.
+ */
+export interface VariableMakamTrackInput {
+  id?: string;
+  type: "variableMakam";
+  repaymentMethod: "spitzer";
+  loanAmount: number;
+  /** Whole years only. */
+  years: number;
+  currentCustomerRatePercent: number;
+  /** Fixed by the product — no arbitrary reset periods. */
+  resetPeriodMonths: 12;
+  /** The official Makam anchor in percent (server-provided snapshot). */
+  currentMakamAnchorPercent: number;
+  forecastZeroYieldsPercent: readonly number[];
+  forecastMode: "official" | "constant" | "stress";
+  stressShiftPercent?: number;
+  forecastCurveId?: string;
+  forecastCurvePublicationDate?: string;
+  /** e.g. "2026-06" — pins the anchor month for reproducible links. */
+  makamSnapshotId?: string;
+}
+
 /** Input for a single mortgage track. */
-export type MortgageTrackInput = FixedUnlinkedTrackInput | PrimeTrackInput;
+export type MortgageTrackInput =
+  | FixedUnlinkedTrackInput
+  | PrimeTrackInput
+  | VariableGovernmentBondTrackInput
+  | VariableMakamTrackInput;
 
 /** Minimal parameter set for the Spitzer payment/schedule helpers. */
 export interface SpitzerPaymentParams {
@@ -130,6 +190,8 @@ export interface AmortizationEntry {
   remainingBalance: number;
   /** Annual rate active this month, percent. Present on variable tracks. */
   activeAnnualRatePercent?: number;
+  /** Balance at the start of the month, before this month's payment. */
+  openingBalance?: number;
 }
 
 /** Computed results for a single track. */
@@ -157,6 +219,36 @@ export interface TrackSummary {
    * schedule.
    */
   forecast?: PrimeForecastSummary;
+  /** Variable-unlinked forecast results; the schedule above is the forecast. */
+  variableForecast?: VariableForecastSummary;
+}
+
+/** Forecast results for a variable-unlinked track. */
+export interface VariableForecastSummary {
+  /** First payment — always at the offered rate (the initial fixed block). */
+  currentFirstPayment: number;
+  forecastFirstPayment: number;
+  forecastMaximumPayment: number;
+  monthOfForecastMaximumPayment: number;
+  forecastLastPayment: number;
+  forecastTotalPayment: number;
+  forecastTotalInterest: number;
+  forecastOverallRatePercent: number;
+  currentOfferedRatePercent: number;
+  resetPeriodMonths: number;
+  /**
+   * offeredRate minus the anchor baseline, percent: A_V (zero-curve yield
+   * at the reset maturity) for the government-bond product, the official
+   * Makam anchor for the Makam product.
+   */
+  customerAnchorMarginPercent: number;
+  forecastMode: "official" | "constant" | "stress";
+  stressShiftPercent: number;
+  forecastCurveId: string | null;
+  forecastCurvePublicationDate: string | null;
+  /** Makam product only: the anchor used and its snapshot month. */
+  makamAnchorPercent?: number;
+  makamSnapshotId?: string | null;
 }
 
 /** Forecast results for a prime track. */
@@ -192,7 +284,18 @@ export interface ScenarioSummary {
   firstPayment: number;
   lastPayment: number;
   maximumPayment: number;
+  /** First month in which the combined maximum payment occurs. */
+  monthOfMaximumPayment: number;
   minimumPayment: number;
+  /**
+   * Sum of each track's first payment at today's/current rates (for prime
+   * tracks: the payment at the currently offered rate, not the forecast).
+   */
+  currentCombinedFirstPayment: number;
+  /** Sum of month 1 across the (forecast) schedules; equals firstPayment. */
+  forecastCombinedFirstPayment: number;
+  /** Annualized IRR of (−total loan, combined forecast payments), percent. */
+  forecastOverallRatePercent: number;
   /** Per-track results, in input order. */
   trackSummaries: TrackSummary[];
   /**
