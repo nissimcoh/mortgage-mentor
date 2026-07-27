@@ -6,6 +6,7 @@ import { isValidLocale } from "@/lib/i18n/config";
 import { getMarketSnapshot } from "@/lib/market-data/get-market-snapshot";
 import { getMortgageForecastData } from "@/lib/market-data/sources/boi-mortgage-forecast";
 import { getMakamAnchorData } from "@/lib/market-data/sources/boi-makam";
+import { buildCalculatorMarketData } from "@/lib/market-data/build-calculator-market-data";
 import MortgageCalculator from "@/components/MortgageCalculator";
 import { getDictionary } from "../dictionaries";
 
@@ -62,22 +63,11 @@ export default async function CalculatorPage({
     getMortgageForecastData(requestedCurveIds),
     getMakamAnchorData(requestedMakamIds),
   ]);
-  const marketData = {
-    boiRatePercent: marketSnapshot.boiRate.ratePercent,
-    boiRateEffectiveDate: marketSnapshot.boiRate.effectiveDate,
-    boiRateStatus: (marketSnapshot.boiRate.isLive ? "live" : "fallback") as
-      | "live"
-      | "fallback",
-    boiNextDecisionAt: marketSnapshot.nextDecision.at,
-    marketFetchedAt: marketSnapshot.fetchedAt,
-    curves: forecastData.curves.map((curve) => ({
-      ...curve,
-      realZeroYieldsPercent: [],
-    })),
-    curveStatus: forecastData.status,
-    makamSnapshots: makamData.snapshots,
-    makamStatus: makamData.status,
-  };
+  const marketData = buildCalculatorMarketData(
+    marketSnapshot,
+    forecastData,
+    makamData,
+  );
 
   return (
     <main className="bg-slate-50 text-slate-900">

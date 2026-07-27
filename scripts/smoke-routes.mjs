@@ -19,13 +19,19 @@ const ROUTES = [
   { path: "/en", expected: 200 },
   { path: "/he/calculator", expected: 200 },
   { path: "/en/calculator", expected: 200 },
-  // App-shell coming-soon surfaces (compare, saved, sign-in)
+  // App-shell surfaces: compare (now a real page), saved/sign-in (still
+  // coming-soon placeholders)
   { path: "/he/compare", expected: 200 },
   { path: "/en/compare", expected: 200 },
   { path: "/he/saved", expected: 200 },
   { path: "/en/saved", expected: 200 },
   { path: "/he/signin", expected: 200 },
   { path: "/en/signin", expected: 200 },
+  // Populated two-scenario comparison (fixedUnlinked vs. prime)
+  {
+    path: "/he/compare?aTrackCount=1&aTrack1Amount=500000&aTrack1Type=fixedUnlinked&aTrack1RepaymentMethod=spitzer&aTrack1Years=20&aTrack1AnnualInterestRatePercent=4.5&bTrackCount=1&bTrack1Amount=500000&bTrack1Type=prime&bTrack1RepaymentMethod=spitzer&bTrack1Years=20&bTrack1CurrentRatePercent=4.5&bTrack1ForecastMode=official",
+    expected: 200,
+  },
   // Fixed-unlinked track
   {
     path: "/he/calculator?trackCount=1&track1Amount=800000&track1Type=fixedUnlinked&track1RepaymentMethod=spitzer&track1Years=25&track1AnnualInterestRatePercent=4.8",

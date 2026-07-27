@@ -31,10 +31,40 @@
     "comingSoonCta": "Learn more"
   },
   "comparePage": {
-    "body": [
-      "Scenario comparison is coming later.",
-      "For now, you can run a few scenarios in the calculator and compare them manually, saving each one with its own link via \"Copy scenario link\"."
-    ]
+    "intro": "Compare two mortgage calculator scenarios — just paste each scenario's link.",
+    "scenarioALabel": "Scenario A",
+    "scenarioBLabel": "Scenario B",
+    "scenarioNameLabel": "Scenario name",
+    "scenarioNamePlaceholder": "e.g. Leumi offer, July 2026",
+    "pasteLinkLabel": "Paste calculator link",
+    "pasteLinkPlaceholder": "https://.../calculator?...",
+    "loadScenarioButton": "Load scenario",
+    "orBuildManuallyLabel": "Or build manually",
+    "compareButton": "Compare scenarios",
+    "linkMissingError": "Paste a calculator link to load a scenario",
+    "linkInvalidError": "We couldn't recognize a valid scenario in that link",
+    "pinnedDataMissingNote": "Some of the pinned market data in this link is no longer available. You can generate a fresh link from the calculator.",
+    "scenarioLoadedSummary": "{n} tracks loaded",
+    "copyComparisonLinkButton": "Copy comparison link",
+    "copyComparisonLinkSuccess": "Link copied",
+    "copyComparisonLinkFallback": "Couldn't copy automatically. Please copy the address from your browser's address bar.",
+    "resultsTitle": "Comparison results",
+    "metricFirstPayment": "First payment",
+    "metricMaxPayment": "Highest payment",
+    "metricTotalPayment": "Forecast total paid",
+    "metricTotalInterest": "Total interest / financing cost",
+    "metricStability": "Stability score",
+    "metricTrackCount": "Number of tracks",
+    "metricPrimeExposure": "Prime exposure",
+    "metricCpiExposure": "CPI-linked exposure",
+    "metricVariableExposure": "Variable-rate exposure",
+    "diffLabel": "Difference",
+    "tableScrollHint": "Scroll the comparison table sideways to see every column.",
+    "insightsTitle": "What changed",
+    "cheaperSentence": "{scenario} is about {amount} lower in forecast total paid according to the model.",
+    "moreStableSentence": "{scenario} is more stable according to the stability score.",
+    "lowerFirstHigherMaxSentence": "{scenario} starts with a lower payment but reaches a higher maximum payment.",
+    "disclaimer": "This comparison is for learning and scenario analysis and is not mortgage advice."
   },
   "savedPage": {
     "body": [

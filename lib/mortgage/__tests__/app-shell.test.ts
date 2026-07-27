@@ -104,14 +104,12 @@ describe("home page redesign dictionary keys", () => {
   });
 });
 
-describe("coming-soon page dictionary keys", () => {
-  it("has non-empty body paragraphs for compare/saved/signin in both locales", () => {
+describe("coming-soon page dictionary keys (saved/sign-in)", () => {
+  // /compare has since become a real page (see compare-page.test.ts) — only
+  // saved/sign-in are still coming-soon placeholders with a body array.
+  it("has non-empty body paragraphs for saved/signin in both locales", () => {
     for (const dict of [heDict, enDict]) {
-      for (const section of [
-        dict.comparePage,
-        dict.savedPage,
-        dict.signinPage,
-      ]) {
+      for (const section of [dict.savedPage, dict.signinPage]) {
         expect(Array.isArray(section.body)).toBe(true);
         expect(section.body.length).toBeGreaterThan(0);
         for (const paragraph of section.body) {

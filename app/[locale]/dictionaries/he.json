@@ -31,10 +31,40 @@
     "comingSoonCta": "לפרטים"
   },
   "comparePage": {
-    "body": [
-      "השוואת תרחישים תתווסף בהמשך.",
-      "בינתיים אפשר להריץ כמה תרחישים במחשבון ולהשוות ביניהם ידנית, ולשמור כל תרחיש בקישור נפרד באמצעות \"העתק קישור לתרחיש\"."
-    ]
+    "intro": "השוו בין שני תרחישים ממחשבון המשכנתא — פשוט הדביקו את הקישור של כל תרחיש.",
+    "scenarioALabel": "תרחיש א׳",
+    "scenarioBLabel": "תרחיש ב׳",
+    "scenarioNameLabel": "שם התרחיש",
+    "scenarioNamePlaceholder": "לדוגמה: הצעת לאומי יולי 2026",
+    "pasteLinkLabel": "הדבק קישור מהמחשבון",
+    "pasteLinkPlaceholder": "https://.../he/calculator?...",
+    "loadScenarioButton": "טען תרחיש",
+    "orBuildManuallyLabel": "או בנה תרחיש ידנית",
+    "compareButton": "השווה תרחישים",
+    "linkMissingError": "הדביקו קישור מהמחשבון כדי לטעון תרחיש",
+    "linkInvalidError": "לא הצלחנו לזהות תרחיש תקין בקישור הזה",
+    "pinnedDataMissingNote": "חלק מהנתונים הכלכליים הנעוצים בקישור זה כבר אינם זמינים. אפשר ליצור קישור עדכני מהמחשבון.",
+    "scenarioLoadedSummary": "{n} מסלולים נטענו",
+    "copyComparisonLinkButton": "העתק קישור להשוואה",
+    "copyComparisonLinkSuccess": "הקישור הועתק",
+    "copyComparisonLinkFallback": "לא ניתן להעתיק אוטומטית. אפשר להעתיק את הכתובת משורת הכתובת בדפדפן.",
+    "resultsTitle": "תוצאות ההשוואה",
+    "metricFirstPayment": "החזר ראשון",
+    "metricMaxPayment": "החזר מרבי",
+    "metricTotalPayment": "סך תשלומים חזוי",
+    "metricTotalInterest": "סך ריבית / עלות מימון",
+    "metricStability": "מדד יציבות",
+    "metricTrackCount": "מספר מסלולים",
+    "metricPrimeExposure": "חשיפה לפריים",
+    "metricCpiExposure": "חשיפה למדד",
+    "metricVariableExposure": "חשיפה לריבית משתנה",
+    "diffLabel": "הפרש",
+    "tableScrollHint": "ניתן לגלול את טבלת ההשוואה הצידה כדי לראות את כל השורות.",
+    "insightsTitle": "מה השתנה",
+    "cheaperSentence": "{scenario} זול יותר בכ־{amount} בסך התשלומים החזוי לפי המודל.",
+    "moreStableSentence": "{scenario} יציב יותר לפי מדד היציבות.",
+    "lowerFirstHigherMaxSentence": "{scenario} מתחיל בהחזר נמוך יותר, אך מגיע להחזר מרבי גבוה יותר.",
+    "disclaimer": "ההשוואה מיועדת ללמידה והשוואה בין תרחישים ואינה ייעוץ משכנתאות."
   },
   "savedPage": {
     "body": [

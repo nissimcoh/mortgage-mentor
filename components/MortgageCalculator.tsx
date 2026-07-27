@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { Locale } from "@/lib/i18n/config";
 import { formatDateOnly, formatDateTimeIsrael } from "@/lib/forms/dates";
 import { freshnessStatusText } from "@/lib/forms/freshness";
-import { copyScenarioLink } from "@/lib/forms/clipboard";
+import type { CalculatorMarketData } from "@/lib/market-data/build-calculator-market-data";
 // Type-only import: erased at compile time, so the server-only dictionary
 // module is never bundled into this Client Component.
 import type { Dictionary } from "@/app/[locale]/dictionaries";
@@ -51,6 +51,7 @@ import {
 import type { MakamAnchorSnapshot } from "@/lib/market-data/mortgage-forecast-types";
 import type { MortgageForecastCurveSnapshot } from "@/lib/market-data/mortgage-forecast-types";
 import AmortizationSchedule from "./AmortizationSchedule";
+import CopyLinkButton from "./CopyLinkButton";
 import MortgageTrackCard, {
   type TrackCardMarketInfo,
 } from "./MortgageTrackCard";
@@ -59,24 +60,6 @@ import ScheduleSelector from "./ScheduleSelector";
 const COMBINED_SCHEDULE_ID = "combined";
 
 type CalculatorLabels = Dictionary["calculator"];
-
-/** Normalized serializable market data the page passes down. */
-export interface CalculatorMarketData {
-  boiRatePercent: number;
-  /** ISO date the current BOI rate took effect. */
-  boiRateEffectiveDate: string;
-  boiRateStatus: "live" | "fallback";
-  /** ISO datetime of the next scheduled BOI rate decision, or null. */
-  boiNextDecisionAt: string | null;
-  /** When the BOI-rate/CPI market snapshot was assembled (ISO). */
-  marketFetchedAt: string;
-  /** Effective official forecast curves, newest first. */
-  curves: MortgageForecastCurveSnapshot[];
-  curveStatus: "live" | "fallback";
-  /** Official Makam anchor snapshots, newest first. */
-  makamSnapshots: MakamAnchorSnapshot[];
-  makamStatus: "live" | "fallback";
-}
 
 interface MortgageCalculatorProps {
   locale: Locale;
@@ -158,53 +141,6 @@ function FreshnessCard({
             ))}
           </dl>
         </details>
-      )}
-    </div>
-  );
-}
-
-type CopyLinkStatus = "idle" | "success" | "fallback";
-
-/** Makes the URL-as-scenario mechanism explicit: the URL already carries
- * the whole scenario, but nothing told the user that until now. */
-function CopyScenarioLinkButton({ labels }: { labels: CalculatorLabels }) {
-  const [status, setStatus] = useState<CopyLinkStatus>("idle");
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    };
-  }, []);
-
-  async function handleCopy() {
-    const nextStatus = await copyScenarioLink(
-      (text) => navigator.clipboard.writeText(text),
-      window.location.href,
-    );
-    setStatus(nextStatus);
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => setStatus("idle"), 2500);
-  }
-
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <button
-        type="button"
-        onClick={handleCopy}
-        className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-100 sm:py-1.5"
-      >
-        {labels.copyScenarioLinkButton}
-      </button>
-      {status === "success" && (
-        <span role="status" className="text-xs text-emerald-700">
-          {labels.copyScenarioLinkSuccess}
-        </span>
-      )}
-      {status === "fallback" && (
-        <span role="status" className="text-xs text-amber-700">
-          {labels.copyScenarioLinkFallback}
-        </span>
       )}
     </div>
   );
@@ -810,7 +746,11 @@ export default function MortgageCalculator({
               <h2 className="text-2xl font-bold tracking-tight">
                 {labels.combinedResultsTitle}
               </h2>
-              <CopyScenarioLinkButton labels={labels} />
+              <CopyLinkButton
+                buttonLabel={labels.copyScenarioLinkButton}
+                successText={labels.copyScenarioLinkSuccess}
+                fallbackText={labels.copyScenarioLinkFallback}
+              />
             </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {combinedResults.map((result) => (
