@@ -299,6 +299,78 @@ export function buildVariableUnlinkedRatePathPercent(
   });
 }
 
+export interface CpiIndexFactorsParams {
+  months: number;
+  /** Cumulative expected CPI index, base 100 at maturity 0, months 0..360. */
+  expectedCpiIndexPath: readonly number[];
+  forecastMode: PrimeForecastMode;
+  /** Parallel ANNUAL inflation shift in percentage points (mode "stress"). */
+  inflationStressShiftPercent?: number;
+}
+
+/**
+ * Monthly CPI indexation factors for a CPI-linked track (index 0 = month 1):
+ *
+ * - official:  f_t = I[t] / I[t−1]  (so f_1 = I[1]/I[0]);
+ * - constant:  f_t = 1  (no inflation);
+ * - stress:    official f_t × (1 + shift/100)^(1/12).
+ *
+ * Deflation is allowed and never clamped, consistent with the negative-rate
+ * policy. A stress shift at or below −100% would make the monthly
+ * multiplier non-positive and is rejected with a clear error.
+ */
+export function buildCpiIndexFactors(
+  params: CpiIndexFactorsParams,
+): number[] {
+  const {
+    months,
+    expectedCpiIndexPath,
+    forecastMode,
+    inflationStressShiftPercent = 0,
+  } = params;
+
+  if (forecastMode === "constant") {
+    return Array.from({ length: months }, () => 1);
+  }
+
+  if (expectedCpiIndexPath.length < months + 1) {
+    throw new Error(
+      `Expected CPI index path covers ${expectedCpiIndexPath.length - 1} months but the track needs ${months}`,
+    );
+  }
+
+  let stressMultiplier = 1;
+  if (forecastMode === "stress") {
+    if (
+      !Number.isFinite(inflationStressShiftPercent) ||
+      inflationStressShiftPercent <= -100
+    ) {
+      throw new Error(
+        `Inflation stress shift ${inflationStressShiftPercent}% would make the monthly index multiplier invalid`,
+      );
+    }
+    stressMultiplier = Math.pow(1 + inflationStressShiftPercent / 100, 1 / 12);
+  }
+
+  const factors: number[] = [];
+  for (let month = 1; month <= months; month++) {
+    const current = expectedCpiIndexPath[month];
+    const previous = expectedCpiIndexPath[month - 1];
+    if (
+      !Number.isFinite(current) ||
+      !Number.isFinite(previous) ||
+      current <= 0 ||
+      previous <= 0
+    ) {
+      throw new Error(
+        `Expected CPI index path has an invalid value around month ${month}`,
+      );
+    }
+    factors.push((current / previous) * stressMultiplier);
+  }
+  return factors;
+}
+
 /**
  * Monthly internal rate of return of (−loanAmount, payments...), solved by
  * bisection. Returns the MONTHLY rate as a fraction; annualize with

@@ -68,6 +68,7 @@ export default async function CalculatorPage({
     boiRateStatus: (marketSnapshot.boiRate.isLive ? "live" : "fallback") as
       | "live"
       | "fallback",
+    boiNextDecisionAt: marketSnapshot.nextDecision.at,
     marketFetchedAt: marketSnapshot.fetchedAt,
     curves: forecastData.curves.map((curve) => ({
       ...curve,

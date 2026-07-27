@@ -340,6 +340,93 @@ describe("Makam drafts and URL round-trip", () => {
   });
 });
 
+describe("fixedLinked drafts and URL round-trip", () => {
+  function fixedLinkedDraft(overrides?: Partial<TrackDraft>): TrackDraft {
+    return createTrackDraft({
+      trackType: "fixedLinked",
+      amount: "500,000",
+      years: "20",
+      currentRatePercent: "4.5",
+      ...overrides,
+    });
+  }
+
+  it("parses a fixedLinked draft with the curve's CPI index, Spitzer-forced", () => {
+    const input = parseTrackDraft(fixedLinkedDraft(), MARKET);
+    expect(input).not.toBeNull();
+    if (input!.type !== "fixedLinked") throw new Error("expected fixedLinked");
+    expect(input!.repaymentMethod).toBe("spitzer");
+    expect(input!.currentCustomerRatePercent).toBe(4.5);
+    expect(input!.expectedCpiIndexPath).toHaveLength(361);
+    expect(input!.forecastCurveId).toBe("2026-06-calendar");
+  });
+
+  it("parses inflation stress from its dedicated field", () => {
+    const stressed = parseTrackDraft(
+      fixedLinkedDraft({ forecastMode: "stress", inflationStressShift: "-1,5" }),
+      MARKET,
+    );
+    if (stressed!.type !== "fixedLinked") throw new Error("expected fixedLinked");
+    expect(stressed!.inflationStressShiftPercent).toBe(-1.5);
+    // The RATE stress field is ignored for CPI tracks.
+    expect(
+      parseTrackDraft(
+        fixedLinkedDraft({ forecastMode: "stress", stressShift: "9" }),
+        MARKET,
+      ),
+    ).toBeNull(); // inflationStressShift empty → invalid
+  });
+
+  it("serializes InflationStressShift and never leaks foreign params", () => {
+    const query = applyTracksToQuery(new URLSearchParams(), [
+      fixedLinkedDraft({
+        forecastMode: "stress",
+        inflationStressShift: "1",
+        forecastCurveId: "2026-06-calendar",
+      }),
+    ]);
+    expect(query.get("track1Type")).toBe("fixedLinked");
+    expect(query.get("track1CurrentRatePercent")).toBe("4.5");
+    expect(query.get("track1InflationStressShift")).toBe("1");
+    expect(query.get("track1RepaymentMethod")).toBe("spitzer");
+    // No rate-stress, reset, Makam, or fixed-rate params for CPI tracks.
+    expect(query.get("track1ForecastStressShift")).toBeNull();
+    expect(query.get("track1ResetPeriodMonths")).toBeNull();
+    expect(query.get("track1MakamSnapshotId")).toBeNull();
+    expect(query.get("track1AnnualInterestRatePercent")).toBeNull();
+  });
+
+  it("inflation-stress params never appear on non-CPI tracks", () => {
+    const primeQuery = applyTracksToQuery(new URLSearchParams(), [
+      primeDraft({ forecastMode: "stress", stressShift: "1" }),
+    ]);
+    expect(primeQuery.get("track1InflationStressShift")).toBeNull();
+    expect(primeQuery.get("track1ForecastStressShift")).toBe("1");
+  });
+
+  it("round-trips a fixedLinked track through the URL", () => {
+    const query = applyTracksToQuery(new URLSearchParams(), [
+      fixedLinkedDraft({
+        forecastMode: "stress",
+        inflationStressShift: "2",
+        forecastCurveId: "2026-06-calendar",
+      }),
+    ]);
+    const drafts = parseTracksFromQuery(query);
+    expect(drafts).toHaveLength(1);
+    expect(drafts![0].trackType).toBe("fixedLinked");
+    expect(drafts![0].inflationStressShift).toBe("2");
+    expect(drafts![0].stressShift).toBe("");
+    expect(parseAllTrackDrafts(drafts!, MARKET)).toHaveLength(1);
+  });
+
+  it("enforces strict curve pinning for fixedLinked too", () => {
+    const draft = fixedLinkedDraft({ forecastCurveId: "2020-01-calendar" });
+    expect(parseTrackDraft(draft, MARKET)).toBeNull();
+    expect(isPinnedCurveMissing(draft, MARKET)).toBe(true);
+  });
+});
+
 describe("legacy variableUnlinked URL migration", () => {
   it("migrates 24/60-month resets to the gov-bond product, keeping valid terms", () => {
     const drafts = parseTracksFromQuery(

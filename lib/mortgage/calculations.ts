@@ -16,6 +16,7 @@
 import {
   DEFAULT_INTEREST_RATE_INPUT_MODE,
   type AmortizationEntry,
+  type FixedCpiLinkedTrackInput,
   type FixedUnlinkedTrackInput,
   type MortgageScenarioInput,
   type MortgageTrackInput,
@@ -29,6 +30,7 @@ import {
 import { annualPercentToMonthlyRate, MONTHS_PER_YEAR } from "./interest";
 import {
   buildBlockRepricedSpitzerSchedule,
+  buildCpiLinkedSpitzerSchedule,
   buildEqualPrincipalSchedule,
   buildSpitzerSchedule,
   buildVariableRateEqualPrincipalSchedule,
@@ -38,6 +40,7 @@ import {
 } from "./amortization";
 import {
   buildBlockForwardRatePathPercent,
+  buildCpiIndexFactors,
   buildPrimeRatePathPercent,
   PRIME_BOI_SPREAD_PERCENT,
   solveMonthlyIrr,
@@ -471,6 +474,97 @@ function calculateMakamTrackSummary(
   return summary;
 }
 
+function calculateFixedCpiLinkedTrackSummary(
+  track: FixedCpiLinkedTrackInput,
+): TrackSummary {
+  if (!Number.isFinite(track.loanAmount) || track.loanAmount <= 0) {
+    throw new Error(`loanAmount must be positive, got ${track.loanAmount}`);
+  }
+  if (!Number.isFinite(track.years) || track.years <= 0) {
+    throw new Error(`years must be positive, got ${track.years}`);
+  }
+  if (
+    !Number.isFinite(track.currentCustomerRatePercent) ||
+    track.currentCustomerRatePercent < 0
+  ) {
+    throw new Error(
+      `currentCustomerRatePercent cannot be negative, got ${track.currentCustomerRatePercent}`,
+    );
+  }
+  const numberOfPayments = termMonthsFromYears(track.years);
+
+  const monthlyCpiFactors = buildCpiIndexFactors({
+    months: numberOfPayments,
+    expectedCpiIndexPath: track.expectedCpiIndexPath,
+    forecastMode: track.forecastMode,
+    inflationStressShiftPercent: track.inflationStressShiftPercent,
+  });
+  const schedule = buildCpiLinkedSpitzerSchedule({
+    loanAmount: track.loanAmount,
+    annualRatePercent: track.currentCustomerRatePercent,
+    numberOfPayments,
+    monthlyCpiFactors,
+  });
+
+  // The visible first payment: the base real payment at today's offered
+  // linked rate, BEFORE forecast indexation (identical to the equivalent
+  // fixed-unlinked payment; in constant mode it equals schedule month 1).
+  const monthlyRate = track.currentCustomerRatePercent / 100 / 12;
+  const currentFirstPayment = roundMoney(
+    spitzerMonthlyPaymentRaw({
+      loanAmount: track.loanAmount,
+      monthlyRate,
+      numberOfPayments,
+    }),
+  );
+
+  const payments = summarizePayments(schedule);
+  const monthlyIrr = solveMonthlyIrr(
+    track.loanAmount,
+    schedule.map((entry) => entry.payment),
+  );
+
+  const firstYearExpectedInflationPercent =
+    track.forecastMode === "constant" ||
+    track.expectedCpiIndexPath.length < 13
+      ? 0
+      : (track.expectedCpiIndexPath[12] / track.expectedCpiIndexPath[0] - 1) *
+        100;
+
+  return {
+    monthlyPayment: currentFirstPayment,
+    totalPayment: payments.totalPayment,
+    // Per spec: total forecast interest = total forecast payments − loan
+    // (i.e., interest + linkage differentials combined).
+    totalInterest: roundMoney(payments.totalPayment - track.loanAmount),
+    numberOfPayments: schedule.length,
+    finalBalance: payments.finalBalance,
+    firstPayment: payments.firstPayment,
+    lastPayment: payments.lastPayment,
+    maximumPayment: payments.maximumPayment,
+    minimumPayment: payments.minimumPayment,
+    schedule,
+    cpiForecast: {
+      currentFirstPayment,
+      forecastFirstPayment: payments.firstPayment,
+      forecastMaximumPayment: payments.maximumPayment,
+      monthOfForecastMaximumPayment: payments.maximumMonth,
+      forecastLastPayment: payments.lastPayment,
+      forecastTotalPayment: payments.totalPayment,
+      forecastTotalInterest: roundMoney(
+        payments.totalPayment - track.loanAmount,
+      ),
+      forecastOverallRatePercent: (Math.pow(1 + monthlyIrr, 12) - 1) * 100,
+      currentOfferedRatePercent: track.currentCustomerRatePercent,
+      firstYearExpectedInflationPercent,
+      forecastMode: track.forecastMode,
+      inflationStressShiftPercent: track.inflationStressShiftPercent ?? 0,
+      forecastCurveId: track.forecastCurveId ?? null,
+      forecastCurvePublicationDate: track.forecastCurvePublicationDate ?? null,
+    },
+  };
+}
+
 /**
  * Compute the summary for a single track.
  *
@@ -485,6 +579,8 @@ export function calculateTrackSummary(track: MortgageTrackInput): TrackSummary {
       return calculateGovernmentBondTrackSummary(track);
     case "variableMakam":
       return calculateMakamTrackSummary(track);
+    case "fixedLinked":
+      return calculateFixedCpiLinkedTrackSummary(track);
     case "fixedUnlinked": {
       const schedule = buildFixedTrackSchedule(track);
       const payments = summarizePayments(schedule);
@@ -503,7 +599,7 @@ export function calculateTrackSummary(track: MortgageTrackInput): TrackSummary {
     }
     default:
       throw new Error(
-        `Track type "${(track as { type: string }).type}" is not implemented yet; supported: "fixedUnlinked", "prime", "variableGovernmentBond", "variableMakam"`,
+        `Track type "${(track as { type: string }).type}" is not implemented yet; supported: "fixedUnlinked", "prime", "variableGovernmentBond", "variableMakam", "fixedLinked"`,
       );
   }
 }
@@ -586,7 +682,10 @@ export function calculateScenarioSummary(
   const currentCombinedFirstPayment = roundMoney(
     trackSummaries.reduce(
       (sum, summary) =>
-        sum + (summary.forecast?.currentFirstPayment ?? summary.firstPayment),
+        sum +
+        (summary.forecast?.currentFirstPayment ??
+          summary.cpiForecast?.currentFirstPayment ??
+          summary.firstPayment),
       0,
     ),
   );

@@ -58,6 +58,17 @@ export interface ParsedCurveRow {
   yieldsPercent: number[]; // exactly 360, maturities 1..360 in order
 }
 
+/** Length of the expected-CPI-index sheet's data: maturities 0..360. */
+export const CPI_INDEX_LENGTH = 361;
+
+export interface ParsedCpiIndexRow {
+  referenceYear: number;
+  referenceMonth: number;
+  averageType: ForecastCurveAverageType;
+  /** Cumulative expected CPI index, base 100 at maturity 0. */
+  indexValues: number[]; // exactly 361, maturities 0..360 in order
+}
+
 export interface ParsedScheduleEntry {
   publicationDate: string; // ISO date
   referenceYear: number;
@@ -96,6 +107,41 @@ export function parseCurveRow(cells: RawRow): ParsedCurveRow | null {
     referenceMonth: HEBREW_MONTHS[month],
     averageType: AVERAGE_TYPES[averageTypeText],
     yieldsPercent: yields as number[],
+  };
+}
+
+/**
+ * Parse one expected-CPI-index sheet row ("התפתחות פער התשואות"):
+ * [year, hebrewMonth, averageType, index@0m, ..., index@360m].
+ * The sheet holds the cumulative expected price index itself (base 100 at
+ * maturity 0), which IS the Directive-451 linkage forecast for CPI-linked
+ * tracks. Returns null for non-data rows.
+ */
+export function parseCpiIndexRow(cells: RawRow): ParsedCpiIndexRow | null {
+  const year = cells[0];
+  const month = asTrimmedString(cells[1]);
+  const averageTypeText = asTrimmedString(cells[2]);
+  if (typeof year !== "number" || !Number.isInteger(year)) return null;
+  if (month === null || !(month in HEBREW_MONTHS)) return null;
+  if (averageTypeText === null || !(averageTypeText in AVERAGE_TYPES)) {
+    return null;
+  }
+
+  const values = cells.slice(3, 3 + CPI_INDEX_LENGTH);
+  if (values.length !== CPI_INDEX_LENGTH) return null;
+  if (
+    !values.every((value) => typeof value === "number" && Number.isFinite(value))
+  ) {
+    return null;
+  }
+  // Base-100 sanity: reject rows whose maturity-0 value is not ~100.
+  if (Math.abs((values[0] as number) - 100) > 0.5) return null;
+
+  return {
+    referenceYear: year,
+    referenceMonth: HEBREW_MONTHS[month],
+    averageType: AVERAGE_TYPES[averageTypeText],
+    indexValues: values as number[],
   };
 }
 
@@ -170,9 +216,16 @@ export function selectEffectiveCurves(
   now: Date,
   fetchedAt: string,
   count: number = Number.POSITIVE_INFINITY,
+  cpiIndexRows: ParsedCpiIndexRow[] = [],
 ): MortgageForecastCurveSnapshot[] {
   const realByKey = new Map(
     realRows.map((row) => [
+      curveKey(row.referenceYear, row.referenceMonth, row.averageType),
+      row,
+    ]),
+  );
+  const cpiByKey = new Map(
+    cpiIndexRows.map((row) => [
       curveKey(row.referenceYear, row.referenceMonth, row.averageType),
       row,
     ]),
@@ -206,6 +259,7 @@ export function selectEffectiveCurves(
       effectiveDate,
       nominalZeroYieldsPercent: row.yieldsPercent,
       realZeroYieldsPercent: realByKey.get(key)?.yieldsPercent ?? [],
+      expectedCpiIndex: cpiByKey.get(key)?.indexValues ?? [],
       fetchedAt,
       status: "live",
       sourceId: FORECAST_SOURCE_ID,
@@ -266,6 +320,10 @@ export function isValidCurveSnapshot(
     (snapshot.realZeroYieldsPercent.length === 0 ||
       (snapshot.realZeroYieldsPercent.length === MATURITY_MONTHS &&
         snapshot.realZeroYieldsPercent.every(Number.isFinite))) &&
+    (snapshot.expectedCpiIndex.length === 0 ||
+      (snapshot.expectedCpiIndex.length === CPI_INDEX_LENGTH &&
+        snapshot.expectedCpiIndex.every(Number.isFinite) &&
+        Math.abs(snapshot.expectedCpiIndex[0] - 100) <= 0.5)) &&
     Number.isInteger(snapshot.referenceYear) &&
     snapshot.referenceMonth >= 1 &&
     snapshot.referenceMonth <= 12 &&

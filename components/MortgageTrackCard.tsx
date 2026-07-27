@@ -36,6 +36,8 @@ export interface TrackCardMarketInfo {
   makamAnchorLabel: string | null;
   /** The draft pins a Makam snapshot ID that is not available. */
   makamAnchorIsMissing: boolean;
+  /** Fixed CPI-linked tracks: formatted expected first-year inflation. */
+  expectedInflationLabel: string | null;
 }
 
 interface MortgageTrackCardProps {
@@ -97,10 +99,11 @@ export default function MortgageTrackCard({
   const isPrime = draft.trackType === "prime";
   const isGovernmentBond = draft.trackType === "variableGovernmentBond";
   const isMakam = draft.trackType === "variableMakam";
-  // Tracks whose future rate comes from the official forecast curve.
-  const isVariableStyle = isPrime || isGovernmentBond || isMakam;
+  const isFixedLinked = draft.trackType === "fixedLinked";
+  // Tracks whose forecast comes from the official curve workbook.
+  const isVariableStyle = isPrime || isGovernmentBond || isMakam || isFixedLinked;
   // Preset products verified as Spitzer-only: no repayment selector.
-  const isSpitzerPreset = isGovernmentBond || isMakam;
+  const isSpitzerPreset = isGovernmentBond || isMakam || isFixedLinked;
 
   const governmentBondReset = Number(draft.resetPeriodMonths);
   const governmentBondTerms = isGovernmentBondResetMonths(governmentBondReset)
@@ -152,6 +155,7 @@ export default function MortgageTrackCard({
           {labels.trackTypeGovernmentBond}
         </option>
         <option value="variableMakam">{labels.trackTypeMakam}</option>
+        <option value="fixedLinked">{labels.trackTypeFixedLinked}</option>
       </select>
     </label>
   );
@@ -383,6 +387,19 @@ export default function MortgageTrackCard({
                 {" · "}
               </>
             )}
+            {isFixedLinked && (
+              <>
+                {labels.fixedLinkedHelp}
+                {market.expectedInflationLabel && (
+                  <>
+                    {" · "}
+                    {labels.expectedInflationLabel}:{" "}
+                    {market.expectedInflationLabel}
+                  </>
+                )}
+                {" · "}
+              </>
+            )}
             {labels.primeInfoCurve}: {market.curveReferenceLabel}
             {market.curveIsFallback && (
               <span className="text-amber-700">
@@ -398,7 +415,11 @@ export default function MortgageTrackCard({
             </summary>
             <div className="mt-2 grid gap-3 sm:grid-cols-2">
               <label className="block">
-                <span className={labelClass}>{labels.forecastModeLabel}</span>
+                <span className={labelClass}>
+                  {isFixedLinked
+                    ? labels.inflationModeLabel
+                    : labels.forecastModeLabel}
+                </span>
                 <select
                   value={draft.forecastMode}
                   onChange={(event) =>
@@ -406,22 +427,45 @@ export default function MortgageTrackCard({
                   }
                   className={fieldClass}
                 >
-                  <option value="official">{labels.forecastModeOfficial}</option>
-                  <option value="constant">{labels.forecastModeConstant}</option>
-                  <option value="stress">{labels.forecastModeStress}</option>
+                  <option value="official">
+                    {isFixedLinked
+                      ? labels.inflationModeOfficial
+                      : labels.forecastModeOfficial}
+                  </option>
+                  <option value="constant">
+                    {isFixedLinked
+                      ? labels.inflationModeConstant
+                      : labels.forecastModeConstant}
+                  </option>
+                  <option value="stress">
+                    {isFixedLinked
+                      ? labels.inflationModeStress
+                      : labels.forecastModeStress}
+                  </option>
                 </select>
               </label>
               {draft.forecastMode === "stress" && (
                 <label className="block">
-                  <span className={labelClass}>{labels.stressShiftLabel}</span>
+                  <span className={labelClass}>
+                    {isFixedLinked
+                      ? labels.inflationStressShiftLabel
+                      : labels.stressShiftLabel}
+                  </span>
                   <input
                     type="text"
                     inputMode="decimal"
                     autoComplete="off"
                     placeholder="+1"
-                    value={draft.stressShift}
+                    value={
+                      isFixedLinked
+                        ? draft.inflationStressShift
+                        : draft.stressShift
+                    }
                     onChange={(event) =>
-                      onChange("stressShift", event.target.value)
+                      onChange(
+                        isFixedLinked ? "inflationStressShift" : "stressShift",
+                        event.target.value,
+                      )
                     }
                     className={fieldClass}
                   />
@@ -433,7 +477,7 @@ export default function MortgageTrackCard({
                 {labels.stressScenarioNote}
               </p>
             )}
-            {draft.forecastMode === "stress" && (
+            {draft.forecastMode === "stress" && !isFixedLinked && (
               <p className="mt-1 text-xs text-slate-500">
                 {labels.negativeRatesNote}
               </p>

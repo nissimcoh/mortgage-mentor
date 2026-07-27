@@ -156,12 +156,37 @@ export interface VariableMakamTrackInput {
   makamSnapshotId?: string;
 }
 
+/**
+ * Fixed CPI-linked track (קבועה צמודה למדד): the interest rate is fixed
+ * for the full term, but the principal and payments are linked to the CPI.
+ * Linkage forecast per Directive 451: the market-implied expected CPI
+ * index published in the official BOI forecast workbook. Spitzer preset.
+ */
+export interface FixedCpiLinkedTrackInput {
+  id?: string;
+  type: "fixedLinked";
+  repaymentMethod: "spitzer";
+  loanAmount: number;
+  /** Whole years only. */
+  years: number;
+  /** The offered fixed LINKED (real) annual rate, percent. */
+  currentCustomerRatePercent: number;
+  /** Cumulative expected CPI index, base 100 at maturity 0, months 0..360. */
+  expectedCpiIndexPath: readonly number[];
+  forecastMode: "official" | "constant" | "stress";
+  /** Parallel ANNUAL inflation shift in percentage points (mode "stress"). */
+  inflationStressShiftPercent?: number;
+  forecastCurveId?: string;
+  forecastCurvePublicationDate?: string;
+}
+
 /** Input for a single mortgage track. */
 export type MortgageTrackInput =
   | FixedUnlinkedTrackInput
   | PrimeTrackInput
   | VariableGovernmentBondTrackInput
-  | VariableMakamTrackInput;
+  | VariableMakamTrackInput
+  | FixedCpiLinkedTrackInput;
 
 /** Minimal parameter set for the Spitzer payment/schedule helpers. */
 export interface SpitzerPaymentParams {
@@ -192,6 +217,8 @@ export interface AmortizationEntry {
   activeAnnualRatePercent?: number;
   /** Balance at the start of the month, before this month's payment. */
   openingBalance?: number;
+  /** CPI-linked tracks: this month's linkage differential on the balance. */
+  indexationAmount?: number;
 }
 
 /** Computed results for a single track. */
@@ -221,6 +248,28 @@ export interface TrackSummary {
   forecast?: PrimeForecastSummary;
   /** Variable-unlinked forecast results; the schedule above is the forecast. */
   variableForecast?: VariableForecastSummary;
+  /** Fixed CPI-linked forecast results; the schedule above is the forecast. */
+  cpiForecast?: CpiLinkedForecastSummary;
+}
+
+/** Forecast results for a fixed CPI-linked track. */
+export interface CpiLinkedForecastSummary {
+  /** Base payment at today's offered linked rate, before CPI indexation. */
+  currentFirstPayment: number;
+  forecastFirstPayment: number;
+  forecastMaximumPayment: number;
+  monthOfForecastMaximumPayment: number;
+  forecastLastPayment: number;
+  forecastTotalPayment: number;
+  forecastTotalInterest: number;
+  forecastOverallRatePercent: number;
+  currentOfferedRatePercent: number;
+  /** expectedCpiIndex[12]/expectedCpiIndex[0] − 1, percent (0 in constant mode). */
+  firstYearExpectedInflationPercent: number;
+  forecastMode: "official" | "constant" | "stress";
+  inflationStressShiftPercent: number;
+  forecastCurveId: string | null;
+  forecastCurvePublicationDate: string | null;
 }
 
 /** Forecast results for a variable-unlinked track. */

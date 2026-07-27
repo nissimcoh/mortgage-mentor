@@ -27,6 +27,7 @@ export const SUPPORTED_TRACK_TYPES = [
   "prime",
   "variableGovernmentBond",
   "variableMakam",
+  "fixedLinked",
 ] as const;
 export type SupportedTrackType = (typeof SUPPORTED_TRACK_TYPES)[number];
 export const SUPPORTED_TRACK_TYPE = "fixedUnlinked"; // default track type
@@ -36,12 +37,13 @@ export type SupportedRepaymentMethod =
 export const DEFAULT_REPAYMENT_METHOD: SupportedRepaymentMethod = "spitzer";
 export const DEFAULT_FORECAST_MODE: PrimeForecastMode = "official";
 
-/** Track types whose future rate comes from the official forecast data. */
+/** Track types whose forecast comes from the official curve workbook. */
 export function isVariableStyleTrackType(value: string): boolean {
   return (
     value === "prime" ||
     value === "variableGovernmentBond" ||
-    value === "variableMakam"
+    value === "variableMakam" ||
+    value === "fixedLinked"
   );
 }
 
@@ -62,6 +64,8 @@ export interface MarketContextForParsing {
     id: string;
     publicationDate: string;
     nominalZeroYieldsPercent: readonly number[];
+    /** Cumulative expected CPI index (base 100, months 0..360). */
+    expectedCpiIndex?: readonly number[];
   }>;
   makamSnapshots?: ReadonlyArray<{
     id: string;
@@ -97,8 +101,10 @@ export interface TrackDraft {
   resetPeriodMonths: string;
   /** Prime/variable tracks: "official" | "constant" | "stress". */
   forecastMode: string;
-  /** Prime/variable tracks, mode "stress": shift in percentage points. */
+  /** Prime/variable tracks, mode "stress": RATE shift in percentage points. */
   stressShift: string;
+  /** Fixed CPI-linked tracks, mode "stress": INFLATION shift in pp. */
+  inflationStressShift: string;
   /** Prime/variable tracks: the official curve the last calculation used. */
   forecastCurveId: string;
   /** Makam tracks: the anchor snapshot the last calculation used. */
@@ -124,6 +130,7 @@ export function createTrackDraft(
     resetPeriodMonths: "",
     forecastMode: DEFAULT_FORECAST_MODE,
     stressShift: "",
+    inflationStressShift: "",
     forecastCurveId: "",
     makamSnapshotId: "",
     ...seed,
@@ -195,6 +202,33 @@ export function resolveForecastCurve(
     );
   }
   return market.curves[0] ?? null;
+}
+
+export type CurveFreshnessRole = "used" | "latest" | "pinned";
+
+/**
+ * How a fetched forecast curve relates to the current scenario, for the
+ * freshness display: the curve actually driving a variable-style track's
+ * calculation right now, the newest curve fetched by default (index 0 in
+ * `market.curves`, "newest first"), or a curve present only because a URL
+ * param pinned it (and no current draft resolves to it).
+ *
+ * "Used" takes priority over "latest": the default curve counts as used
+ * once some draft actually resolves to it.
+ */
+export function classifyCurveFreshnessRole(
+  curveId: string,
+  index: number,
+  drafts: readonly TrackDraft[],
+  market: MarketContextForParsing,
+): CurveFreshnessRole {
+  const isUsed = drafts.some(
+    (draft) =>
+      isVariableStyleTrackType(draft.trackType) &&
+      resolveForecastCurve(draft, market)?.id === curveId,
+  );
+  if (isUsed) return "used";
+  return index === 0 ? "latest" : "pinned";
 }
 
 /** True when the draft pins a curve ID that is not available. */
@@ -288,6 +322,13 @@ export function parseTrackDraft(
     if (!curve || curve.nominalZeroYieldsPercent.length < years * 12) {
       return null;
     }
+    // CPI-linked tracks additionally need the expected-CPI-index path.
+    if (
+      draft.trackType === "fixedLinked" &&
+      (curve.expectedCpiIndex ?? []).length < years * 12 + 1
+    ) {
+      return null;
+    }
     const currentRatePercent = parseDecimalRate(draft.currentRatePercent);
     if (currentRatePercent === null) return null;
 
@@ -296,7 +337,12 @@ export function parseTrackDraft(
       : DEFAULT_FORECAST_MODE;
     let stressShiftPercent = 0;
     if (forecastMode === "stress") {
-      const shift = parseSignedDecimal(draft.stressShift);
+      // Fixed CPI-linked stresses INFLATION; the others stress the RATE.
+      const shift = parseSignedDecimal(
+        draft.trackType === "fixedLinked"
+          ? draft.inflationStressShift
+          : draft.stressShift,
+      );
       if (shift === null) return null;
       stressShiftPercent = shift;
     }
@@ -333,6 +379,21 @@ export function parseTrackDraft(
         currentMakamAnchorPercent: snapshot.anchorPercent,
         makamSnapshotId: snapshot.id,
         ...shared,
+      };
+    }
+
+    if (draft.trackType === "fixedLinked") {
+      const {
+        forecastZeroYieldsPercent: _unusedYields,
+        stressShiftPercent: inflationShift,
+        ...sharedRest
+      } = shared;
+      return {
+        type: "fixedLinked",
+        repaymentMethod: "spitzer", // preset-verified product method
+        expectedCpiIndexPath: curve.expectedCpiIndex ?? [],
+        inflationStressShiftPercent: inflationShift,
+        ...sharedRest,
       };
     }
 
@@ -437,7 +498,8 @@ export function applyTracksToQuery(
     query.set(
       `${prefix}RepaymentMethod`,
       draft.trackType === "variableGovernmentBond" ||
-        draft.trackType === "variableMakam"
+        draft.trackType === "variableMakam" ||
+        draft.trackType === "fixedLinked"
         ? "spitzer"
         : draft.repaymentMethod,
     );
@@ -463,8 +525,14 @@ export function applyTracksToQuery(
         : DEFAULT_FORECAST_MODE;
       query.set(`${prefix}ForecastMode`, mode);
       if (mode === "stress") {
-        const shift = parseSignedDecimal(draft.stressShift);
-        query.set(`${prefix}ForecastStressShift`, String(shift ?? 0));
+        if (draft.trackType === "fixedLinked") {
+          // Inflation shift is fixedLinked-only; rate shift never written.
+          const shift = parseSignedDecimal(draft.inflationStressShift);
+          query.set(`${prefix}InflationStressShift`, String(shift ?? 0));
+        } else {
+          const shift = parseSignedDecimal(draft.stressShift);
+          query.set(`${prefix}ForecastStressShift`, String(shift ?? 0));
+        }
       }
       if (draft.forecastCurveId !== "") {
         query.set(`${prefix}ForecastCurveId`, draft.forecastCurveId);
@@ -563,7 +631,14 @@ export function parseTracksFromQuery(
           forecastMode: isPrimeForecastMode(mode)
             ? mode
             : DEFAULT_FORECAST_MODE,
-          stressShift: query.get(`${prefix}ForecastStressShift`) ?? "",
+          stressShift:
+            trackType === "fixedLinked"
+              ? ""
+              : (query.get(`${prefix}ForecastStressShift`) ?? ""),
+          inflationStressShift:
+            trackType === "fixedLinked"
+              ? (query.get(`${prefix}InflationStressShift`) ?? "")
+              : "",
           forecastCurveId: isVariableStyle
             ? (query.get(`${prefix}ForecastCurveId`) ?? "")
             : "",

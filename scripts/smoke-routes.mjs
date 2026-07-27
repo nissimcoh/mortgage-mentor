@@ -45,6 +45,11 @@ const ROUTES = [
     path: "/he/calculator?trackCount=1&track1Amount=200000&track1Type=variableUnlinked&track1Years=15&track1CurrentRatePercent=4&track1ResetPeriodMonths=12",
     expected: 200,
   },
+  // Fixed CPI-linked with an inflation-stress scenario
+  {
+    path: "/he/calculator?trackCount=1&track1Amount=500000&track1Type=fixedLinked&track1RepaymentMethod=spitzer&track1Years=20&track1CurrentRatePercent=4.5&track1ForecastMode=official&track1ForecastCurveId=2026-06-calendar",
+    expected: 200,
+  },
   // Legacy single-track format
   {
     path: "/he/calculator?loanAmount=800000&annualInterestRatePercent=4.8&years=25",

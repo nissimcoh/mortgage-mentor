@@ -245,6 +245,82 @@ export function buildVariableRateEqualPrincipalSchedule({
   return schedule;
 }
 
+export interface CpiLinkedSpitzerParams {
+  loanAmount: number;
+  /** The fixed LINKED (real) annual rate, percent. */
+  annualRatePercent: number;
+  numberOfPayments: number;
+  /** Monthly CPI indexation factors, index 0 = month 1. */
+  monthlyCpiFactors: readonly number[];
+}
+
+/**
+ * Fixed CPI-linked Spitzer schedule (קבועה צמודה, שיטת שפיצר).
+ *
+ * The loan behaves as a plain Spitzer in REAL (linked) terms at the fixed
+ * rate; nominal values are the real values scaled by the cumulative CPI
+ * factor. Implemented iteratively per month:
+ *
+ *   1. openingBalance   = previous remaining (nominal)
+ *   2. indexedBalance   = openingBalance × f_t
+ *   3. indexationAmount = indexedBalance − openingBalance
+ *   4. interest         = indexedBalance × i
+ *   5. payment          = P × C_t   (base real payment, indexed cumulatively)
+ *   6. principal        = payment − interest
+ *   7. remaining        = indexedBalance − principal
+ *
+ * The base payment is fixed at the ROUNDED (agorot) amount like every
+ * other builder; balances are carried at full precision and the final
+ * month repays the remaining balance exactly, so the schedule always ends
+ * at exactly 0. Deflationary factors (< 1) flow through unchanged.
+ */
+export function buildCpiLinkedSpitzerSchedule({
+  loanAmount,
+  annualRatePercent,
+  numberOfPayments,
+  monthlyCpiFactors,
+}: CpiLinkedSpitzerParams): AmortizationEntry[] {
+  const monthlyRate = annualRatePercent / 100 / 12;
+  const basePayment = roundMoney(
+    spitzerMonthlyPaymentRaw({ loanAmount, monthlyRate, numberOfPayments }),
+  );
+
+  const schedule: AmortizationEntry[] = [];
+  let balance = loanAmount;
+  let cumulativeFactor = 1;
+
+  for (let month = 1; month <= numberOfPayments; month++) {
+    const factor = monthlyCpiFactors[month - 1];
+    cumulativeFactor *= factor;
+
+    const openingBalance = balance;
+    const indexedBalance = openingBalance * factor;
+    const indexationAmount = indexedBalance - openingBalance;
+    const interestPayment = indexedBalance * monthlyRate;
+
+    let payment = basePayment * cumulativeFactor;
+    let principalPayment = payment - interestPayment;
+    if (month === numberOfPayments || principalPayment >= indexedBalance) {
+      principalPayment = indexedBalance;
+      payment = principalPayment + interestPayment;
+    }
+    balance = indexedBalance - principalPayment;
+
+    schedule.push({
+      month,
+      payment: roundMoney(principalPayment + interestPayment),
+      principalPayment: roundMoney(principalPayment),
+      interestPayment: roundMoney(interestPayment),
+      remainingBalance: roundMoney(balance),
+      activeAnnualRatePercent: annualRatePercent,
+      openingBalance: roundMoney(openingBalance),
+      indexationAmount: roundMoney(indexationAmount),
+    });
+  }
+
+  return schedule;
+}
+
 /**
  * Build a month-by-month equal-principal (קרן שווה) schedule:
  *

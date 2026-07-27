@@ -178,9 +178,9 @@ describe("unsupported inputs fail loudly", () => {
     expect(() =>
       calculateTrackSummary({
         ...referenceTrack,
-        type: "fixedLinked",
+        type: "variableLinked",
       } as unknown as MortgageTrackInput),
-    ).toThrow(/"fixedLinked" is not implemented yet/);
+    ).toThrow(/"variableLinked" is not implemented yet/);
   });
 
   it("throws a clear error for a not-yet-implemented repayment method", () => {

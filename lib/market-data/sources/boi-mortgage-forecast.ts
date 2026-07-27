@@ -11,10 +11,12 @@ import { createFallbackForecastCurve } from "../mortgage-forecast-fallback";
 import {
   FORECAST_SOURCE_ID,
   isValidCurveSnapshot,
+  parseCpiIndexRow,
   parseCurveRow,
   parseScheduleRow,
   pickCurvesForRequest,
   selectEffectiveCurves,
+  type ParsedCpiIndexRow,
   type ParsedCurveRow,
   type ParsedScheduleEntry,
   type RawRow,
@@ -74,6 +76,7 @@ async function fetchWorkbook(url: string) {
 interface ParsedWorkbooks {
   nominalRows: ParsedCurveRow[];
   realRows: ParsedCurveRow[];
+  cpiIndexRows: ParsedCpiIndexRow[];
   schedule: ParsedScheduleEntry[];
   fetchedAt: string;
 }
@@ -97,7 +100,11 @@ async function loadWorkbookRows(): Promise<ParsedWorkbooks> {
 
   const nominalSheet = curveBook.worksheets[0];
   const realSheet = curveBook.worksheets[1];
-  if (!nominalSheet || !realSheet) {
+  // Third sheet ("התפתחות פער התשואות"): the cumulative expected CPI index
+  // (base 100 at maturity 0, months 0..360) — the Directive-451 linkage
+  // forecast for CPI-linked tracks.
+  const cpiSheet = curveBook.worksheets[2];
+  if (!nominalSheet || !realSheet || !cpiSheet) {
     throw new Error("BOI curve workbook is missing expected sheets");
   }
 
@@ -107,6 +114,9 @@ async function loadWorkbookRows(): Promise<ParsedWorkbooks> {
   const realRows = extractSheetRows(realSheet, 363)
     .map(parseCurveRow)
     .filter((row): row is ParsedCurveRow => row !== null);
+  const cpiIndexRows = extractSheetRows(cpiSheet, 364)
+    .map(parseCpiIndexRow)
+    .filter((row): row is ParsedCpiIndexRow => row !== null);
 
   const schedule: ParsedScheduleEntry[] = [];
   for (const sheet of scheduleBook.worksheets) {
@@ -116,7 +126,7 @@ async function loadWorkbookRows(): Promise<ParsedWorkbooks> {
     }
   }
 
-  const data = { nominalRows, realRows, schedule, fetchedAt };
+  const data = { nominalRows, realRows, cpiIndexRows, schedule, fetchedAt };
   parseCache = { at: Date.now(), data };
   return data;
 }
@@ -137,8 +147,13 @@ export async function getMortgageForecastData(
 ): Promise<MortgageForecastData> {
   const fetchedAt = new Date().toISOString();
   try {
-    const { nominalRows, realRows, schedule, fetchedAt: parsedAt } =
-      await loadWorkbookRows();
+    const {
+      nominalRows,
+      realRows,
+      cpiIndexRows,
+      schedule,
+      fetchedAt: parsedAt,
+    } = await loadWorkbookRows();
 
     const effective = selectEffectiveCurves(
       nominalRows,
@@ -146,6 +161,8 @@ export async function getMortgageForecastData(
       schedule,
       new Date(),
       parsedAt,
+      Number.POSITIVE_INFINITY,
+      cpiIndexRows,
     ).filter(isValidCurveSnapshot);
 
     if (effective.length === 0) {

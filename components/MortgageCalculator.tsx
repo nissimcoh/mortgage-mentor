@@ -1,8 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { Locale } from "@/lib/i18n/config";
+import { formatDateOnly, formatDateTimeIsrael } from "@/lib/forms/dates";
+import { freshnessStatusText } from "@/lib/forms/freshness";
 // Type-only import: erased at compile time, so the server-only dictionary
 // module is never bundled into this Client Component.
 import type { Dictionary } from "@/app/[locale]/dictionaries";
@@ -26,6 +29,7 @@ import {
 } from "@/lib/mortgage/product-catalog";
 import {
   applyTracksToQuery,
+  classifyCurveFreshnessRole,
   createTrackDraft,
   duplicateTrackDraft,
   formatAmountForDisplay,
@@ -59,6 +63,8 @@ export interface CalculatorMarketData {
   /** ISO date the current BOI rate took effect. */
   boiRateEffectiveDate: string;
   boiRateStatus: "live" | "fallback";
+  /** ISO datetime of the next scheduled BOI rate decision, or null. */
+  boiNextDecisionAt: string | null;
   /** When the BOI-rate/CPI market snapshot was assembled (ISO). */
   marketFetchedAt: string;
   /** Effective official forecast curves, newest first. */
@@ -89,6 +95,47 @@ function tryCalculateScenario(
   } catch {
     return null;
   }
+}
+
+interface FreshnessRowData {
+  label: string;
+  value: ReactNode;
+}
+
+/** One label/value line inside a freshness mini-card. Values that are
+ * dates or IDs stay LTR even inside the Hebrew (RTL) layout so digits and
+ * separators never get visually reordered by the bidi algorithm. */
+function FreshnessRow({ label, value }: FreshnessRowData) {
+  return (
+    <div className="flex items-baseline justify-between gap-2">
+      <dt className="text-slate-400">{label}</dt>
+      <dd dir="ltr" className="text-end text-slate-600">
+        {value}
+      </dd>
+    </div>
+  );
+}
+
+/** A single compact source card: a heading plus a handful of labeled facts
+ * (reference period, publication/effective/checked dates, status), kept as
+ * separate rows so they are never mashed into one ambiguous sentence. */
+function FreshnessCard({
+  title,
+  rows,
+}: {
+  title: string;
+  rows: FreshnessRowData[];
+}) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+      <p className="text-sm font-medium text-slate-700">{title}</p>
+      <dl className="mt-1 space-y-0.5 text-xs leading-5">
+        {rows.map((row) => (
+          <FreshnessRow key={row.label} label={row.label} value={row.value} />
+        ))}
+      </dl>
+    </div>
+  );
 }
 
 export default function MortgageCalculator({
@@ -161,6 +208,12 @@ export default function MortgageCalculator({
     return `${month} · ${average}`;
   }
 
+  /** All current sources are Bank of Israel adapters; falls back to the
+   * raw ID for any future source that isn't. */
+  function sourceDisplayName(sourceId: string): string {
+    return sourceId.startsWith("boi-") ? labels.freshnessSourceBoi : sourceId;
+  }
+
   function marketInfoForDraft(draft: TrackDraft): TrackCardMarketInfo {
     const curve = resolveForecastCurve(draft, market);
     const makamSnapshot =
@@ -190,6 +243,17 @@ export default function MortgageCalculator({
           )})`
         : null,
       makamAnchorIsMissing: isPinnedMakamSnapshotMissing(draft, market),
+      expectedInflationLabel:
+        draft.trackType === "fixedLinked" &&
+        curve !== null &&
+        ((curve as MortgageForecastCurveSnapshot).expectedCpiIndex?.length ??
+          0) >= 13
+          ? percentFormat.format(
+              ((curve as MortgageForecastCurveSnapshot).expectedCpiIndex[12] /
+                (curve as MortgageForecastCurveSnapshot).expectedCpiIndex[0] -
+                1),
+            )
+          : null,
     };
   }
 
@@ -234,13 +298,17 @@ export default function MortgageCalculator({
           if (value === "variableGovernmentBond") {
             next.resetPeriodMonths = "";
             next.years = "";
-          } else if (value === "variableMakam") {
+          } else if (value === "variableMakam" || value === "fixedLinked") {
             next.resetPeriodMonths = "";
             if (!Number.isInteger(Number(next.years)) || next.years === "") {
               next.years = "";
             }
           }
-          if (value === "variableGovernmentBond" || value === "variableMakam") {
+          if (
+            value === "variableGovernmentBond" ||
+            value === "variableMakam" ||
+            value === "fixedLinked"
+          ) {
             next.repaymentMethod = "spitzer";
           }
         }
@@ -525,6 +593,9 @@ export default function MortgageCalculator({
             submitted.summary.trackSummaries[
               isSingleTrack ? 0 : (selectedTrackIndex ?? 0)
             ]?.variableForecast?.currentFirstPayment ??
+            submitted.summary.trackSummaries[
+              isSingleTrack ? 0 : (selectedTrackIndex ?? 0)
+            ]?.cpiForecast?.currentFirstPayment ??
             displayedSchedule[0].payment)),
     ) >= 0.01;
   const scheduleNotes = displayedIsCombined
@@ -705,7 +776,9 @@ export default function MortgageCalculator({
                   // layout; the visible first payment is ALWAYS the
                   // today's-rate payment (forecast month 1 stays internal).
                   const forecastResults =
-                    trackSummary.forecast ?? trackSummary.variableForecast;
+                    trackSummary.forecast ??
+                    trackSummary.variableForecast ??
+                    trackSummary.cpiForecast;
                   const rows =
                     input.type !== "fixedUnlinked" && forecastResults
                       ? [
@@ -742,6 +815,18 @@ export default function MortgageCalculator({
                                   value: percentFormat.format(
                                     trackSummary.variableForecast
                                       .makamAnchorPercent / 100,
+                                  ),
+                                },
+                              ]
+                            : []),
+                          ...(input.type === "fixedLinked" &&
+                          trackSummary.cpiForecast
+                            ? [
+                                {
+                                  label: labels.expectedInflationLabel,
+                                  value: percentFormat.format(
+                                    trackSummary.cpiForecast
+                                      .firstYearExpectedInflationPercent / 100,
                                   ),
                                 },
                               ]
@@ -851,6 +936,7 @@ export default function MortgageCalculator({
                               variableGovernmentBond:
                                 labels.trackTypeGovernmentBond,
                               variableMakam: labels.trackTypeMakam,
+                              fixedLinked: labels.trackTypeFixedLinked,
                               fixedUnlinked: labels.trackTypeFixedUnlinked,
                             }[input.type]
                           }
@@ -924,58 +1010,121 @@ export default function MortgageCalculator({
       )}
 
       {/* Compact, audit-friendly freshness of every external data source.
-          Each entry keeps the observation period, publication/effective
-          dates, and fetch time as SEPARATE facts. */}
+          Each card keeps the observation period, publication/effective
+          dates, and check time as SEPARATE, human-formatted facts — never
+          a raw ISO timestamp. */}
       <details className="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
         <summary className="cursor-pointer text-xs font-medium text-slate-600">
           {labels.freshnessTitle}
         </summary>
-        <dl className="mt-2 space-y-2 text-xs leading-5 text-slate-600">
-          <div>
-            <dt className="font-medium text-slate-700">
-              {labels.freshnessBoiRate}: {marketData.boiRatePercent}% ·{" "}
-              {marketData.boiRateStatus === "live"
-                ? labels.freshnessStatusLive
-                : labels.freshnessStatusFallback}
-            </dt>
-            <dd>
-              {labels.freshnessEffective}: {marketData.boiRateEffectiveDate} ·{" "}
-              {labels.freshnessChecked}: {marketData.marketFetchedAt}
-            </dd>
-          </div>
-          {marketData.curves.map((curve) => (
-            <div key={curve.id}>
-              <dt className="font-medium text-slate-700">
-                {labels.freshnessCurve}: {curve.id} ·{" "}
-                {curve.status === "live"
-                  ? labels.freshnessStatusLive
-                  : labels.freshnessStatusFallback}
-              </dt>
-              <dd>
-                {labels.freshnessReference}:{" "}
-                {curveReferenceLabel(curve as MortgageForecastCurveSnapshot)} ·{" "}
-                {labels.freshnessPublished}: {curve.publicationDate || "—"} ·{" "}
-                {labels.freshnessEffective}: {curve.effectiveDate || "—"} ·{" "}
-                {labels.freshnessChecked}: {curve.fetchedAt}
-              </dd>
-            </div>
-          ))}
+        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <FreshnessCard
+            title={labels.freshnessBoiRate}
+            rows={[
+              {
+                label: labels.freshnessValue,
+                value: `${marketData.boiRatePercent}%`,
+              },
+              {
+                label: labels.freshnessEffective,
+                value: formatDateOnly(marketData.boiRateEffectiveDate, locale),
+              },
+              {
+                label: labels.freshnessNextDecision,
+                value: formatDateOnly(marketData.boiNextDecisionAt, locale),
+              },
+              {
+                label: labels.freshnessChecked,
+                value: formatDateTimeIsrael(marketData.marketFetchedAt, locale),
+              },
+              {
+                label: labels.freshnessStatusLabel,
+                value: freshnessStatusText(marketData.boiRateStatus, labels),
+              },
+            ]}
+          />
+          {marketData.curves.map((curve, index) => {
+            const role = classifyCurveFreshnessRole(
+              curve.id,
+              index,
+              drafts,
+              market,
+            );
+            const title =
+              role === "used"
+                ? labels.freshnessCurveUsed
+                : role === "latest"
+                  ? labels.freshnessCurveLatest
+                  : labels.freshnessCurvePinned;
+            return (
+              <FreshnessCard
+                key={curve.id}
+                title={title}
+                rows={[
+                  {
+                    label: labels.freshnessReference,
+                    value: curveReferenceLabel(
+                      curve as MortgageForecastCurveSnapshot,
+                    ),
+                  },
+                  { label: labels.freshnessId, value: curve.id },
+                  {
+                    label: labels.freshnessPublished,
+                    value: formatDateOnly(curve.publicationDate, locale),
+                  },
+                  {
+                    label: labels.freshnessEffective,
+                    value: formatDateOnly(curve.effectiveDate, locale),
+                  },
+                  {
+                    label: labels.freshnessChecked,
+                    value: formatDateTimeIsrael(curve.fetchedAt, locale),
+                  },
+                  {
+                    label: labels.freshnessStatusLabel,
+                    value: freshnessStatusText(curve.status, labels),
+                  },
+                ]}
+              />
+            );
+          })}
           {marketData.makamSnapshots.map((snapshot) => (
-            <div key={snapshot.id}>
-              <dt className="font-medium text-slate-700">
-                {labels.freshnessMakam}: {snapshot.id} ·{" "}
-                {snapshot.status === "live"
-                  ? labels.freshnessStatusLive
-                  : labels.freshnessStatusFallback}
-              </dt>
-              <dd>
-                {Math.round(snapshot.anchorPercent * 10000) / 10000}% ·{" "}
-                {labels.freshnessChecked}: {snapshot.fetchedAt} ·{" "}
-                {labels.freshnessSource}: {snapshot.sourceId}
-              </dd>
-            </div>
+            <FreshnessCard
+              key={snapshot.id}
+              title={labels.freshnessMakam}
+              rows={[
+                {
+                  label: labels.freshnessReference,
+                  value: monthYearFormat.format(
+                    new Date(
+                      Date.UTC(
+                        snapshot.referenceYear,
+                        snapshot.referenceMonth - 1,
+                        1,
+                      ),
+                    ),
+                  ),
+                },
+                {
+                  label: labels.freshnessValue,
+                  value: `${Math.round(snapshot.anchorPercent * 10000) / 10000}%`,
+                },
+                {
+                  label: labels.freshnessSource,
+                  value: sourceDisplayName(snapshot.sourceId),
+                },
+                {
+                  label: labels.freshnessChecked,
+                  value: formatDateTimeIsrael(snapshot.fetchedAt, locale),
+                },
+                {
+                  label: labels.freshnessStatusLabel,
+                  value: freshnessStatusText(snapshot.status, labels),
+                },
+              ]}
+            />
           ))}
-        </dl>
+        </div>
       </details>
 
       <p className="mt-3 text-sm leading-6 text-slate-500">

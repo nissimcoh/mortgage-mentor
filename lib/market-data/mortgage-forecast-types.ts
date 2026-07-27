@@ -20,8 +20,14 @@ export interface MortgageForecastCurveSnapshot {
   effectiveDate: string;
   /** Zero spot yields in annual percent, maturities 1..360 months, in order. */
   nominalZeroYieldsPercent: number[];
-  /** Real (CPI-linked) curve — parsed for future use, no CPI tracks yet. */
+  /** Real (CPI-linked) curve — parsed for future variable-linked tracks. */
   realZeroYieldsPercent: number[];
+  /**
+   * Cumulative expected CPI index from the workbook's yield-gap sheet:
+   * base 100 at maturity 0, monthly maturities 0..360 (361 values).
+   * Empty when the sheet row is unavailable for this reference month.
+   */
+  expectedCpiIndex: number[];
   fetchedAt: string;
   status: "live" | "fallback";
   sourceId: "boi-directive-451-forecast-workbook";
