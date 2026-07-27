@@ -3,26 +3,49 @@
     "title": "MortgageMentor | Mortgage Simulator",
     "description": "A smart simulation tool for understanding mortgages in Israel"
   },
+  "nav": {
+    "appName": "MortgageMentor",
+    "appNameLocalized": "",
+    "ariaLabel": "Main navigation",
+    "home": "Home",
+    "calculator": "Calculator",
+    "compare": "Compare scenarios",
+    "saved": "Saved",
+    "signIn": "Sign in",
+    "bottomNavCompare": "Compare"
+  },
   "home": {
-    "devBadge": "Early development version",
-    "title": "MortgageMentor",
-    "tagline": "A smart simulation tool for understanding mortgages in Israel",
-    "description": "The goal of this app is to help couples and individuals understand how much mortgage they need, what their expected monthly payment will be, how different loan tracks affect risk, and which questions to ask before approaching the bank.",
-    "calculatorCta": "Try the mortgage calculator",
-    "aboutCta": "What will this app do?",
-    "features": [
-      {
-        "title": "Monthly payment calculation",
-        "description": "An initial monthly payment estimate based on loan amount, interest rate, and term."
-      },
-      {
-        "title": "Track mix comparison",
-        "description": "Later we will add comparisons between fixed unlinked, prime, variable, and CPI-linked tracks."
-      },
-      {
-        "title": "Risk simulation",
-        "description": "We will explore what happens to your payment if interest rates rise or the CPI changes."
-      }
+    "heroTitle": "Get a clearer picture of your mortgage",
+    "heroSubtitle": "A mortgage calculator that brings together tracks, forecasts, stability, and payments — in plain language, with no sign-up required.",
+    "heroPrimaryCta": "Start calculating",
+    "heroSecondaryCta": "See what you can check",
+    "heroTrustNote": "This calculator is for learning and comparing scenarios, and is not mortgage advice.",
+    "calcCardTitle": "Free-form calculator",
+    "calcCardBody": "Build a mix with several tracks, and check the first payment, maximum payment, and total payments.",
+    "calcCardCta": "Open calculator",
+    "compareCardTitle": "Compare scenarios",
+    "compareCardBody": "Coming soon: compare a bank's offer, a refinance, and an alternative mix.",
+    "savedCardTitle": "Saving offers",
+    "savedCardBody": "Coming soon: save scenarios under a name like \"Leumi offer, July 2026\".",
+    "comingSoonBadge": "Coming soon",
+    "comingSoonCta": "Learn more"
+  },
+  "comparePage": {
+    "body": [
+      "Scenario comparison is coming later.",
+      "For now, you can run a few scenarios in the calculator and compare them manually, saving each one with its own link via \"Copy scenario link\"."
+    ]
+  },
+  "savedPage": {
+    "body": [
+      "Saving scenarios is coming later.",
+      "For now, you can save a scenario using \"Copy scenario link\" in the calculator."
+    ]
+  },
+  "signinPage": {
+    "body": [
+      "Sign-in is coming later.",
+      "No account is needed to use the calculator right now — every scenario is saved in a link you can copy and share."
     ]
   },
   "market": {

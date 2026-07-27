@@ -1,9 +1,8 @@
-import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Heebo } from "next/font/google";
 import { notFound } from "next/navigation";
 import { getDirection, isValidLocale, locales } from "@/lib/i18n/config";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
+import AppShell from "@/components/AppShell";
 import { getDictionary } from "./dictionaries";
 import "../globals.css";
 
@@ -41,19 +40,18 @@ export default async function LocaleLayout({
   const { locale } = await params;
   if (!isValidLocale(locale)) notFound();
 
+  const dict = await getDictionary(locale);
+
   return (
     <html
       lang={locale}
       dir={getDirection(locale)}
       className={`${heebo.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        {/* Suspense is required around useSearchParams consumers on
-            statically prerendered pages. */}
-        <Suspense fallback={null}>
-          <LanguageSwitcher />
-        </Suspense>
-        {children}
+      <body className="flex min-h-full flex-col bg-slate-50">
+        <AppShell locale={locale} nav={dict.nav}>
+          {children}
+        </AppShell>
       </body>
     </html>
   );

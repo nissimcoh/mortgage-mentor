@@ -133,8 +133,10 @@ export default function MarketSnapshotCards({
 
   return (
     <section className="w-full">
-      <h2 className="mb-1 text-2xl font-bold tracking-tight">{labels.title}</h2>
-      <p className="mb-4 text-sm leading-6 text-slate-600">{labels.subtitle}</p>
+      <h2 className="mb-1 text-lg font-semibold tracking-tight text-slate-700">
+        {labels.title}
+      </h2>
+      <p className="mb-4 text-sm leading-6 text-slate-500">{labels.subtitle}</p>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {cards.map((card) => (

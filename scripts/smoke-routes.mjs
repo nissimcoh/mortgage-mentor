@@ -19,6 +19,13 @@ const ROUTES = [
   { path: "/en", expected: 200 },
   { path: "/he/calculator", expected: 200 },
   { path: "/en/calculator", expected: 200 },
+  // App-shell coming-soon surfaces (compare, saved, sign-in)
+  { path: "/he/compare", expected: 200 },
+  { path: "/en/compare", expected: 200 },
+  { path: "/he/saved", expected: 200 },
+  { path: "/en/saved", expected: 200 },
+  { path: "/he/signin", expected: 200 },
+  { path: "/en/signin", expected: 200 },
   // Fixed-unlinked track
   {
     path: "/he/calculator?trackCount=1&track1Amount=800000&track1Type=fixedUnlinked&track1RepaymentMethod=spitzer&track1Years=25&track1AnnualInterestRatePercent=4.8",

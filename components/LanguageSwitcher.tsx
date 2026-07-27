@@ -68,13 +68,11 @@ export default function LanguageSwitcher() {
   }, [pathname]);
 
   return (
-    // dir="ltr" keeps the control's internal layout identical on RTL and
-    // LTR pages; the fixed top-center position is direction-neutral.
-    <div
-      ref={containerRef}
-      dir="ltr"
-      className="fixed left-1/2 top-4 z-50 -translate-x-1/2 text-sm"
-    >
+    // dir="ltr" keeps the control's internal layout identical regardless of
+    // the page's own direction. Positioned inline in the header now (not
+    // floating over content) — `relative` just gives the dropdown below an
+    // anchor to position against.
+    <div ref={containerRef} dir="ltr" className="relative text-sm">
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}

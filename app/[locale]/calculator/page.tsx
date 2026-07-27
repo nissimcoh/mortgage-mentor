@@ -80,8 +80,8 @@ export default async function CalculatorPage({
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900">
-      <section className="mx-auto max-w-6xl px-6 py-14">
+    <main className="bg-slate-50 text-slate-900">
+      <section className="mx-auto max-w-6xl px-6 pt-8 pb-14 sm:pt-12">
         <Link
           href={`/${locale}`}
           className="text-sm text-slate-500 transition hover:text-slate-800"
@@ -89,7 +89,7 @@ export default async function CalculatorPage({
           {t.backToHome}
         </Link>
 
-        <h1 className="mt-3 mb-2 text-4xl font-bold tracking-tight">
+        <h1 className="mt-3 mb-2 text-3xl font-bold tracking-tight sm:text-4xl">
           {t.title}
         </h1>
         <p className="mb-1.5 text-lg leading-8 text-slate-600">{t.subtitle}</p>
