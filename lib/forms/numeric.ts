@@ -38,3 +38,27 @@ export function parseSignedDecimal(raw: string): number | null {
 export function formatThousands(value: number): string {
   return value.toLocaleString("en-US");
 }
+
+/**
+ * Digits only — strips spaces, commas, currency symbols, and anything else
+ * non-numeric. Used for live "format while typing" amount inputs and for
+ * pasted values like "500,000" or "₪500,000".
+ */
+export function stripAmountSeparators(raw: string): string {
+  return raw.replace(/\D/g, "");
+}
+
+/**
+ * Live "format while typing" for amount inputs: keeps only digits typed or
+ * pasted so far, then adds thousands separators as they accumulate ("500000"
+ * -> "500,000" as each digit lands). Empty stays empty.
+ *
+ * Unlike `formatAmountForDisplay` (used on blur / URL hydration, where a
+ * malformed value is shown as-is so the field-error message stays legible),
+ * this never falls back to the raw input — every non-digit character is
+ * simply dropped, since that's the expected live-typing/paste experience.
+ */
+export function formatAmountWhileTyping(raw: string): string {
+  const digits = stripAmountSeparators(raw);
+  return digits === "" ? "" : formatThousands(Number(digits));
+}

@@ -16,7 +16,7 @@ import {
   isGovernmentBondResetMonths,
   MAKAM_TERM_YEARS,
 } from "@/lib/mortgage/product-catalog";
-import { parseDecimalRate } from "@/lib/forms/numeric";
+import { formatAmountWhileTyping, parseDecimalRate } from "@/lib/forms/numeric";
 
 type CalculatorLabels = Dictionary["calculator"];
 
@@ -165,7 +165,18 @@ export default function MortgageTrackCard({
           autoComplete="off"
           placeholder="0"
           value={draft.amount}
-          onChange={(event) => onChange("amount", event.target.value)}
+          onChange={(event) => {
+            // Format on every keystroke (and on paste), not just on blur.
+            // The cursor is intentionally moved to the end after each edit
+            // — simple and always usable, if not ideal for mid-string
+            // edits — since reformatting can shift comma positions in a
+            // way a raw caret offset wouldn't survive meaningfully anyway.
+            const input = event.target;
+            const formatted = formatAmountWhileTyping(input.value);
+            input.value = formatted;
+            input.setSelectionRange(formatted.length, formatted.length);
+            onChange("amount", formatted);
+          }}
           onBlur={onAmountBlur}
           className={`${fieldClass} pe-9`}
         />
