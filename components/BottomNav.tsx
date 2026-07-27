@@ -31,9 +31,15 @@ export default function BottomNav({ locale, labels }: BottomNavProps) {
   }
 
   return (
+    // A fully opaque bg (no /alpha, no backdrop-blur) so nothing beneath —
+    // including the safe-area strip below the tab bar itself — can ever
+    // show through. paddingBottom (inside this same opaque box, so the
+    // color extends all the way into it) reserves the iOS home-indicator
+    // area; it only resolves to a real value because `viewportFit: "cover"`
+    // is set in layout.tsx's `viewport` export.
     <nav
       aria-label={labels.ariaLabel}
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white shadow-[0_-2px_10px_rgba(15,23,42,0.05)] md:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <div className="mx-auto flex max-w-6xl">
@@ -44,14 +50,20 @@ export default function BottomNav({ locale, labels }: BottomNavProps) {
               key={item.href}
               href={item.href}
               aria-current={active ? "page" : undefined}
-              className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-xs transition ${
-                active ? "text-slate-900" : "text-slate-500 hover:text-slate-700"
-              }`}
+              className="flex flex-1 flex-col items-center justify-center gap-0.5 py-2.5"
             >
-              <span aria-hidden className="text-lg leading-none">
-                {item.glyph}
+              <span
+                className={`flex flex-col items-center gap-0.5 rounded-xl px-4 py-1 text-xs transition ${
+                  active
+                    ? "bg-slate-100 text-slate-900"
+                    : "text-slate-500"
+                }`}
+              >
+                <span aria-hidden className="text-lg leading-none">
+                  {item.glyph}
+                </span>
+                {item.label}
               </span>
-              {item.label}
             </Link>
           );
         })}

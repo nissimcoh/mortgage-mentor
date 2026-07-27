@@ -81,7 +81,7 @@ export default async function CalculatorPage({
 
   return (
     <main className="bg-slate-50 text-slate-900">
-      <section className="mx-auto max-w-6xl px-6 pt-8 pb-14 sm:pt-12">
+      <section className="mx-auto max-w-6xl px-6 pt-10 pb-14 sm:pt-12">
         <Link
           href={`/${locale}`}
           className="text-sm text-slate-500 transition hover:text-slate-800"

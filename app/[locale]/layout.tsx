@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Heebo } from "next/font/google";
 import { notFound } from "next/navigation";
 import { getDirection, isValidLocale, locales } from "@/lib/i18n/config";
@@ -14,6 +14,16 @@ const heebo = Heebo({
 export async function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
 }
+
+// Forces a light presentation on iOS/Android regardless of OS dark-mode
+// settings (this app has no dark theme), and `viewportFit: "cover"` is what
+// makes env(safe-area-inset-*) resolve to real values instead of 0 — both
+// the header's top padding and BottomNav's bottom padding depend on it.
+export const viewport: Viewport = {
+  themeColor: "#f8fafc",
+  colorScheme: "light",
+  viewportFit: "cover",
+};
 
 export async function generateMetadata({
   params,
@@ -46,9 +56,9 @@ export default async function LocaleLayout({
     <html
       lang={locale}
       dir={getDirection(locale)}
-      className={`${heebo.variable} h-full antialiased`}
+      className={`${heebo.variable} min-h-dvh antialiased`}
     >
-      <body className="flex min-h-full flex-col bg-slate-50">
+      <body className="flex min-h-dvh flex-col bg-slate-50">
         <AppShell locale={locale} nav={dict.nav}>
           {children}
         </AppShell>

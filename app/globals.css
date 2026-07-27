@@ -1,7 +1,18 @@
 @import "tailwindcss";
 
+/*
+ * This app is light-only by design — every component uses explicit
+ * light-mode Tailwind classes (bg-slate-50, bg-white, ...) with no
+ * dark-mode-aware styling anywhere. The original create-next-app
+ * boilerplate included a `prefers-color-scheme: dark` override that flipped
+ * this to a near-black background on devices in dark mode; that was never
+ * adapted to the product's actual design and showed up on iOS as a black
+ * strip in the overscroll/safe-area regions (which paint straight from
+ * html/body's background, not from any component). Kept light
+ * unconditionally on purpose.
+ */
 :root {
-  --background: #ffffff;
+  --background: #f8fafc; /* slate-50 — matches the rest of the app */
   --foreground: #171717;
 }
 
@@ -11,15 +22,12 @@
   --font-sans: var(--font-heebo);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+html,
 body {
   background: var(--background);
   color: var(--foreground);
+}
+
+body {
   font-family: var(--font-heebo), Arial, Helvetica, sans-serif;
 }

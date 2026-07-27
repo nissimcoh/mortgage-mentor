@@ -20,7 +20,7 @@ export default async function Home({
 
   return (
     <main className="bg-slate-50 text-slate-900">
-      <section className="mx-auto max-w-5xl px-6 pt-10 pb-8 sm:pt-16 sm:pb-12">
+      <section className="mx-auto max-w-5xl px-6 pt-12 pb-8 sm:pt-16 sm:pb-12">
         <h1 className="mb-4 max-w-3xl text-3xl font-bold tracking-tight sm:text-5xl">
           {t.heroTitle}
         </h1>

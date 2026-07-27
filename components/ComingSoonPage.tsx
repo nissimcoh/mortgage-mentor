@@ -18,7 +18,7 @@ export default function ComingSoonPage({
 }: ComingSoonPageProps) {
   return (
     <main className="bg-slate-50 text-slate-900">
-      <section className="mx-auto max-w-2xl px-6 pt-8 pb-16 sm:pt-12">
+      <section className="mx-auto max-w-2xl px-6 pt-10 pb-16 sm:pt-12">
         <Link
           href={backHref}
           className="text-sm text-slate-500 transition hover:text-slate-800"
