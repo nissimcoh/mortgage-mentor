@@ -7,6 +7,8 @@ import {
   MAX_YEARS,
   MIN_YEARS,
   type TrackDraft,
+  type TrackFieldErrorCode,
+  type TrackFieldErrors,
 } from "@/lib/mortgage/scenario-form";
 import {
   GOVERNMENT_BOND_RESET_MONTHS,
@@ -45,6 +47,9 @@ interface MortgageTrackCardProps {
   draft: TrackDraft;
   labels: CalculatorLabels;
   market: TrackCardMarketInfo;
+  /** Empty ({}) before any submit attempt; populated only for fields that
+   * are actually wrong, and only once the user has tried to calculate. */
+  fieldErrors: TrackFieldErrors;
   canRemove: boolean;
   canDuplicate: boolean;
   onChange: (field: keyof Omit<TrackDraft, "id">, value: string) => void;
@@ -53,13 +58,42 @@ interface MortgageTrackCardProps {
   onDuplicate: () => void;
 }
 
+function fieldErrorMessage(
+  code: TrackFieldErrorCode | undefined,
+  labels: CalculatorLabels,
+): string | null {
+  switch (code) {
+    case "amountInvalid":
+      return labels.fieldErrorAmountInvalid;
+    case "yearsInvalid":
+      return labels.fieldErrorYearsInvalid;
+    case "yearsInvalidForReset":
+      return labels.fieldErrorYearsInvalidForReset;
+    case "resetPeriodInvalid":
+      return labels.fieldErrorResetPeriodInvalid;
+    case "rateInvalid":
+      return labels.fieldErrorRateInvalid;
+    default:
+      return null;
+  }
+}
+
+function FieldError({ message }: { message: string | null }) {
+  if (!message) return null;
+  return (
+    <p role="alert" className="mt-1 text-xs text-red-600">
+      {message}
+    </p>
+  );
+}
+
 const labelClass = "mb-1 block text-sm font-medium text-slate-700";
 const fieldClass =
   "w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-slate-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400";
 const unitClass =
   "pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-sm text-slate-400";
 const actionClass =
-  "rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-600 transition hover:bg-slate-100";
+  "rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-600 transition hover:bg-slate-100 sm:py-1.5";
 
 function resetFrequencyLabel(
   labels: CalculatorLabels,
@@ -89,6 +123,7 @@ export default function MortgageTrackCard({
   draft,
   labels,
   market,
+  fieldErrors,
   canRemove,
   canDuplicate,
   onChange,
@@ -138,6 +173,7 @@ export default function MortgageTrackCard({
           ₪
         </span>
       </span>
+      <FieldError message={fieldErrorMessage(fieldErrors.amount, labels)} />
     </label>
   );
 
@@ -186,6 +222,7 @@ export default function MortgageTrackCard({
           %
         </span>
       </span>
+      <FieldError message={fieldErrorMessage(fieldErrors.rate, labels)} />
     </label>
   );
 
@@ -251,6 +288,7 @@ export default function MortgageTrackCard({
             </option>
           ))}
       </select>
+      <FieldError message={fieldErrorMessage(fieldErrors.years, labels)} />
     </label>
   );
 
@@ -272,7 +310,7 @@ export default function MortgageTrackCard({
               role="radio"
               aria-checked={selected}
               onClick={() => onChange("resetPeriodMonths", String(months))}
-              className={`rounded-full px-3 py-1.5 text-xs transition ${
+              className={`rounded-full px-3 py-2 text-xs transition sm:py-1.5 ${
                 selected
                   ? "bg-slate-900 text-white"
                   : "border border-slate-300 bg-white text-slate-600 hover:bg-slate-100"
@@ -283,6 +321,9 @@ export default function MortgageTrackCard({
           );
         })}
       </div>
+      <FieldError
+        message={fieldErrorMessage(fieldErrors.resetPeriodMonths, labels)}
+      />
     </div>
   );
 

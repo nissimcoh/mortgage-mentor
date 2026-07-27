@@ -277,6 +277,77 @@ export function isPinnedMakamSnapshotMissing(
 }
 
 /**
+ * Field-level validation error codes. Deliberately a small, closed set that
+ * mirrors exactly the checks `parseTrackDraft` performs — this function
+ * re-invokes the same rule primitives (never reimplements the rules) so a
+ * catalog/range change only ever needs to happen in one place.
+ */
+export type TrackFieldErrorCode =
+  | "amountInvalid"
+  | "yearsInvalid"
+  | "yearsInvalidForReset"
+  | "resetPeriodInvalid"
+  | "rateInvalid";
+
+export interface TrackFieldErrors {
+  amount?: TrackFieldErrorCode;
+  years?: TrackFieldErrorCode;
+  resetPeriodMonths?: TrackFieldErrorCode;
+  rate?: TrackFieldErrorCode;
+}
+
+/**
+ * Which fields are wrong in a draft, for inline UI messages. Does not
+ * duplicate `parseTrackDraft`'s logic so much as narrate it: same helper
+ * functions, same order, but collecting a reason per field instead of
+ * bailing out on the first failure.
+ *
+ * Deliberately does NOT flag "pinned curve/Makam snapshot unavailable" —
+ * that already has a dedicated, more actionable amber notice with a
+ * one-click fix (see `isPinnedCurveMissing`/`isPinnedMakamSnapshotMissing`
+ * and their UI in MortgageTrackCard); duplicating it as a second red field
+ * error would just be a confusing second message for the same condition.
+ */
+export function validateTrackDraft(draft: TrackDraft): TrackFieldErrors {
+  const errors: TrackFieldErrors = {};
+
+  const loanAmount = parseWholeAmount(draft.amount);
+  if (loanAmount === null || loanAmount <= 0) {
+    errors.amount = "amountInvalid";
+  }
+
+  const years = Number(draft.years);
+  if (draft.trackType === "variableGovernmentBond") {
+    const reset = Number(draft.resetPeriodMonths);
+    if (!isGovernmentBondResetMonths(reset)) {
+      errors.resetPeriodMonths = "resetPeriodInvalid";
+    } else if (draft.years === "") {
+      errors.years = "yearsInvalid";
+    } else if (!isGovernmentBondTermValid(reset, years)) {
+      errors.years = "yearsInvalidForReset";
+    }
+  } else if (draft.trackType === "variableMakam") {
+    if (!isMakamTermValid(years)) errors.years = "yearsInvalid";
+  } else if (
+    !Number.isInteger(years) ||
+    years < MIN_YEARS ||
+    years > MAX_YEARS
+  ) {
+    errors.years = "yearsInvalid";
+  }
+
+  if (isVariableStyleTrackType(draft.trackType)) {
+    if (parseDecimalRate(draft.currentRatePercent) === null) {
+      errors.rate = "rateInvalid";
+    }
+  } else if (parseDecimalRate(draft.ratePercent) === null) {
+    errors.rate = "rateInvalid";
+  }
+
+  return errors;
+}
+
+/**
  * Convert one draft into an engine input. Returns null when any field is
  * missing/invalid, so callers can never feed the engine a wrong number.
  * Prime drafts additionally need the market context (BOI rate + curves).

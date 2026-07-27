@@ -28,7 +28,7 @@ export default function ScheduleSelector({
             role="tab"
             aria-selected={isSelected}
             onClick={() => onSelect(option.id)}
-            className={`rounded-full px-4 py-1.5 text-sm transition ${
+            className={`rounded-full px-4 py-2 text-sm transition sm:py-1.5 ${
               isSelected
                 ? "bg-slate-900 text-white"
                 : "border border-slate-300 bg-white text-slate-600 hover:bg-slate-100"

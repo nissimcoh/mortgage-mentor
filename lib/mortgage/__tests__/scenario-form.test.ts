@@ -9,6 +9,7 @@ import {
   parseTrackDraft,
   parseTracksFromQuery,
   sumEnteredTrackAmounts,
+  validateTrackDraft,
   type MarketContextForParsing,
   type TrackDraft,
 } from "../scenario-form";
@@ -646,5 +647,124 @@ describe("scenario integration", () => {
       summary.trackSummaries[0].schedule[120].payment,
       2,
     );
+  });
+});
+
+describe("field-level validation (validateTrackDraft)", () => {
+  it("returns no errors for a valid fixed-unlinked draft", () => {
+    expect(validateTrackDraft(validDraft())).toEqual({});
+  });
+
+  it("returns no errors for a valid prime draft", () => {
+    expect(validateTrackDraft(primeDraft())).toEqual({});
+  });
+
+  it("flags a missing or non-positive amount", () => {
+    expect(validateTrackDraft(validDraft({ amount: "" })).amount).toBe(
+      "amountInvalid",
+    );
+    expect(validateTrackDraft(validDraft({ amount: "0" })).amount).toBe(
+      "amountInvalid",
+    );
+    expect(
+      validateTrackDraft(validDraft({ amount: "not-a-number" })).amount,
+    ).toBe("amountInvalid");
+  });
+
+  it("flags a missing or out-of-range term for fixed/prime tracks", () => {
+    expect(validateTrackDraft(validDraft({ years: "" })).years).toBe(
+      "yearsInvalid",
+    );
+    expect(validateTrackDraft(validDraft({ years: "31" })).years).toBe(
+      "yearsInvalid",
+    );
+    expect(validateTrackDraft(validDraft({ years: "0" })).years).toBe(
+      "yearsInvalid",
+    );
+  });
+
+  it("flags a missing or invalid rate", () => {
+    expect(validateTrackDraft(validDraft({ ratePercent: "" })).rate).toBe(
+      "rateInvalid",
+    );
+    expect(
+      validateTrackDraft(primeDraft({ currentRatePercent: "" })).rate,
+    ).toBe("rateInvalid");
+  });
+
+  it("reports multiple simultaneous field errors", () => {
+    const errors = validateTrackDraft(
+      validDraft({ amount: "", ratePercent: "" }),
+    );
+    expect(errors.amount).toBe("amountInvalid");
+    expect(errors.rate).toBe("rateInvalid");
+    expect(errors.years).toBeUndefined();
+  });
+
+  it("flags an unchosen reset frequency for variableGovernmentBond, not years", () => {
+    const errors = validateTrackDraft(
+      createTrackDraft({
+        trackType: "variableGovernmentBond",
+        amount: "200,000",
+        currentRatePercent: "4",
+        resetPeriodMonths: "",
+        years: "20",
+      }),
+    );
+    expect(errors.resetPeriodMonths).toBe("resetPeriodInvalid");
+    expect(errors.years).toBeUndefined();
+  });
+
+  it("flags a missing term once the reset frequency is valid", () => {
+    const errors = validateTrackDraft(
+      createTrackDraft({
+        trackType: "variableGovernmentBond",
+        amount: "200,000",
+        currentRatePercent: "4",
+        resetPeriodMonths: "24",
+        years: "",
+      }),
+    );
+    expect(errors.resetPeriodMonths).toBeUndefined();
+    expect(errors.years).toBe("yearsInvalid");
+  });
+
+  it("flags a term that doesn't match the chosen reset frequency", () => {
+    // 13 years is not a catalog option for the 24-month reset product.
+    const errors = validateTrackDraft(
+      createTrackDraft({
+        trackType: "variableGovernmentBond",
+        amount: "200,000",
+        currentRatePercent: "4",
+        resetPeriodMonths: "24",
+        years: "13",
+      }),
+    );
+    expect(errors.years).toBe("yearsInvalidForReset");
+  });
+
+  it("accepts a valid gov-bond term/reset combination with no errors", () => {
+    const errors = validateTrackDraft(
+      createTrackDraft({
+        trackType: "variableGovernmentBond",
+        amount: "200,000",
+        currentRatePercent: "4",
+        resetPeriodMonths: "24",
+        years: "20",
+      }),
+    );
+    expect(errors).toEqual({});
+  });
+
+  it("flags an off-catalog Makam term", () => {
+    const errors = validateTrackDraft(
+      createTrackDraft({
+        trackType: "variableMakam",
+        amount: "150,000",
+        currentRatePercent: "4.1",
+        years: "3", // below the 4-year catalog minimum
+      }),
+    );
+    expect(errors.years).toBe("yearsInvalid");
   });
 });

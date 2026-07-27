@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import type { Locale } from "@/lib/i18n/config";
 // Type-only import: erased at compile time, keeps the server-only
 // dictionary module out of the client bundle.
@@ -95,6 +96,24 @@ export default function AmortizationSchedule({
   rateColumnHeader,
   notes,
 }: AmortizationScheduleProps) {
+  // Detects real overflow (not a breakpoint guess) so the sideways-scroll
+  // hint and edge fade only show up when the table is actually wider than
+  // its container — true on most phones, false once the viewport is wide
+  // enough to fit every column.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [isScrollable, setIsScrollable] = useState(false);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const checkOverflow = () =>
+      setIsScrollable(el.scrollWidth > el.clientWidth + 1);
+    checkOverflow();
+    const observer = new ResizeObserver(checkOverflow);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [schedule]);
+
   const intlLocale = locale === "he" ? "he-IL" : "en-US";
   const currencyFormat = new Intl.NumberFormat(intlLocale, {
     style: "currency",
@@ -163,8 +182,21 @@ export default function AmortizationSchedule({
         </div>
       )}
 
-      <div className={`${selector || (notes && notes.length > 0) ? "" : "mt-6 "}max-h-[500px] overflow-auto rounded-2xl border border-slate-200 bg-white shadow-sm`}>
-        <table className="w-full min-w-[560px] text-sm">
+      {isScrollable && (
+        <p className="mb-2 flex items-center gap-1.5 text-xs text-slate-500">
+          <span aria-hidden>↔</span>
+          {labels.scheduleScrollHint}
+        </p>
+      )}
+
+      <div
+        className={`relative ${selector || (notes && notes.length > 0) || isScrollable ? "" : "mt-6 "}`}
+      >
+        <div
+          ref={scrollRef}
+          className="max-h-[500px] overflow-auto rounded-2xl border border-slate-200 bg-white shadow-sm"
+        >
+          <table className="w-full min-w-[560px] text-sm">
           <thead>
             <tr>
               <th scope="col" className={`${stickyHeader} text-start`}>
@@ -219,6 +251,23 @@ export default function AmortizationSchedule({
             ))}
           </tbody>
         </table>
+        </div>
+        {isScrollable && (
+          <>
+            {/* Physical (not logical) left/right placement on purpose: each
+                strip fades to white at its own true edge, so the cue is
+                correct in both RTL and LTR without guessing which side
+                currently hides more content. */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-white to-transparent sm:w-8"
+            />
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-white to-transparent sm:w-8"
+            />
+          </>
+        )}
       </div>
     </section>
   );

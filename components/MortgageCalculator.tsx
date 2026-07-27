@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { Locale } from "@/lib/i18n/config";
 import { formatDateOnly, formatDateTimeIsrael } from "@/lib/forms/dates";
 import { freshnessStatusText } from "@/lib/forms/freshness";
+import { copyScenarioLink } from "@/lib/forms/clipboard";
 // Type-only import: erased at compile time, so the server-only dictionary
 // module is never bundled into this Client Component.
 import type { Dictionary } from "@/app/[locale]/dictionaries";
@@ -42,8 +43,10 @@ import {
   resolveForecastCurve,
   resolveMakamSnapshot,
   sumEnteredTrackAmounts,
+  validateTrackDraft,
   type MarketContextForParsing,
   type TrackDraft,
+  type TrackFieldErrors,
 } from "@/lib/mortgage/scenario-form";
 import type { MakamAnchorSnapshot } from "@/lib/market-data/mortgage-forecast-types";
 import type { MortgageForecastCurveSnapshot } from "@/lib/market-data/mortgage-forecast-types";
@@ -122,9 +125,15 @@ function FreshnessRow({ label, value }: FreshnessRowData) {
 function FreshnessCard({
   title,
   rows,
+  technical,
+  technicalTitle,
 }: {
   title: string;
   rows: FreshnessRowData[];
+  /** Optional raw/technical facts (e.g. a curve ID) tucked behind their own
+   * disclosure instead of sitting in the default view. */
+  technical?: FreshnessRowData[];
+  technicalTitle?: string;
 }) {
   return (
     <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
@@ -134,6 +143,69 @@ function FreshnessCard({
           <FreshnessRow key={row.label} label={row.label} value={row.value} />
         ))}
       </dl>
+      {technical && technical.length > 0 && (
+        <details className="mt-1.5">
+          <summary className="cursor-pointer text-xs text-slate-400">
+            {technicalTitle}
+          </summary>
+          <dl className="mt-1 space-y-0.5 text-xs leading-5">
+            {technical.map((row) => (
+              <FreshnessRow
+                key={row.label}
+                label={row.label}
+                value={row.value}
+              />
+            ))}
+          </dl>
+        </details>
+      )}
+    </div>
+  );
+}
+
+type CopyLinkStatus = "idle" | "success" | "fallback";
+
+/** Makes the URL-as-scenario mechanism explicit: the URL already carries
+ * the whole scenario, but nothing told the user that until now. */
+function CopyScenarioLinkButton({ labels }: { labels: CalculatorLabels }) {
+  const [status, setStatus] = useState<CopyLinkStatus>("idle");
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
+  async function handleCopy() {
+    const nextStatus = await copyScenarioLink(
+      (text) => navigator.clipboard.writeText(text),
+      window.location.href,
+    );
+    setStatus(nextStatus);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => setStatus("idle"), 2500);
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        onClick={handleCopy}
+        className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-100 sm:py-1.5"
+      >
+        {labels.copyScenarioLinkButton}
+      </button>
+      {status === "success" && (
+        <span role="status" className="text-xs text-emerald-700">
+          {labels.copyScenarioLinkSuccess}
+        </span>
+      )}
+      {status === "fallback" && (
+        <span role="status" className="text-xs text-amber-700">
+          {labels.copyScenarioLinkFallback}
+        </span>
+      )}
     </div>
   );
 }
@@ -174,6 +246,22 @@ export default function MortgageCalculator({
   // Which schedule the amortization table shows; purely local view state.
   const [selectedScheduleId, setSelectedScheduleId] =
     useState(COMBINED_SCHEDULE_ID);
+
+  // Jump-to-results: scroll only on an explicit user submit, never when a
+  // shared link restores an already-submitted scenario on first load.
+  const resultsRef = useRef<HTMLElement>(null);
+  const justSubmittedRef = useRef(false);
+
+  useEffect(() => {
+    if (submitted && justSubmittedRef.current) {
+      justSubmittedRef.current = false;
+      resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [submitted]);
+
+  function scrollToResults() {
+    resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   const intlLocale = locale === "he" ? "he-IL" : "en-US";
   const currencyFormat = new Intl.NumberFormat(intlLocale, {
@@ -382,6 +470,7 @@ export default function MortgageCalculator({
       return draft;
     });
 
+    justSubmittedRef.current = true;
     setDrafts(stamped);
     setSubmitted({ inputs, summary });
     setHasError(false);
@@ -652,6 +741,7 @@ export default function MortgageCalculator({
               draft={draft}
               labels={labels}
               market={marketInfoForDraft(draft)}
+              fieldErrors={hasError ? validateTrackDraft(draft) : {}}
               canRemove={drafts.length > MIN_TRACKS}
               canDuplicate={drafts.length < MAX_TRACKS}
               onChange={(field, value) => updateTrack(draft.id, field, value)}
@@ -676,6 +766,15 @@ export default function MortgageCalculator({
               className="rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm text-slate-700 transition hover:bg-slate-100"
             >
               {labels.addTrack}
+            </button>
+          )}
+          {submitted && (
+            <button
+              type="button"
+              onClick={scrollToResults}
+              className="rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm text-slate-700 transition hover:bg-slate-100"
+            >
+              {labels.viewResultsButton} <span aria-hidden>↓</span>
             </button>
           )}
         </div>
@@ -706,10 +805,13 @@ export default function MortgageCalculator({
 
       {submitted && (
         <>
-          <section className="mt-6">
-            <h2 className="mb-3 text-2xl font-bold tracking-tight">
-              {labels.combinedResultsTitle}
-            </h2>
+          <section id="results" ref={resultsRef} className="mt-6 scroll-mt-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-2xl font-bold tracking-tight">
+                {labels.combinedResultsTitle}
+              </h2>
+              <CopyScenarioLinkButton labels={labels} />
+            </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {combinedResults.map((result) => (
                 <div
@@ -1017,6 +1119,9 @@ export default function MortgageCalculator({
         <summary className="cursor-pointer text-xs font-medium text-slate-600">
           {labels.freshnessTitle}
         </summary>
+        <p className="mt-2 text-xs leading-5 text-slate-500">
+          {labels.freshnessIntro}
+        </p>
         <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           <FreshnessCard
             title={labels.freshnessBoiRate}
@@ -1067,7 +1172,6 @@ export default function MortgageCalculator({
                       curve as MortgageForecastCurveSnapshot,
                     ),
                   },
-                  { label: labels.freshnessId, value: curve.id },
                   {
                     label: labels.freshnessPublished,
                     value: formatDateOnly(curve.publicationDate, locale),
@@ -1085,6 +1189,8 @@ export default function MortgageCalculator({
                     value: freshnessStatusText(curve.status, labels),
                   },
                 ]}
+                technicalTitle={labels.freshnessTechnicalDetails}
+                technical={[{ label: labels.freshnessId, value: curve.id }]}
               />
             );
           })}
