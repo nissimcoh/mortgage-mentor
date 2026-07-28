@@ -10,10 +10,10 @@ describe("app-shell navigation labels", () => {
       expect(nav.ariaLabel.length).toBeGreaterThan(0);
       expect(nav.home.length).toBeGreaterThan(0);
       expect(nav.calculator.length).toBeGreaterThan(0);
-      expect(nav.compare.length).toBeGreaterThan(0);
+      expect(nav.learn.length).toBeGreaterThan(0);
       expect(nav.saved.length).toBeGreaterThan(0);
       expect(nav.signIn.length).toBeGreaterThan(0);
-      expect(nav.bottomNavCompare.length).toBeGreaterThan(0);
+      expect(nav.bottomNavLearn.length).toBeGreaterThan(0);
     }
   });
 
@@ -21,7 +21,7 @@ describe("app-shell navigation labels", () => {
     const nav = heDict.nav;
     expect(nav.home).toBe("בית");
     expect(nav.calculator).toBe("מחשבון");
-    expect(nav.compare).toBe("השוואת תרחישים");
+    expect(nav.learn).toBe("לומדים");
     expect(nav.saved).toBe("שמורים");
     expect(nav.signIn).toBe("כניסה");
   });
@@ -30,16 +30,23 @@ describe("app-shell navigation labels", () => {
     const nav = enDict.nav;
     expect(nav.home).toBe("Home");
     expect(nav.calculator).toBe("Calculator");
-    expect(nav.compare).toBe("Compare scenarios");
+    expect(nav.learn).toBe("Learn");
     expect(nav.saved).toBe("Saved");
     expect(nav.signIn).toBe("Sign in");
   });
 
-  it("uses a shorter bottom-nav compare label, distinct from the top-nav one", () => {
-    expect(heDict.nav.bottomNavCompare).toBe("השוואה");
-    expect(heDict.nav.bottomNavCompare).not.toBe(heDict.nav.compare);
-    expect(enDict.nav.bottomNavCompare).toBe("Compare");
-    expect(enDict.nav.bottomNavCompare).not.toBe(enDict.nav.compare);
+  it("has the exact requested bottom-nav learn label in both locales", () => {
+    expect(heDict.nav.bottomNavLearn).toBe("למידה");
+    expect(enDict.nav.bottomNavLearn).toBe("Learn");
+  });
+
+  it("no longer carries the retired compare nav keys", () => {
+    for (const dict of [heDict, enDict]) {
+      expect((dict.nav as Record<string, unknown>).compare).toBeUndefined();
+      expect(
+        (dict.nav as Record<string, unknown>).bottomNavCompare,
+      ).toBeUndefined();
+    }
   });
 
   it("keeps home and calculator labels identical between top and bottom nav", () => {
@@ -71,8 +78,9 @@ describe("home page redesign dictionary keys", () => {
         h.calcCardTitle,
         h.calcCardBody,
         h.calcCardCta,
-        h.compareCardTitle,
-        h.compareCardBody,
+        h.learnCardTitle,
+        h.learnCardBody,
+        h.learnCardCta,
         h.savedCardTitle,
         h.savedCardBody,
         h.comingSoonBadge,
@@ -96,17 +104,87 @@ describe("home page redesign dictionary keys", () => {
     );
   });
 
-  it("no longer carries the old dev-badge/features copy", () => {
+  it("no longer carries the old dev-badge/features copy or the retired compare card", () => {
     for (const dict of [heDict, enDict]) {
       expect((dict.home as Record<string, unknown>).devBadge).toBeUndefined();
       expect((dict.home as Record<string, unknown>).features).toBeUndefined();
+      expect(
+        (dict.home as Record<string, unknown>).compareCardTitle,
+      ).toBeUndefined();
+      expect(
+        (dict.home as Record<string, unknown>).compareCardBody,
+      ).toBeUndefined();
     }
   });
 });
 
+describe("learn page dictionary keys", () => {
+  it("has a title, intro, and six topics, non-empty, in both locales", () => {
+    for (const dict of [heDict, enDict]) {
+      const l = dict.learnPage;
+      expect(l.title.length).toBeGreaterThan(0);
+      expect(l.intro.length).toBeGreaterThan(0);
+      expect(Array.isArray(l.topics)).toBe(true);
+      expect(l.topics).toHaveLength(6);
+      for (const topic of l.topics) {
+        expect(topic.length).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it("has the exact requested Hebrew title/intro/topics", () => {
+    const l = heDict.learnPage;
+    expect(l.title).toBe("לומדים משכנתא בשפה פשוטה");
+    expect(l.intro).toBe(
+      "מדריכים קצרים שיעזרו להבין מסלולים, ריביות, הצמדה ולוחות סילוקין לפני שמקבלים החלטה.",
+    );
+    expect(l.topics).toEqual([
+      "מהו מסלול משכנתא?",
+      "פריים, קל״צ וריבית משתנה",
+      "מהי הצמדה למדד?",
+      "איך לקרוא לוח סילוקין?",
+      "החזר ראשון מול החזר מרבי",
+      "מהו מדד היציבות?",
+    ]);
+  });
+
+  it("has the exact requested English title/intro/topics", () => {
+    const l = enDict.learnPage;
+    expect(l.title).toBe("Learn mortgages in plain language");
+    expect(l.topics).toEqual([
+      "What is a mortgage track?",
+      "Prime, fixed, and variable rates",
+      "What does CPI linkage mean?",
+      "How to read an amortization schedule",
+      "First payment versus maximum payment",
+      "What is the stability score?",
+    ]);
+  });
+
+  it("no longer carries the retired comparison dictionary section", () => {
+    for (const dict of [heDict, enDict]) {
+      expect(
+        (dict as Record<string, unknown>).comparePage,
+      ).toBeUndefined();
+    }
+  });
+});
+
+describe("calculator: future comparison placeholder", () => {
+  it("has a non-empty, clearly-labeled 'coming soon' compare action in both locales", () => {
+    expect(heDict.calculator.compareComingSoonLabel).toBe(
+      "השווה לתמהיל אחר — בקרוב",
+    );
+    expect(enDict.calculator.compareComingSoonLabel).toBe(
+      "Compare with another scenario — coming soon",
+    );
+  });
+});
+
 describe("coming-soon page dictionary keys (saved/sign-in)", () => {
-  // /compare has since become a real page (see compare-page.test.ts) — only
-  // saved/sign-in are still coming-soon placeholders with a body array.
+  // /compare has since become a redirect to /learn (see the "Realign
+  // navigation" milestone) — only saved/sign-in are still coming-soon
+  // placeholders with a body array.
   it("has non-empty body paragraphs for saved/signin in both locales", () => {
     for (const dict of [heDict, enDict]) {
       for (const section of [dict.savedPage, dict.signinPage]) {

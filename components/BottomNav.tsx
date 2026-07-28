@@ -21,7 +21,7 @@ export default function BottomNav({ locale, labels }: BottomNavProps) {
   const items = [
     { href: `/${locale}`, label: labels.home, glyph: "⌂" },
     { href: `/${locale}/calculator`, label: labels.calculator, glyph: "₪" },
-    { href: `/${locale}/compare`, label: labels.bottomNavCompare, glyph: "⇄" },
+    { href: `/${locale}/learn`, label: labels.bottomNavLearn, glyph: "✎" },
     { href: `/${locale}/saved`, label: labels.saved, glyph: "☆" },
   ];
 

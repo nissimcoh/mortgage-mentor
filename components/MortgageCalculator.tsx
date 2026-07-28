@@ -746,11 +746,23 @@ export default function MortgageCalculator({
               <h2 className="text-2xl font-bold tracking-tight">
                 {labels.combinedResultsTitle}
               </h2>
-              <CopyLinkButton
-                buttonLabel={labels.copyScenarioLinkButton}
-                successText={labels.copyScenarioLinkSuccess}
-                fallbackText={labels.copyScenarioLinkFallback}
-              />
+              <div className="flex flex-wrap items-center gap-2">
+                <CopyLinkButton
+                  buttonLabel={labels.copyScenarioLinkButton}
+                  successText={labels.copyScenarioLinkSuccess}
+                  fallbackText={labels.copyScenarioLinkFallback}
+                />
+                {/* Placeholder for the future comparison entry point (see
+                    "Realign navigation" milestone) — disabled on purpose
+                    until saved scenarios/accounts exist to compare against. */}
+                <button
+                  type="button"
+                  disabled
+                  className="cursor-not-allowed rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-400 sm:py-1.5"
+                >
+                  {labels.compareComingSoonLabel}
+                </button>
+              </div>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {combinedResults.map((result) => (

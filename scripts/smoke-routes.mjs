@@ -19,19 +19,18 @@ const ROUTES = [
   { path: "/en", expected: 200 },
   { path: "/he/calculator", expected: 200 },
   { path: "/en/calculator", expected: 200 },
-  // App-shell surfaces: compare (now a real page), saved/sign-in (still
+  // App-shell surfaces: learn (real page), saved/sign-in (still
   // coming-soon placeholders)
-  { path: "/he/compare", expected: 200 },
-  { path: "/en/compare", expected: 200 },
+  { path: "/he/learn", expected: 200 },
+  { path: "/en/learn", expected: 200 },
   { path: "/he/saved", expected: 200 },
   { path: "/en/saved", expected: 200 },
   { path: "/he/signin", expected: 200 },
   { path: "/en/signin", expected: 200 },
-  // Populated two-scenario comparison (fixedUnlinked vs. prime)
-  {
-    path: "/he/compare?aTrackCount=1&aTrack1Amount=500000&aTrack1Type=fixedUnlinked&aTrack1RepaymentMethod=spitzer&aTrack1Years=20&aTrack1AnnualInterestRatePercent=4.5&bTrackCount=1&bTrack1Amount=500000&bTrack1Type=prime&bTrack1RepaymentMethod=spitzer&bTrack1Years=20&bTrack1CurrentRatePercent=4.5&bTrack1ForecastMode=official",
-    expected: 200,
-  },
+  // /compare is retired (see "Realign navigation" milestone) and redirects
+  // to /learn rather than exposing the old paste-link comparison UI.
+  { path: "/he/compare", expected: 307 },
+  { path: "/en/compare", expected: 307 },
   // Fixed-unlinked track
   {
     path: "/he/calculator?trackCount=1&track1Amount=800000&track1Type=fixedUnlinked&track1RepaymentMethod=spitzer&track1Years=25&track1AnnualInterestRatePercent=4.8",

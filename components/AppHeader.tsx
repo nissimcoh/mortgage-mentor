@@ -23,7 +23,7 @@ export default function AppHeader({ locale, labels }: AppHeaderProps) {
   const navItems = [
     { href: `/${locale}`, label: labels.home },
     { href: `/${locale}/calculator`, label: labels.calculator },
-    { href: `/${locale}/compare`, label: labels.compare },
+    { href: `/${locale}/learn`, label: labels.learn },
     { href: `/${locale}/saved`, label: labels.saved },
   ];
 
