@@ -19,12 +19,12 @@ const ROUTES = [
   { path: "/en", expected: 200 },
   { path: "/he/calculator", expected: 200 },
   { path: "/en/calculator", expected: 200 },
-  // App-shell surfaces: learn (real page), saved/sign-in (still
-  // coming-soon placeholders)
+  // App-shell surfaces: learn and sign-in are real pages; /saved requires
+  // auth and redirects unauthenticated visitors to /signin.
   { path: "/he/learn", expected: 200 },
   { path: "/en/learn", expected: 200 },
-  { path: "/he/saved", expected: 200 },
-  { path: "/en/saved", expected: 200 },
+  { path: "/he/saved", expected: 307 },
+  { path: "/en/saved", expected: 307 },
   { path: "/he/signin", expected: 200 },
   { path: "/en/signin", expected: 200 },
   // /compare is retired (see "Realign navigation" milestone) and redirects

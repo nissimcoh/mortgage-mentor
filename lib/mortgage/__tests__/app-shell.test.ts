@@ -181,18 +181,17 @@ describe("calculator: future comparison placeholder", () => {
   });
 });
 
-describe("coming-soon page dictionary keys (saved/sign-in)", () => {
-  // /compare has since become a redirect to /learn (see the "Realign
-  // navigation" milestone) — only saved/sign-in are still coming-soon
-  // placeholders with a body array.
-  it("has non-empty body paragraphs for saved/signin in both locales", () => {
+describe("saved page dictionary keys", () => {
+  // /saved still shows a "saving is coming later" body note (the copy-link
+  // workaround remains true even for signed-in users), plus real
+  // signed-in-state copy (email greeting + sign-out) now that /saved is a
+  // real authenticated page rather than a coming-soon placeholder.
+  it("has non-empty body paragraphs in both locales", () => {
     for (const dict of [heDict, enDict]) {
-      for (const section of [dict.savedPage, dict.signinPage]) {
-        expect(Array.isArray(section.body)).toBe(true);
-        expect(section.body.length).toBeGreaterThan(0);
-        for (const paragraph of section.body) {
-          expect(paragraph.length).toBeGreaterThan(0);
-        }
+      expect(Array.isArray(dict.savedPage.body)).toBe(true);
+      expect(dict.savedPage.body.length).toBeGreaterThan(0);
+      for (const paragraph of dict.savedPage.body) {
+        expect(paragraph.length).toBeGreaterThan(0);
       }
     }
   });
@@ -201,6 +200,37 @@ describe("coming-soon page dictionary keys (saved/sign-in)", () => {
     for (const dict of [heDict, enDict]) {
       const joined = dict.savedPage.body.join(" ");
       expect(joined).toMatch(/קישור|link/i);
+    }
+  });
+
+  it("has a signed-in greeting with an {email} token, and a sign-out label", () => {
+    for (const dict of [heDict, enDict]) {
+      expect(dict.savedPage.signedInIntro).toContain("{email}");
+      expect(dict.savedPage.signOutButton.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("sign-in page dictionary keys (Google OAuth)", () => {
+  it("has non-empty Google sign-in copy in both locales", () => {
+    for (const dict of [heDict, enDict]) {
+      const { signinPage } = dict;
+      expect(signinPage.intro.length).toBeGreaterThan(0);
+      expect(signinPage.continueWithGoogleButton.length).toBeGreaterThan(0);
+      expect(signinPage.signInErrorMessage.length).toBeGreaterThan(0);
+      expect(signinPage.callbackErrorMessage.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("no longer carries Magic-Link-only copy", () => {
+    for (const dict of [heDict, enDict]) {
+      const section = dict.signinPage as Record<string, unknown>;
+      expect(section.emailLabel).toBeUndefined();
+      expect(section.emailPlaceholder).toBeUndefined();
+      expect(section.sendLinkButton).toBeUndefined();
+      expect(section.sendingButton).toBeUndefined();
+      expect(section.checkEmailMessage).toBeUndefined();
+      expect(section.sendErrorMessage).toBeUndefined();
     }
   });
 });

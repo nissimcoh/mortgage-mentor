@@ -44,16 +44,18 @@
     ]
   },
   "savedPage": {
+    "signedInIntro": "Signed in as {email}.",
     "body": [
       "Saving scenarios is coming later.",
       "For now, you can save a scenario using \"Copy scenario link\" in the calculator."
-    ]
+    ],
+    "signOutButton": "Sign out"
   },
   "signinPage": {
-    "body": [
-      "Sign-in is coming later.",
-      "No account is needed to use the calculator right now — every scenario is saved in a link you can copy and share."
-    ]
+    "intro": "Sign in to save and manage mortgage scenarios.",
+    "continueWithGoogleButton": "Continue with Google",
+    "signInErrorMessage": "Something went wrong starting Google sign-in. Please try again in a moment.",
+    "callbackErrorMessage": "Sign-in failed or expired. You can try again."
   },
   "market": {
     "title": "Market now",
