@@ -65,6 +65,28 @@ describe("app-shell navigation labels", () => {
   });
 });
 
+describe("header account menu labels", () => {
+  it("has every account-menu label, non-empty, in both locales", () => {
+    for (const dict of [heDict, enDict]) {
+      const menu = dict.accountMenu;
+      expect(menu.menuLabel.length).toBeGreaterThan(0);
+      expect(menu.avatarAlt.length).toBeGreaterThan(0);
+      expect(menu.savedScenarios.length).toBeGreaterThan(0);
+      expect(menu.signOut.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("has the exact requested Hebrew account-menu labels", () => {
+    expect(heDict.accountMenu.savedScenarios).toBe("שמורים");
+    expect(heDict.accountMenu.signOut).toBe("התנתקות");
+  });
+
+  it("has the exact requested English account-menu labels", () => {
+    expect(enDict.accountMenu.savedScenarios).toBe("Saved scenarios");
+    expect(enDict.accountMenu.signOut).toBe("Sign out");
+  });
+});
+
 describe("home page redesign dictionary keys", () => {
   it("has every hero/card key, non-empty, in both locales", () => {
     for (const dict of [heDict, enDict]) {

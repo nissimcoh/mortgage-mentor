@@ -14,6 +14,12 @@
     "signIn": "Sign in",
     "bottomNavLearn": "Learn"
   },
+  "accountMenu": {
+    "menuLabel": "Account menu",
+    "avatarAlt": "Profile picture",
+    "savedScenarios": "Saved scenarios",
+    "signOut": "Sign out"
+  },
   "home": {
     "heroTitle": "Get a clearer picture of your mortgage",
     "heroSubtitle": "A mortgage calculator that brings together tracks, forecasts, stability, and payments — in plain language, with no sign-up required.",

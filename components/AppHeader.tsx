@@ -8,6 +8,7 @@ import type { Locale } from "@/lib/i18n/config";
 // dictionary module out of the client bundle.
 import type { Dictionary } from "@/app/[locale]/dictionaries";
 import BrandMark from "./BrandMark";
+import HeaderAuthStatus from "./HeaderAuthStatus";
 import LanguageSwitcher from "./LanguageSwitcher";
 
 type NavLabels = Dictionary["nav"];
@@ -15,9 +16,10 @@ type NavLabels = Dictionary["nav"];
 interface AppHeaderProps {
   locale: Locale;
   labels: NavLabels;
+  accountMenu: Dictionary["accountMenu"];
 }
 
-export default function AppHeader({ locale, labels }: AppHeaderProps) {
+export default function AppHeader({ locale, labels, accountMenu }: AppHeaderProps) {
   const pathname = usePathname();
 
   const navItems = [
@@ -83,12 +85,11 @@ export default function AppHeader({ locale, labels }: AppHeaderProps) {
           <Suspense fallback={null}>
             <LanguageSwitcher />
           </Suspense>
-          <Link
-            href={`/${locale}/signin`}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
-          >
-            {labels.signIn}
-          </Link>
+          <HeaderAuthStatus
+            locale={locale}
+            signInLabel={labels.signIn}
+            labels={accountMenu}
+          />
         </div>
       </div>
     </header>
