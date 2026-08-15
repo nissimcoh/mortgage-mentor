@@ -92,18 +92,24 @@ create trigger mortgage_scenarios_set_updated_at
 -- policy, anonymous requests get zero rows and zero mutations by default.
 alter table public.mortgage_scenarios enable row level security;
 
+-- create policy has no "if not exists" form in PostgreSQL, so a bare
+-- create policy would fail on a second run of this migration; drop-then-
+-- create is what makes this file safely re-runnable like the rest of it.
+drop policy if exists "select own scenarios" on public.mortgage_scenarios;
 create policy "select own scenarios"
   on public.mortgage_scenarios
   for select
   to authenticated
   using ((select auth.uid()) = user_id);
 
+drop policy if exists "insert own scenarios" on public.mortgage_scenarios;
 create policy "insert own scenarios"
   on public.mortgage_scenarios
   for insert
   to authenticated
   with check ((select auth.uid()) = user_id);
 
+drop policy if exists "update own scenarios" on public.mortgage_scenarios;
 create policy "update own scenarios"
   on public.mortgage_scenarios
   for update
@@ -111,6 +117,7 @@ create policy "update own scenarios"
   using ((select auth.uid()) = user_id)
   with check ((select auth.uid()) = user_id);
 
+drop policy if exists "delete own scenarios" on public.mortgage_scenarios;
 create policy "delete own scenarios"
   on public.mortgage_scenarios
   for delete

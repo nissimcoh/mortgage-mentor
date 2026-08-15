@@ -68,6 +68,25 @@ describe("mortgage_scenarios migration", () => {
     );
   });
 
+  it("is safely re-runnable: each policy is dropped (if exists) before being recreated", () => {
+    // create policy has no "if not exists" form in PostgreSQL, unlike the
+    // table/index/function/trigger statements elsewhere in this file — a
+    // bare create policy would fail on a second run. Each of the four
+    // policies must have a matching drop-if-exists immediately before it.
+    for (const policyName of [
+      "select own scenarios",
+      "insert own scenarios",
+      "update own scenarios",
+      "delete own scenarios",
+    ]) {
+      expect(sql).toMatch(
+        new RegExp(
+          `drop policy if exists "${policyName}" on public\\.mortgage_scenarios;\\s*create policy "${policyName}"`,
+        ),
+      );
+    }
+  });
+
   it("grants no anonymous or service_role access", () => {
     expect(sql).not.toMatch(/\bto anon\b/);
     expect(sql).not.toMatch(/service_role/i);
