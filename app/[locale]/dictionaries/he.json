@@ -65,8 +65,21 @@
     "cardHighestPaymentLabel": "החזר מרבי",
     "cardStabilityLabel": "יציבות",
     "cardUpdatedLabel": "עודכן",
-    "loadErrorMessage": "לא ניתן לטעון את התמהילים השמורים כרגע.",
-    "invalidScenarioMessage": "לא ניתן לפתוח תמהיל זה — הנתונים השמורים אינם תקינים."
+    "loadErrorMessage": "לא הצלחנו לטעון את התמהילים כרגע. אפשר לנסות שוב בעוד רגע.",
+    "invalidScenarioMessage": "לא ניתן לפתוח תמהיל זה — הנתונים השמורים אינם תקינים.",
+    "menuLabel": "תפריט פעולות",
+    "renameAction": "שנה שם",
+    "duplicateAction": "שכפל",
+    "duplicatingAction": "משכפל...",
+    "deletingAction": "מוחק...",
+    "renameDialogTitle": "שינוי שם תמהיל",
+    "renameNameLabel": "שם התמהיל",
+    "renameSaveButton": "שמירה",
+    "renamingAction": "שומר...",
+    "renameCancelButton": "ביטול",
+    "renameNameInvalidMessage": "יש להזין שם באורך 1 עד 120 תווים.",
+    "actionErrorMessage": "משהו השתבש. נסו שוב.",
+    "notFoundMessage": "התמהיל הזה כבר לא זמין."
   },
   "saveScenarioDialog": {
     "title": "שמירת תמהיל",

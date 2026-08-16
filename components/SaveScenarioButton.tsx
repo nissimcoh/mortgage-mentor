@@ -104,7 +104,7 @@ export default function SaveScenarioButton({
     }
 
     setErrorMessage(
-      result.error === "invalidName"
+      result.error === "invalid-name"
         ? labels.nameInvalidMessage
         : labels.genericErrorMessage,
     );

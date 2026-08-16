@@ -231,6 +231,39 @@ describe("saved page dictionary keys", () => {
     }
   });
 
+  it("has non-empty scenario action-menu copy (rename/duplicate/delete) in both locales", () => {
+    for (const dict of [heDict, enDict]) {
+      const s = dict.savedPage;
+      expect(s.menuLabel.length).toBeGreaterThan(0);
+      expect(s.renameAction.length).toBeGreaterThan(0);
+      expect(s.duplicateAction.length).toBeGreaterThan(0);
+      expect(s.duplicatingAction.length).toBeGreaterThan(0);
+      expect(s.deletingAction.length).toBeGreaterThan(0);
+      expect(s.renameDialogTitle.length).toBeGreaterThan(0);
+      expect(s.renameNameLabel.length).toBeGreaterThan(0);
+      expect(s.renameSaveButton.length).toBeGreaterThan(0);
+      expect(s.renamingAction.length).toBeGreaterThan(0);
+      expect(s.renameCancelButton.length).toBeGreaterThan(0);
+      expect(s.renameNameInvalidMessage.length).toBeGreaterThan(0);
+      expect(s.actionErrorMessage.length).toBeGreaterThan(0);
+      expect(s.notFoundMessage.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("has the exact requested rename action label", () => {
+    expect(heDict.savedPage.renameAction).toBe("שנה שם");
+    expect(enDict.savedPage.renameAction).toBe("Rename");
+  });
+
+  it("has the exact requested saved-page load-error copy", () => {
+    expect(heDict.savedPage.loadErrorMessage).toBe(
+      "לא הצלחנו לטעון את התמהילים כרגע. אפשר לנסות שוב בעוד רגע.",
+    );
+    expect(enDict.savedPage.loadErrorMessage).toBe(
+      "We couldn't load your saved scenarios right now. Please try again shortly.",
+    );
+  });
+
   it("has the exact requested empty-state copy", () => {
     expect(heDict.savedPage.emptyTitle).toBe("עדיין לא שמרת תמהילים.");
     expect(heDict.savedPage.emptyBody).toBe(

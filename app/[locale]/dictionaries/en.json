@@ -65,8 +65,21 @@
     "cardHighestPaymentLabel": "Highest payment",
     "cardStabilityLabel": "Stability",
     "cardUpdatedLabel": "Updated",
-    "loadErrorMessage": "Saved scenarios can't be loaded right now.",
-    "invalidScenarioMessage": "This scenario can't be opened — the saved data is invalid."
+    "loadErrorMessage": "We couldn't load your saved scenarios right now. Please try again shortly.",
+    "invalidScenarioMessage": "This scenario can't be opened — the saved data is invalid.",
+    "menuLabel": "Actions menu",
+    "renameAction": "Rename",
+    "duplicateAction": "Duplicate",
+    "duplicatingAction": "Duplicating...",
+    "deletingAction": "Deleting...",
+    "renameDialogTitle": "Rename scenario",
+    "renameNameLabel": "Scenario name",
+    "renameSaveButton": "Save",
+    "renamingAction": "Saving...",
+    "renameCancelButton": "Cancel",
+    "renameNameInvalidMessage": "Name must be between 1 and 120 characters.",
+    "actionErrorMessage": "Something went wrong. Please try again.",
+    "notFoundMessage": "This scenario is no longer available."
   },
   "saveScenarioDialog": {
     "title": "Save scenario",

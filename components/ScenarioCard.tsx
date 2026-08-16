@@ -4,7 +4,7 @@ import { formatDateOnly } from "@/lib/forms/dates";
 import type { Locale } from "@/lib/i18n/config";
 import { stabilityColorState } from "@/lib/mortgage/stability";
 import type { StoredScenarioResultSnapshot } from "@/lib/scenarios/contract";
-import DeleteScenarioButton from "./DeleteScenarioButton";
+import ScenarioActionsMenu from "./ScenarioActionsMenu";
 
 const STABILITY_BADGE_CLASS = {
   stable: "border-emerald-200 bg-emerald-50 text-emerald-800",
@@ -102,7 +102,7 @@ export default function ScenarioCard({
         ) : (
           <span />
         )}
-        <DeleteScenarioButton id={id} labels={labels} />
+        <ScenarioActionsMenu id={id} currentName={name} labels={labels} />
       </div>
     </div>
   );

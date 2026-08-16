@@ -53,6 +53,17 @@ export default async function SavedPage({
     .eq("user_id", user.id)
     .order("updated_at", { ascending: false });
 
+  if (error) {
+    // Safe fields only (never the caller's session/tokens) — the user
+    // only ever sees the generic, translated loadErrorMessage below, not
+    // this raw Postgres error.
+    console.error("[saved] failed to load scenarios:", {
+      code: error.code,
+      message: error.message,
+      hint: error.hint,
+    });
+  }
+
   return (
     <main className="bg-slate-50 text-slate-900">
       <section className="mx-auto max-w-3xl px-6 pt-10 pb-16 sm:pt-12">

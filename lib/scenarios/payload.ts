@@ -5,6 +5,7 @@
  * every field is explicitly picked and type-checked, never spread.
  */
 
+import { defaultLocale, isValidLocale, type Locale } from "../i18n/config";
 import {
   createTrackDraft,
   MAX_TRACKS,
@@ -14,6 +15,7 @@ import {
 import {
   SCENARIO_SCHEMA_VERSION,
   type StoredScenarioInputPayload,
+  type StoredScenarioMarketReferences,
   type StoredScenarioResultSnapshot,
 } from "./contract";
 
@@ -155,4 +157,110 @@ export function isValidResultSnapshot(
     (field) =>
       typeof source[field] === "number" && Number.isFinite(source[field]),
   );
+}
+
+function isValidMarketReferenceTrack(raw: unknown): boolean {
+  if (raw === null || typeof raw !== "object") return false;
+  const track = raw as Record<string, unknown>;
+  if (typeof track.trackId !== "string") return false;
+  if (track.forecastCurveId !== null && typeof track.forecastCurveId !== "string") {
+    return false;
+  }
+  if (track.makamSnapshotId !== null && typeof track.makamSnapshotId !== "string") {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Structural guard for a stored row's market_references column — same
+ * defense-in-depth rationale as isValidResultSnapshot: this data is
+ * always server-derived, but a duplicate action reads a stored row back
+ * out and must not propagate a malformed value into a brand-new row.
+ */
+export function isValidMarketReferences(
+  raw: unknown,
+): raw is StoredScenarioMarketReferences {
+  if (raw === null || typeof raw !== "object") return false;
+  const source = raw as Record<string, unknown>;
+  if (source.schemaVersion !== SCENARIO_SCHEMA_VERSION) return false;
+  if (
+    typeof source.boiRatePercent !== "number" ||
+    !Number.isFinite(source.boiRatePercent)
+  ) {
+    return false;
+  }
+  if (
+    typeof source.boiRateEffectiveDate !== "string" ||
+    source.boiRateEffectiveDate === ""
+  ) {
+    return false;
+  }
+  if (!Array.isArray(source.tracks)) return false;
+  return source.tracks.every(isValidMarketReferenceTrack);
+}
+
+/** Appended to a scenario's name when duplicating it, in the source
+ * scenario's own stored locale — not the caller's current UI locale. */
+const DUPLICATE_NAME_SUFFIX: Record<Locale, string> = {
+  he: " — עותק",
+  en: " — Copy",
+};
+
+/**
+ * Builds a duplicate's default name: "{name}{suffix}", truncating the
+ * ORIGINAL name (never the suffix) if the combined length would exceed
+ * the product's 120-character limit, so the "— Copy" marker always stays
+ * intact and visible rather than silently disappearing off the end.
+ */
+export function buildDuplicateName(
+  originalName: string,
+  locale: unknown,
+  maxLength: number = MAX_SCENARIO_NAME_LENGTH,
+): string {
+  const suffix =
+    typeof locale === "string" && isValidLocale(locale)
+      ? DUPLICATE_NAME_SUFFIX[locale]
+      : DUPLICATE_NAME_SUFFIX[defaultLocale];
+  const combined = `${originalName}${suffix}`;
+  if (combined.length <= maxLength) return combined;
+
+  const availableForName = Math.max(0, maxLength - suffix.length);
+  const truncatedName = originalName.slice(0, availableForName).trimEnd();
+  return `${truncatedName}${suffix}`;
+}
+
+export interface DuplicateScenarioSource {
+  name: string;
+  locale: unknown;
+  schemaVersion: number;
+  calculatorVersion: string;
+  inputPayload: StoredScenarioInputPayload;
+  resultSnapshot: StoredScenarioResultSnapshot;
+  marketReferences: StoredScenarioMarketReferences;
+  calculatedAt: string;
+}
+
+/**
+ * Assembles the row to insert for a duplicate, from an already-validated
+ * source scenario. Deliberately never includes `id`, `user_id`,
+ * `created_at`, or `updated_at` — the caller adds `user_id` from the
+ * authenticated session, and the database supplies a fresh id and
+ * timestamps on insert. This is what actually guarantees a duplicate is a
+ * distinct new row rather than a copy of the source row's identity.
+ */
+export function buildDuplicateRow(source: DuplicateScenarioSource) {
+  const built = buildDuplicateName(source.name, source.locale);
+  const name = validateScenarioName(built) ?? built.slice(0, MAX_SCENARIO_NAME_LENGTH);
+
+  return {
+    name,
+    schema_version: source.schemaVersion,
+    calculator_version: source.calculatorVersion,
+    locale: source.locale,
+    input_payload: source.inputPayload,
+    result_snapshot: source.resultSnapshot,
+    market_references: source.marketReferences,
+    calculated_at: source.calculatedAt,
+  };
 }

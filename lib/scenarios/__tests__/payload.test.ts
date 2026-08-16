@@ -1,13 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildDuplicateName,
+  buildDuplicateRow,
   coerceTrackDraftFromUnknown,
   extractPinnedCurveIds,
   extractPinnedMakamSnapshotIds,
+  isValidMarketReferences,
   isValidResultSnapshot,
   MAX_SCENARIO_NAME_LENGTH,
   MIN_SCENARIO_NAME_LENGTH,
   validateInputPayload,
   validateScenarioName,
+  type DuplicateScenarioSource,
 } from "../payload";
 
 describe("validateScenarioName", () => {
@@ -248,5 +252,184 @@ describe("isValidResultSnapshot", () => {
   it("rejects non-object input", () => {
     expect(isValidResultSnapshot(null)).toBe(false);
     expect(isValidResultSnapshot("snapshot")).toBe(false);
+  });
+});
+
+function validMarketReferences(overrides?: Record<string, unknown>) {
+  return {
+    schemaVersion: 1,
+    boiRatePercent: 3.5,
+    boiRateEffectiveDate: "2026-01-01",
+    tracks: [
+      { trackId: "track-1", forecastCurveId: null, makamSnapshotId: null },
+      {
+        trackId: "track-2",
+        forecastCurveId: "2026-06-calendar",
+        makamSnapshotId: "2026-06",
+      },
+    ],
+    ...overrides,
+  };
+}
+
+describe("isValidMarketReferences", () => {
+  it("accepts a well-formed value, including null curve/Makam IDs", () => {
+    expect(isValidMarketReferences(validMarketReferences())).toBe(true);
+  });
+
+  it("rejects a wrong schemaVersion", () => {
+    expect(
+      isValidMarketReferences(validMarketReferences({ schemaVersion: 2 })),
+    ).toBe(false);
+  });
+
+  it("rejects a non-finite or missing boiRatePercent", () => {
+    expect(
+      isValidMarketReferences(validMarketReferences({ boiRatePercent: NaN })),
+    ).toBe(false);
+    expect(
+      isValidMarketReferences(
+        validMarketReferences({ boiRatePercent: "3.5" }),
+      ),
+    ).toBe(false);
+  });
+
+  it("rejects a missing or empty boiRateEffectiveDate", () => {
+    expect(
+      isValidMarketReferences(
+        validMarketReferences({ boiRateEffectiveDate: "" }),
+      ),
+    ).toBe(false);
+    expect(
+      isValidMarketReferences(
+        validMarketReferences({ boiRateEffectiveDate: undefined }),
+      ),
+    ).toBe(false);
+  });
+
+  it("rejects a non-array tracks field", () => {
+    expect(
+      isValidMarketReferences(validMarketReferences({ tracks: "nope" })),
+    ).toBe(false);
+  });
+
+  it("rejects a track with a non-string trackId or wrong-typed curve/Makam ids", () => {
+    expect(
+      isValidMarketReferences(
+        validMarketReferences({
+          tracks: [{ trackId: 1, forecastCurveId: null, makamSnapshotId: null }],
+        }),
+      ),
+    ).toBe(false);
+    expect(
+      isValidMarketReferences(
+        validMarketReferences({
+          tracks: [
+            { trackId: "t1", forecastCurveId: 42, makamSnapshotId: null },
+          ],
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  it("rejects non-object input", () => {
+    expect(isValidMarketReferences(null)).toBe(false);
+    expect(isValidMarketReferences("refs")).toBe(false);
+  });
+});
+
+describe("buildDuplicateName", () => {
+  it("appends the Hebrew suffix for a Hebrew-locale source scenario", () => {
+    expect(buildDuplicateName("תמהיל לדוגמה", "he")).toBe(
+      "תמהיל לדוגמה — עותק",
+    );
+  });
+
+  it("appends the English suffix for an English-locale source scenario", () => {
+    expect(buildDuplicateName("Sample scenario", "en")).toBe(
+      "Sample scenario — Copy",
+    );
+  });
+
+  it("falls back to the default locale's suffix for an invalid/missing locale", () => {
+    expect(buildDuplicateName("Sample scenario", "fr")).toBe(
+      buildDuplicateName("Sample scenario", undefined),
+    );
+  });
+
+  it("truncates a long name so the combined result stays within the limit, keeping the suffix intact", () => {
+    const longName = "a".repeat(MAX_SCENARIO_NAME_LENGTH);
+    const result = buildDuplicateName(longName, "en");
+    expect(result.length).toBeLessThanOrEqual(MAX_SCENARIO_NAME_LENGTH);
+    expect(result.endsWith(" — Copy")).toBe(true);
+  });
+
+  it("keeps names that already fit comfortably unchanged aside from the suffix", () => {
+    const result = buildDuplicateName("Short name", "en", 120);
+    expect(result).toBe("Short name — Copy");
+    expect(result.length).toBeLessThanOrEqual(120);
+  });
+
+  it("respects a custom maxLength for truncation", () => {
+    const result = buildDuplicateName("A fairly long original name here", "en", 20);
+    expect(result.length).toBeLessThanOrEqual(20);
+    expect(result.endsWith(" — Copy")).toBe(true);
+  });
+});
+
+function duplicateSource(
+  overrides?: Partial<DuplicateScenarioSource>,
+): DuplicateScenarioSource {
+  const payload = validateInputPayload({
+    schemaVersion: 1,
+    tracks: [validRawTrack()],
+  })!;
+  return {
+    name: "Original scenario",
+    locale: "en",
+    schemaVersion: 1,
+    calculatorVersion: "1.0.0",
+    inputPayload: payload,
+    resultSnapshot: validResultSnapshot() as ReturnType<typeof validResultSnapshot> &
+      DuplicateScenarioSource["resultSnapshot"],
+    marketReferences: validMarketReferences() as DuplicateScenarioSource["marketReferences"],
+    calculatedAt: "2026-01-15T10:00:00.000Z",
+    ...overrides,
+  };
+}
+
+describe("buildDuplicateRow — distinct-row contract", () => {
+  it("never includes id, user_id, created_at, or updated_at — the caller adds user_id, the database assigns the rest", () => {
+    const row = buildDuplicateRow(duplicateSource());
+    const keys = Object.keys(row);
+    expect(keys).not.toContain("id");
+    expect(keys).not.toContain("user_id");
+    expect(keys).not.toContain("created_at");
+    expect(keys).not.toContain("updated_at");
+  });
+
+  it("preserves input_payload, result_snapshot, market_references, schema_version, calculator_version, locale, and calculated_at verbatim", () => {
+    const source = duplicateSource();
+    const row = buildDuplicateRow(source);
+
+    expect(row.input_payload).toEqual(source.inputPayload);
+    expect(row.result_snapshot).toEqual(source.resultSnapshot);
+    expect(row.market_references).toEqual(source.marketReferences);
+    expect(row.schema_version).toBe(source.schemaVersion);
+    expect(row.calculator_version).toBe(source.calculatorVersion);
+    expect(row.locale).toBe(source.locale);
+    expect(row.calculated_at).toBe(source.calculatedAt);
+  });
+
+  it("applies the duplicate-name suffix rather than reusing the source name verbatim", () => {
+    const row = buildDuplicateRow(duplicateSource({ name: "My mortgage" }));
+    expect(row.name).toBe("My mortgage — Copy");
+  });
+
+  it("always returns a name that itself passes validateScenarioName (non-empty, within 120 chars)", () => {
+    const longName = "b".repeat(200);
+    const row = buildDuplicateRow(duplicateSource({ name: longName }));
+    expect(validateScenarioName(row.name)).not.toBeNull();
+    expect(row.name.length).toBeLessThanOrEqual(MAX_SCENARIO_NAME_LENGTH);
   });
 });

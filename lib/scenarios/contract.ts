@@ -54,3 +54,22 @@ export interface StoredScenarioMarketReferences {
   boiRateEffectiveDate: string;
   tracks: StoredScenarioMarketReferenceTrack[];
 }
+
+/**
+ * Shared result contract for every scenario Server Action
+ * (create/rename/duplicate/delete). A small, stable, closed set of codes
+ * — never a raw database/Postgres error message — so the client can
+ * always show a safe, translated message no matter what actually failed
+ * server-side.
+ */
+export type ScenarioActionError =
+  | "unauthenticated"
+  | "invalid-name"
+  | "invalid-scenario"
+  | "not-found"
+  | "database-error";
+
+export interface ScenarioActionFailure {
+  ok: false;
+  error: ScenarioActionError;
+}
