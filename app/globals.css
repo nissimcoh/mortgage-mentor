@@ -14,12 +14,24 @@
 :root {
   --background: #f8fafc; /* slate-50 — matches the rest of the app */
   --foreground: #171717;
+
+  /* Single restrained brand accent (deep teal), light-only like the rest
+   * of the app. Used sparingly and only where the design spec calls for
+   * it: the hero result panel, the primary Save Scenario action, and the
+   * stability meter's chrome. It never replaces the semantic
+   * emerald/amber/red stability states, which stay semantic. */
+  --accent: #0f6e68;
+  --accent-soft: #e4f1ef;
+  --accent-foreground: #ffffff;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-heebo);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-foreground: var(--accent-foreground);
 }
 
 html,

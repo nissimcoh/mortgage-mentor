@@ -192,14 +192,16 @@ describe("learn page dictionary keys", () => {
   });
 });
 
-describe("calculator: future comparison placeholder", () => {
-  it("has a non-empty, clearly-labeled 'coming soon' compare action in both locales", () => {
-    expect(heDict.calculator.compareComingSoonLabel).toBe(
-      "השווה לתמהיל אחר — בקרוב",
-    );
-    expect(enDict.calculator.compareComingSoonLabel).toBe(
-      "Compare with another scenario — coming soon",
-    );
+describe("calculator: comparison entry point removed from the results screen", () => {
+  // Round 2 of the results/save UX redesign explicitly removed the
+  // disabled "Compare — coming soon" stub rather than keeping it as a
+  // quiet note (option B) — it no longer competes with real actions.
+  it("no longer carries the retired compareComingSoonLabel key", () => {
+    for (const dict of [heDict, enDict]) {
+      expect(
+        (dict.calculator as Record<string, unknown>).compareComingSoonLabel,
+      ).toBeUndefined();
+    }
   });
 });
 
@@ -280,6 +282,70 @@ describe("save scenario dialog dictionary keys", () => {
   it("has the exact requested save-scenario button label in the calculator", () => {
     expect(heDict.calculator.saveScenarioButton).toBe("שמור תמהיל");
     expect(enDict.calculator.saveScenarioButton).toBe("Save scenario");
+  });
+
+  it("has the exact requested non-blocking toast copy (no 'Cancel' after success)", () => {
+    expect(heDict.saveScenarioDialog.successMessage).toBe("התמהיל נשמר");
+    expect(enDict.saveScenarioDialog.successMessage).toBe("Scenario saved");
+    expect(heDict.saveScenarioDialog.viewSavedLink).toBe("לצפייה בשמורים");
+    expect(enDict.saveScenarioDialog.viewSavedLink).toBe(
+      "View saved scenarios",
+    );
+    expect(heDict.saveScenarioDialog.dismissAriaLabel.length).toBeGreaterThan(
+      0,
+    );
+    expect(enDict.saveScenarioDialog.dismissAriaLabel.length).toBeGreaterThan(
+      0,
+    );
+  });
+});
+
+describe("results hierarchy dictionary keys (hero, secondary metrics, insight sentence)", () => {
+  it("has non-empty hero and secondary-metric copy in both locales", () => {
+    for (const dict of [heDict, enDict]) {
+      const c = dict.calculator;
+      expect(c.heroFirstPaymentContext.length).toBeGreaterThan(0);
+      expect(c.mortgageAmountLabel.length).toBeGreaterThan(0);
+      expect(c.financingCostLabel.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("has the exact requested secondary-metric labels", () => {
+    expect(heDict.calculator.mortgageAmountLabel).toBe("סכום המשכנתא");
+    expect(enDict.calculator.mortgageAmountLabel).toBe("Mortgage amount");
+    expect(heDict.calculator.financingCostLabel).toBe("עלות מימון חזויה");
+    expect(enDict.calculator.financingCostLabel).toBe(
+      "Forecast financing cost",
+    );
+  });
+
+  it("has all three insight-sentence templates, each with the {first} and {total} tokens", () => {
+    for (const dict of [heDict, enDict]) {
+      const c = dict.calculator;
+      for (const template of [
+        c.insightFlatTemplate,
+        c.insightRisingTemplate,
+        c.insightNonRisingTemplate,
+      ]) {
+        expect(template).toContain("{first}");
+        expect(template).toContain("{total}");
+      }
+      expect(c.insightRisingTemplate).toContain("{highest}");
+      expect(c.insightRisingTemplate).toContain("{month}");
+    }
+  });
+
+  it("has the exact requested Hebrew insight-sentence templates", () => {
+    const c = heDict.calculator;
+    expect(c.insightFlatTemplate).toBe(
+      "ההחזר מתחיל ב־₪{first} ובתרחיש הזה נשאר יציב לאורך התקופה. סך התשלומים החזוי הוא כ־₪{total}.",
+    );
+    expect(c.insightRisingTemplate).toBe(
+      "ההחזר מתחיל ב־₪{first} ועשוי לעלות עד כ־₪{highest} בחודש {month}, לפי התחזית. סך התשלומים החזוי הוא כ־₪{total}.",
+    );
+    expect(c.insightNonRisingTemplate).toBe(
+      "ההחזר מתחיל ב־₪{first}, ולפי התחזית אינו צפוי לעלות משמעותית מעל סכום זה לאורך התקופה. סך התשלומים החזוי הוא כ־₪{total}.",
+    );
   });
 });
 

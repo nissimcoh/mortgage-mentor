@@ -77,8 +77,9 @@
     "cancelButton": "ביטול",
     "nameInvalidMessage": "יש להזין שם באורך 1 עד 120 תווים.",
     "genericErrorMessage": "משהו השתבש בשמירה. נסו שוב.",
-    "successMessage": "התמהיל נשמר בהצלחה.",
-    "viewSavedLink": "צפייה בתמהילים השמורים"
+    "successMessage": "התמהיל נשמר",
+    "viewSavedLink": "לצפייה בשמורים",
+    "dismissAriaLabel": "סגור"
   },
   "signinPage": {
     "intro": "היכנסו כדי לשמור ולנהל תרחישי משכנתא.",
@@ -203,7 +204,6 @@
     "copyScenarioLinkSuccess": "הקישור הועתק",
     "copyScenarioLinkFallback": "לא ניתן להעתיק אוטומטית. אפשר להעתיק את הכתובת משורת הכתובת בדפדפן.",
     "saveScenarioButton": "שמור תמהיל",
-    "compareComingSoonLabel": "השווה לתמהיל אחר — בקרוב",
     "viewResultsButton": "לתוצאות",
     "perTrackResultsTitle": "פירוט לפי מסלול",
     "mixHelp": "כל מסלול מחושב בנפרד, וההחזר החודשי הכולל הוא סכום ההחזרים של המסלולים הפעילים באותו חודש. כשמסלול קצר מסתיים, ההחזר החודשי הכולל יורד.",
@@ -212,6 +212,12 @@
     "forecastTotalPaymentLabel": "סך תשלומים חזוי",
     "forecastTotalInterestLabel": "סך ריבית חזוי",
     "forecastOverallRateLabel": "הריבית הכוללת החזויה",
+    "heroFirstPaymentContext": "לפי הריבית המוצעת כיום",
+    "mortgageAmountLabel": "סכום המשכנתא",
+    "financingCostLabel": "עלות מימון חזויה",
+    "insightFlatTemplate": "ההחזר מתחיל ב־₪{first} ובתרחיש הזה נשאר יציב לאורך התקופה. סך התשלומים החזוי הוא כ־₪{total}.",
+    "insightRisingTemplate": "ההחזר מתחיל ב־₪{first} ועשוי לעלות עד כ־₪{highest} בחודש {month}, לפי התחזית. סך התשלומים החזוי הוא כ־₪{total}.",
+    "insightNonRisingTemplate": "ההחזר מתחיל ב־₪{first}, ולפי התחזית אינו צפוי לעלות משמעותית מעל סכום זה לאורך התקופה. סך התשלומים החזוי הוא כ־₪{total}.",
     "maxMonthTemplate": "בחודש {m} — שנה {y}, חודש {my}",
     "rateHeader": "ריבית שנתית",
     "weightedRateHeader": "ריבית שנתית משוקללת",

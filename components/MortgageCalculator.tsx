@@ -12,7 +12,9 @@ import type { CalculatorMarketData } from "@/lib/market-data/build-calculator-ma
 import type { Dictionary } from "@/app/[locale]/dictionaries";
 import {
   calculateScenarioSummary,
+  classifyPaymentPath,
   combinedStabilityScore,
+  getForecastFinancingCost,
   nominalAnnualPercentToEffectiveAnnualPercent,
   paymentMonthParts,
   stabilityColorState,
@@ -53,6 +55,7 @@ import type { MortgageForecastCurveSnapshot } from "@/lib/market-data/mortgage-f
 import AmortizationSchedule from "./AmortizationSchedule";
 import CopyLinkButton from "./CopyLinkButton";
 import SaveScenarioButton from "./SaveScenarioButton";
+import StabilityMeter from "./StabilityMeter";
 import MortgageTrackCard, {
   type TrackCardMarketInfo,
 } from "./MortgageTrackCard";
@@ -471,78 +474,47 @@ export default function MortgageCalculator({
       )
     : 0;
 
-  const scenarioTone = stabilityTone[stabilityColorState(scenarioStability)];
-  const combinedResults = submitted
-    ? [
-        {
-          label: labels.totalAmountLabel,
-          value: wholeCurrencyFormat.format(
-            submitted.inputs.reduce((sum, input) => sum + input.loanAmount, 0),
-          ),
-          help: undefined,
-          tone: undefined as string | undefined,
-          icon: undefined as string | undefined,
-        },
-        {
-          // Always today's-rate payment: the single, beginner-friendly
-          // first-payment number (forecast month 1 stays engine-internal).
-          label: labels.firstMonthlyPaymentLabel,
-          value: currencyFormat.format(
-            submitted.summary.currentCombinedFirstPayment,
-          ),
-          help: undefined,
-          tone: undefined,
-          icon: undefined,
-        },
-        {
-          label: labels.forecastMaxPaymentLabel,
-          value: currencyFormat.format(submitted.summary.maximumPayment),
-          help: formatMaxMonth(submitted.summary.monthOfMaximumPayment),
-          tone: undefined,
-          icon: undefined,
-        },
-        {
-          label: labels.forecastTotalPaymentLabel,
-          value: currencyFormat.format(submitted.summary.totalPayment),
-          help: labels.totalPaymentHelp,
-          tone: undefined,
-          icon: undefined,
-        },
-        {
-          label: labels.forecastTotalInterestLabel,
-          value: currencyFormat.format(submitted.summary.totalInterest),
-          help: labels.totalInterestHelp,
-          tone: undefined,
-          icon: undefined,
-        },
-        {
-          label: labels.forecastOverallRateLabel,
-          value: percentFormat.format(
-            submitted.summary.forecastOverallRatePercent / 100,
-          ),
-          help: undefined,
-          tone: undefined,
-          icon: undefined,
-        },
-        {
-          label: labels.numberOfPayments,
-          value: numberFormat.format(submitted.summary.numberOfPayments),
-          help: undefined,
-          tone: undefined,
-          icon: undefined,
-        },
-        {
-          label:
-            submitted.inputs.length > 1
-              ? labels.stabilityCombinedLabel
-              : labels.stabilityTrackLabel,
-          value: formatStability(scenarioStability),
-          help: labels.stabilityDimensionsHelp,
-          tone: scenarioTone.badge,
-          icon: scenarioTone.icon,
-        },
-      ]
-    : [];
+  const totalPrincipal = submitted
+    ? submitted.inputs.reduce((sum, input) => sum + input.loanAmount, 0)
+    : 0;
+  const stabilityLevelLabel = stabilityLevelLabels[stabilityLevel(scenarioStability)];
+  const stabilityAccessibleLabel =
+    submitted && submitted.inputs.length > 1
+      ? labels.stabilityCombinedLabel
+      : labels.stabilityTrackLabel;
+
+  /** One plain-language sentence, derived only from values the engine has
+   * already computed — never a recommendation, never an invented figure.
+   * classifyPaymentPath reads the combined schedule directly so declining
+   * paths (equal-principal, a shorter track ending) are told apart from a
+   * genuinely rising forecast rather than lumped in with "stable". */
+  function buildInsightSentence(): string {
+    if (!submitted) return "";
+    const { summary } = submitted;
+    const first = numberFormat.format(
+      Math.round(summary.currentCombinedFirstPayment),
+    );
+    const total = numberFormat.format(Math.round(summary.totalPayment));
+    const classification = classifyPaymentPath(summary.combinedSchedule);
+
+    if (classification === "flat") {
+      return labels.insightFlatTemplate
+        .replace("{first}", first)
+        .replace("{total}", total);
+    }
+    if (classification === "rising") {
+      const highest = numberFormat.format(Math.round(summary.maximumPayment));
+      const month = numberFormat.format(summary.monthOfMaximumPayment);
+      return labels.insightRisingTemplate
+        .replace("{first}", first)
+        .replace("{highest}", highest)
+        .replace("{month}", month)
+        .replace("{total}", total);
+    }
+    return labels.insightNonRisingTemplate
+      .replace("{first}", first)
+      .replace("{total}", total);
+  }
 
   const fieldExplanations = [
     { term: labels.trackAmountLabel, explanation: labels.trackAmountHelp },
@@ -752,57 +724,117 @@ export default function MortgageCalculator({
       {submitted && (
         <>
           <section id="results" ref={resultsRef} className="mt-6 scroll-mt-4">
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-2xl font-bold tracking-tight">
-                {labels.combinedResultsTitle}
-              </h2>
-              <div className="flex flex-wrap items-center gap-2">
-                <CopyLinkButton
-                  buttonLabel={labels.copyScenarioLinkButton}
-                  successText={labels.copyScenarioLinkSuccess}
-                  fallbackText={labels.copyScenarioLinkFallback}
+            <h2 className="mb-3 text-2xl font-bold tracking-tight">
+              {labels.combinedResultsTitle}
+            </h2>
+
+            {/* Hero: the dominant figure on the whole screen, grouped with
+                the stability meter in one panel — not two separate cards. */}
+            <div className="rounded-2xl bg-accent-soft p-5 sm:p-6">
+              <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div className="text-sm font-medium text-slate-600">
+                    {labels.firstMonthlyPaymentLabel}
+                  </div>
+                  <div className="mt-1 text-4xl font-bold tracking-tight text-slate-900 tabular-nums sm:text-5xl">
+                    {currencyFormat.format(
+                      submitted.summary.currentCombinedFirstPayment,
+                    )}
+                  </div>
+                  <div className="mt-1 text-sm text-slate-600">
+                    {labels.heroFirstPaymentContext}
+                  </div>
+                </div>
+                <StabilityMeter
+                  score={scenarioStability}
+                  levelLabel={stabilityLevelLabel}
+                  accessibleLabel={stabilityAccessibleLabel}
                 />
-                {submittedDrafts && (
-                  <SaveScenarioButton
-                    locale={locale}
-                    buttonLabel={labels.saveScenarioButton}
-                    drafts={submittedDrafts}
-                    labels={saveScenarioLabels}
-                  />
-                )}
-                {/* Placeholder for the future comparison entry point (see
-                    "Realign navigation" milestone) — disabled on purpose
-                    until saved scenarios/accounts exist to compare against. */}
-                <button
-                  type="button"
-                  disabled
-                  className="cursor-not-allowed rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-400 sm:py-1.5"
-                >
-                  {labels.compareComingSoonLabel}
-                </button>
               </div>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {combinedResults.map((result) => (
-                <div
-                  key={result.label}
-                  className={`rounded-2xl border p-4 shadow-sm ${
-                    result.tone ?? "border-slate-200 bg-white"
-                  }`}
-                >
-                  <div className="text-sm text-slate-500">{result.label}</div>
-                  <div className="mt-1 text-xl font-bold text-slate-900">
-                    {result.icon && <span aria-hidden>{result.icon} </span>}
-                    {result.value}
-                  </div>
-                  {result.help && (
-                    <p className="mt-1.5 text-xs leading-5 text-slate-500">
-                      {result.help}
-                    </p>
-                  )}
-                </div>
-              ))}
+
+            {/* Actions: Save is primary, Share/Copy is secondary. No
+                Compare stub here — it would compete with real actions for
+                no reason until saved scenarios exist to compare against. */}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {submittedDrafts && (
+                <SaveScenarioButton
+                  locale={locale}
+                  buttonLabel={labels.saveScenarioButton}
+                  drafts={submittedDrafts}
+                  labels={saveScenarioLabels}
+                />
+              )}
+              <CopyLinkButton
+                buttonLabel={labels.copyScenarioLinkButton}
+                successText={labels.copyScenarioLinkSuccess}
+                fallbackText={labels.copyScenarioLinkFallback}
+              />
             </div>
+
+            {/* Secondary metrics: a quiet stat row, not four more cards. */}
+            <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-slate-200 pt-4 sm:grid-cols-4">
+              <div>
+                <dt className="text-xs text-slate-500">
+                  {labels.forecastMaxPaymentLabel}
+                </dt>
+                <dd className="mt-0.5 text-lg font-semibold text-slate-900 tabular-nums">
+                  {currencyFormat.format(submitted.summary.maximumPayment)}
+                </dd>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  {formatMaxMonth(submitted.summary.monthOfMaximumPayment)}
+                </p>
+              </div>
+              <div>
+                <dt className="text-xs text-slate-500">
+                  {labels.forecastTotalPaymentLabel}
+                </dt>
+                <dd className="mt-0.5 text-lg font-semibold text-slate-900 tabular-nums">
+                  {currencyFormat.format(submitted.summary.totalPayment)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-slate-500">
+                  {labels.financingCostLabel}
+                </dt>
+                <dd className="mt-0.5 text-lg font-semibold text-slate-900 tabular-nums">
+                  {currencyFormat.format(
+                    getForecastFinancingCost(submitted.summary),
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-slate-500">
+                  {labels.mortgageAmountLabel}
+                </dt>
+                <dd className="mt-0.5 text-lg font-semibold text-slate-900 tabular-nums">
+                  {wholeCurrencyFormat.format(totalPrincipal)}
+                </dd>
+              </div>
+            </dl>
+
+            {/* Tertiary: lower-priority, still available, visibly quieter. */}
+            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-500">
+              <span>
+                {labels.numberOfPayments}{" "}
+                <span className="tabular-nums text-slate-600">
+                  {numberFormat.format(submitted.summary.numberOfPayments)}
+                </span>
+              </span>
+              <span>
+                {labels.forecastOverallRateLabel}{" "}
+                <span className="tabular-nums text-slate-600">
+                  {percentFormat.format(
+                    submitted.summary.forecastOverallRatePercent / 100,
+                  )}
+                </span>
+              </span>
+            </div>
+
+            <p className="mt-4 text-sm leading-6 text-slate-700">
+              {buildInsightSentence()}
+            </p>
+
             {hasScenarioOverride && (
               <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800">
                 {labels.stressScenarioNote}

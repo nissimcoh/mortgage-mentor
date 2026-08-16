@@ -77,8 +77,9 @@
     "cancelButton": "Cancel",
     "nameInvalidMessage": "Name must be between 1 and 120 characters.",
     "genericErrorMessage": "Something went wrong saving. Please try again.",
-    "successMessage": "Scenario saved.",
-    "viewSavedLink": "View saved scenarios"
+    "successMessage": "Scenario saved",
+    "viewSavedLink": "View saved scenarios",
+    "dismissAriaLabel": "Dismiss"
   },
   "signinPage": {
     "intro": "Sign in to save and manage mortgage scenarios.",
@@ -203,7 +204,6 @@
     "copyScenarioLinkButton": "Copy scenario link",
     "copyScenarioLinkSuccess": "Link copied",
     "copyScenarioLinkFallback": "Couldn't copy automatically. Please copy the address from your browser's address bar.",
-    "compareComingSoonLabel": "Compare with another scenario — coming soon",
     "viewResultsButton": "View results",
     "perTrackResultsTitle": "Per-track breakdown",
     "mixHelp": "Each track is calculated independently, and the total monthly payment is the sum of the tracks still active in that month. When a shorter track ends, the combined monthly payment goes down.",
@@ -212,6 +212,12 @@
     "forecastTotalPaymentLabel": "Total forecast payments",
     "forecastTotalInterestLabel": "Total forecast interest",
     "forecastOverallRateLabel": "Forecast overall interest rate",
+    "heroFirstPaymentContext": "Based on today's offered rates",
+    "mortgageAmountLabel": "Mortgage amount",
+    "financingCostLabel": "Forecast financing cost",
+    "insightFlatTemplate": "The payment starts at ₪{first} and remains stable throughout the term. The forecast total paid is about ₪{total}.",
+    "insightRisingTemplate": "The payment starts at ₪{first} and may rise to about ₪{highest} in month {month}, according to the forecast. The forecast total paid is about ₪{total}.",
+    "insightNonRisingTemplate": "The payment starts at ₪{first} and, in this forecast, is not expected to rise materially above that amount during the term. The forecast total paid is about ₪{total}.",
     "maxMonthTemplate": "Month {m} — year {y}, month {my}",
     "rateHeader": "Annual rate",
     "weightedRateHeader": "Weighted annual rate",
