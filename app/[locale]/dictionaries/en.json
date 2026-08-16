@@ -50,12 +50,35 @@
     ]
   },
   "savedPage": {
-    "signedInIntro": "Signed in as {email}.",
-    "body": [
-      "Saving scenarios is coming later.",
-      "For now, you can save a scenario using \"Copy scenario link\" in the calculator."
-    ],
-    "signOutButton": "Sign out"
+    "intro": "Your saved scenarios, sorted by most recently updated.",
+    "emptyTitle": "You haven't saved any scenarios yet.",
+    "emptyBody": "You can build a scenario in the calculator and save it here.",
+    "emptyCta": "Open calculator",
+    "openButton": "Open in calculator",
+    "deleteButton": "Delete",
+    "deleteConfirmPrompt": "Delete this scenario permanently?",
+    "deleteConfirmYes": "Delete",
+    "deleteConfirmCancel": "Cancel",
+    "cardAmountLabel": "Loan amount",
+    "cardTrackCountLabel": "Number of tracks",
+    "cardFirstPaymentLabel": "First payment",
+    "cardHighestPaymentLabel": "Highest payment",
+    "cardStabilityLabel": "Stability",
+    "cardUpdatedLabel": "Updated",
+    "loadErrorMessage": "Saved scenarios can't be loaded right now.",
+    "invalidScenarioMessage": "This scenario can't be opened — the saved data is invalid."
+  },
+  "saveScenarioDialog": {
+    "title": "Save scenario",
+    "nameLabel": "Scenario name",
+    "defaultName": "New scenario",
+    "saveButton": "Save",
+    "savingButton": "Saving...",
+    "cancelButton": "Cancel",
+    "nameInvalidMessage": "Name must be between 1 and 120 characters.",
+    "genericErrorMessage": "Something went wrong saving. Please try again.",
+    "successMessage": "Scenario saved.",
+    "viewSavedLink": "View saved scenarios"
   },
   "signinPage": {
     "intro": "Sign in to save and manage mortgage scenarios.",
@@ -176,6 +199,7 @@
     "effectiveRateLabel": "Estimated effective annual rate",
     "effectiveRateHelp": "The effective annual rate after accounting for monthly compounding.",
     "combinedResultsTitle": "Combined results",
+    "saveScenarioButton": "Save scenario",
     "copyScenarioLinkButton": "Copy scenario link",
     "copyScenarioLinkSuccess": "Link copied",
     "copyScenarioLinkFallback": "Couldn't copy automatically. Please copy the address from your browser's address bar.",

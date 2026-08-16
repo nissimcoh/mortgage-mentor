@@ -92,6 +92,7 @@ export default async function CalculatorPage({
             locale={locale}
             labels={t}
             marketData={marketData}
+            saveScenarioLabels={dict.saveScenarioDialog}
           />
         </Suspense>
       </section>

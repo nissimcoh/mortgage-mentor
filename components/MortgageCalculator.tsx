@@ -52,6 +52,7 @@ import type { MakamAnchorSnapshot } from "@/lib/market-data/mortgage-forecast-ty
 import type { MortgageForecastCurveSnapshot } from "@/lib/market-data/mortgage-forecast-types";
 import AmortizationSchedule from "./AmortizationSchedule";
 import CopyLinkButton from "./CopyLinkButton";
+import SaveScenarioButton from "./SaveScenarioButton";
 import MortgageTrackCard, {
   type TrackCardMarketInfo,
 } from "./MortgageTrackCard";
@@ -65,6 +66,7 @@ interface MortgageCalculatorProps {
   locale: Locale;
   labels: CalculatorLabels;
   marketData: CalculatorMarketData;
+  saveScenarioLabels: Dictionary["saveScenarioDialog"];
 }
 
 /** A successfully calculated mix: the inputs it was computed from + result. */
@@ -150,6 +152,7 @@ export default function MortgageCalculator({
   locale,
   labels,
   marketData,
+  saveScenarioLabels,
 }: MortgageCalculatorProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -177,6 +180,12 @@ export default function MortgageCalculator({
   const [drafts, setDrafts] = useState<TrackDraft[]>(initial.drafts);
   const [submitted, setSubmitted] = useState<SubmittedScenario | null>(
     initial.submitted,
+  );
+  // Snapshot of the exact drafts that produced `submitted`, kept separate
+  // from the live (possibly since-edited) `drafts` state — Save must
+  // store what's on screen, not whatever the user has half-typed since.
+  const [submittedDrafts, setSubmittedDrafts] = useState<TrackDraft[] | null>(
+    initial.submitted ? initial.drafts : null,
   );
   const [hasError, setHasError] = useState(false);
   // Which schedule the amortization table shows; purely local view state.
@@ -409,6 +418,7 @@ export default function MortgageCalculator({
     justSubmittedRef.current = true;
     setDrafts(stamped);
     setSubmitted({ inputs, summary });
+    setSubmittedDrafts(stamped);
     setHasError(false);
     setSelectedScheduleId(COMBINED_SCHEDULE_ID);
     syncQuery(stamped);
@@ -752,6 +762,14 @@ export default function MortgageCalculator({
                   successText={labels.copyScenarioLinkSuccess}
                   fallbackText={labels.copyScenarioLinkFallback}
                 />
+                {submittedDrafts && (
+                  <SaveScenarioButton
+                    locale={locale}
+                    buttonLabel={labels.saveScenarioButton}
+                    drafts={submittedDrafts}
+                    labels={saveScenarioLabels}
+                  />
+                )}
                 {/* Placeholder for the future comparison entry point (see
                     "Realign navigation" milestone) — disabled on purpose
                     until saved scenarios/accounts exist to compare against. */}

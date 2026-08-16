@@ -50,12 +50,35 @@
     ]
   },
   "savedPage": {
-    "signedInIntro": "מחוברים כ-{email}.",
-    "body": [
-      "שמירת תרחישים תתווסף בהמשך.",
-      "בינתיים אפשר לשמור תרחיש באמצעות \"העתק קישור לתרחיש\" מהמחשבון."
-    ],
-    "signOutButton": "התנתק"
+    "intro": "התמהילים ששמרתם, מסודרים לפי עדכון אחרון.",
+    "emptyTitle": "עדיין לא שמרת תמהילים.",
+    "emptyBody": "אפשר לבנות תמהיל במחשבון ולשמור אותו כאן.",
+    "emptyCta": "פתח מחשבון",
+    "openButton": "פתח במחשבון",
+    "deleteButton": "מחק",
+    "deleteConfirmPrompt": "למחוק את התמהיל לצמיתות?",
+    "deleteConfirmYes": "מחק",
+    "deleteConfirmCancel": "ביטול",
+    "cardAmountLabel": "סכום ההלוואה",
+    "cardTrackCountLabel": "מספר מסלולים",
+    "cardFirstPaymentLabel": "החזר ראשון",
+    "cardHighestPaymentLabel": "החזר מרבי",
+    "cardStabilityLabel": "יציבות",
+    "cardUpdatedLabel": "עודכן",
+    "loadErrorMessage": "לא ניתן לטעון את התמהילים השמורים כרגע.",
+    "invalidScenarioMessage": "לא ניתן לפתוח תמהיל זה — הנתונים השמורים אינם תקינים."
+  },
+  "saveScenarioDialog": {
+    "title": "שמירת תמהיל",
+    "nameLabel": "שם התמהיל",
+    "defaultName": "תמהיל חדש",
+    "saveButton": "שמירה",
+    "savingButton": "שומר...",
+    "cancelButton": "ביטול",
+    "nameInvalidMessage": "יש להזין שם באורך 1 עד 120 תווים.",
+    "genericErrorMessage": "משהו השתבש בשמירה. נסו שוב.",
+    "successMessage": "התמהיל נשמר בהצלחה.",
+    "viewSavedLink": "צפייה בתמהילים השמורים"
   },
   "signinPage": {
     "intro": "היכנסו כדי לשמור ולנהל תרחישי משכנתא.",
@@ -179,6 +202,7 @@
     "copyScenarioLinkButton": "העתק קישור לתרחיש",
     "copyScenarioLinkSuccess": "הקישור הועתק",
     "copyScenarioLinkFallback": "לא ניתן להעתיק אוטומטית. אפשר להעתיק את הכתובת משורת הכתובת בדפדפן.",
+    "saveScenarioButton": "שמור תמהיל",
     "compareComingSoonLabel": "השווה לתמהיל אחר — בקרוב",
     "viewResultsButton": "לתוצאות",
     "perTrackResultsTitle": "פירוט לפי מסלול",

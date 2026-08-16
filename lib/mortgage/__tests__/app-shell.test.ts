@@ -204,32 +204,82 @@ describe("calculator: future comparison placeholder", () => {
 });
 
 describe("saved page dictionary keys", () => {
-  // /saved still shows a "saving is coming later" body note (the copy-link
-  // workaround remains true even for signed-in users), plus real
-  // signed-in-state copy (email greeting + sign-out) now that /saved is a
-  // real authenticated page rather than a coming-soon placeholder.
-  it("has non-empty body paragraphs in both locales", () => {
+  // /saved is now the real saved-scenarios list (see lib/scenarios/) —
+  // no longer a coming-soon placeholder pointing at copy-link.
+  it("has non-empty list/empty-state copy in both locales", () => {
     for (const dict of [heDict, enDict]) {
-      expect(Array.isArray(dict.savedPage.body)).toBe(true);
-      expect(dict.savedPage.body.length).toBeGreaterThan(0);
-      for (const paragraph of dict.savedPage.body) {
-        expect(paragraph.length).toBeGreaterThan(0);
-      }
+      const s = dict.savedPage;
+      expect(s.intro.length).toBeGreaterThan(0);
+      expect(s.emptyTitle.length).toBeGreaterThan(0);
+      expect(s.emptyBody.length).toBeGreaterThan(0);
+      expect(s.emptyCta.length).toBeGreaterThan(0);
+      expect(s.openButton.length).toBeGreaterThan(0);
+      expect(s.deleteButton.length).toBeGreaterThan(0);
+      expect(s.deleteConfirmPrompt.length).toBeGreaterThan(0);
+      expect(s.deleteConfirmYes.length).toBeGreaterThan(0);
+      expect(s.deleteConfirmCancel.length).toBeGreaterThan(0);
+      expect(s.cardAmountLabel.length).toBeGreaterThan(0);
+      expect(s.cardTrackCountLabel.length).toBeGreaterThan(0);
+      expect(s.cardFirstPaymentLabel.length).toBeGreaterThan(0);
+      expect(s.cardHighestPaymentLabel.length).toBeGreaterThan(0);
+      expect(s.cardStabilityLabel.length).toBeGreaterThan(0);
+      expect(s.cardUpdatedLabel.length).toBeGreaterThan(0);
+      expect(s.loadErrorMessage.length).toBeGreaterThan(0);
+      expect(s.invalidScenarioMessage.length).toBeGreaterThan(0);
     }
   });
 
-  it("points users at the existing copy-link feature instead of a fake save feature", () => {
+  it("has the exact requested empty-state copy", () => {
+    expect(heDict.savedPage.emptyTitle).toBe("עדיין לא שמרת תמהילים.");
+    expect(heDict.savedPage.emptyBody).toBe(
+      "אפשר לבנות תמהיל במחשבון ולשמור אותו כאן.",
+    );
+    expect(heDict.savedPage.emptyCta).toBe("פתח מחשבון");
+    expect(enDict.savedPage.emptyCta).toBe("Open calculator");
+  });
+
+  it("has the exact requested open/delete button labels", () => {
+    expect(heDict.savedPage.openButton).toBe("פתח במחשבון");
+    expect(enDict.savedPage.openButton).toBe("Open in calculator");
+    expect(heDict.savedPage.deleteButton).toBe("מחק");
+    expect(enDict.savedPage.deleteButton).toBe("Delete");
+  });
+
+  it("no longer carries the retired placeholder copy", () => {
     for (const dict of [heDict, enDict]) {
-      const joined = dict.savedPage.body.join(" ");
-      expect(joined).toMatch(/קישור|link/i);
+      const section = dict.savedPage as Record<string, unknown>;
+      expect(section.body).toBeUndefined();
+      expect(section.signedInIntro).toBeUndefined();
+      expect(section.signOutButton).toBeUndefined();
+    }
+  });
+});
+
+describe("save scenario dialog dictionary keys", () => {
+  it("has non-empty dialog copy in both locales", () => {
+    for (const dict of [heDict, enDict]) {
+      const d = dict.saveScenarioDialog;
+      expect(d.title.length).toBeGreaterThan(0);
+      expect(d.nameLabel.length).toBeGreaterThan(0);
+      expect(d.defaultName.length).toBeGreaterThan(0);
+      expect(d.saveButton.length).toBeGreaterThan(0);
+      expect(d.savingButton.length).toBeGreaterThan(0);
+      expect(d.cancelButton.length).toBeGreaterThan(0);
+      expect(d.nameInvalidMessage.length).toBeGreaterThan(0);
+      expect(d.genericErrorMessage.length).toBeGreaterThan(0);
+      expect(d.successMessage.length).toBeGreaterThan(0);
+      expect(d.viewSavedLink.length).toBeGreaterThan(0);
     }
   });
 
-  it("has a signed-in greeting with an {email} token, and a sign-out label", () => {
-    for (const dict of [heDict, enDict]) {
-      expect(dict.savedPage.signedInIntro).toContain("{email}");
-      expect(dict.savedPage.signOutButton.length).toBeGreaterThan(0);
-    }
+  it("has the exact requested default scenario name", () => {
+    expect(heDict.saveScenarioDialog.defaultName).toBe("תמהיל חדש");
+    expect(enDict.saveScenarioDialog.defaultName).toBe("New scenario");
+  });
+
+  it("has the exact requested save-scenario button label in the calculator", () => {
+    expect(heDict.calculator.saveScenarioButton).toBe("שמור תמהיל");
+    expect(enDict.calculator.saveScenarioButton).toBe("Save scenario");
   });
 });
 
