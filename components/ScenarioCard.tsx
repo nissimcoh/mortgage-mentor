@@ -20,18 +20,22 @@ interface ScenarioCardProps {
   /** Null when the stored row failed validation — shown as an inline
    * error instead of numbers that might not mean what they claim to. */
   resultSnapshot: StoredScenarioResultSnapshot | null;
-  /** Null when input_payload couldn't be parsed — Open is hidden. */
-  openHref: string | null;
   labels: Dictionary["savedPage"];
 }
 
+/**
+ * The card's main area is a single link into the scenario's detail page
+ * (`/saved/{id}`) — this list is no longer primarily a shortcut into the
+ * calculator. The overflow menu (Rename/Duplicate/Delete) is a separate
+ * sibling, absolutely positioned in the corner, so it never nests an
+ * interactive button inside the card's own anchor.
+ */
 export default function ScenarioCard({
   id,
   name,
   updatedAt,
   locale,
   resultSnapshot,
-  openHref,
   labels,
 }: ScenarioCardProps) {
   const intlLocale = locale === "he" ? "he-IL" : "en-US";
@@ -42,68 +46,48 @@ export default function ScenarioCard({
   });
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="mb-2 flex items-start justify-between gap-2">
-        <h3 className="text-base font-bold text-slate-900">{name}</h3>
-        <span className="shrink-0 text-xs text-slate-400">
-          {labels.cardUpdatedLabel} {formatDateOnly(updatedAt, locale)}
-        </span>
-      </div>
-
-      {resultSnapshot ? (
-        <>
-          <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-sm">
-            <div>
-              <dt className="text-slate-500">{labels.cardAmountLabel}</dt>
-              <dd className="font-medium text-slate-900">
-                {currencyFormat.format(resultSnapshot.totalPrincipal)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-slate-500">{labels.cardTrackCountLabel}</dt>
-              <dd className="font-medium text-slate-900">
-                {resultSnapshot.trackCount}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-slate-500">{labels.cardFirstPaymentLabel}</dt>
-              <dd className="font-medium text-slate-900">
-                {currencyFormat.format(resultSnapshot.firstPayment)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-slate-500">{labels.cardHighestPaymentLabel}</dt>
-              <dd className="font-medium text-slate-900">
-                {currencyFormat.format(resultSnapshot.highestPayment)}
-              </dd>
-            </div>
-          </dl>
-
-          <span
-            className={`mt-2 inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${STABILITY_BADGE_CLASS[stabilityColorState(resultSnapshot.stabilityScore)]}`}
-          >
-            {labels.cardStabilityLabel} {Math.round(resultSnapshot.stabilityScore)}/100
-          </span>
-        </>
-      ) : (
-        <p role="alert" className="text-sm text-red-600">
-          {labels.invalidScenarioMessage}
-        </p>
-      )}
-
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-        {openHref ? (
-          <Link
-            href={openHref}
-            className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm text-white transition hover:bg-slate-700"
-          >
-            {labels.openButton}
-          </Link>
-        ) : (
-          <span />
-        )}
+    <div className="relative rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="absolute end-2 top-2 z-10">
         <ScenarioActionsMenu id={id} currentName={name} labels={labels} />
       </div>
+
+      <Link
+        href={`/${locale}/saved/${id}`}
+        className="block rounded-2xl p-4 pe-14 transition hover:bg-slate-50"
+      >
+        <h3 className="text-base font-bold text-slate-900">{name}</h3>
+
+        {resultSnapshot ? (
+          <>
+            <p className="mt-2 text-xs text-slate-500">
+              {labels.cardAmountLabel}
+            </p>
+            <p className="text-2xl font-bold tracking-tight text-slate-900 tabular-nums">
+              {currencyFormat.format(resultSnapshot.totalPrincipal)}
+            </p>
+            <p className="mt-1 text-sm text-slate-600">
+              {labels.cardFirstPaymentLabel}{" "}
+              <span className="tabular-nums">
+                {currencyFormat.format(resultSnapshot.firstPayment)}
+              </span>
+            </p>
+            <span
+              className={`mt-2 inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${STABILITY_BADGE_CLASS[stabilityColorState(resultSnapshot.stabilityScore)]}`}
+            >
+              {labels.cardStabilityLabel}{" "}
+              {Math.round(resultSnapshot.stabilityScore)}/100
+            </span>
+          </>
+        ) : (
+          <p role="alert" className="mt-2 text-sm text-red-600">
+            {labels.invalidScenarioMessage}
+          </p>
+        )}
+
+        <p className="mt-3 text-xs text-slate-400">
+          {labels.cardUpdatedLabel} {formatDateOnly(updatedAt, locale)}
+        </p>
+      </Link>
     </div>
   );
 }

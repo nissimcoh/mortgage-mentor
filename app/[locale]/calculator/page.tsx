@@ -7,8 +7,61 @@ import { getMarketSnapshot } from "@/lib/market-data/get-market-snapshot";
 import { getMortgageForecastData } from "@/lib/market-data/sources/boi-mortgage-forecast";
 import { getMakamAnchorData } from "@/lib/market-data/sources/boi-makam";
 import { buildCalculatorMarketData } from "@/lib/market-data/build-calculator-market-data";
+import {
+  buildTrustedEditContext,
+  computeCalculatorInstanceKey,
+  extractSavedScenarioIdParam,
+  isEditContextUnavailable,
+  type TrustedEditContext,
+} from "@/lib/scenarios/edit-context";
+import { createClient } from "@/lib/supabase/server";
 import MortgageCalculator from "@/components/MortgageCalculator";
 import { getDictionary } from "../dictionaries";
+
+/**
+ * Resolves calculator edit mode server-side, never from URL metadata
+ * alone: savedScenarioId is only a lookup key, so the name and
+ * concurrency token (updatedAt) shown in the UI always come from a
+ * fresh, RLS-scoped row read for the currently authenticated user.
+ * Returns null uniformly whether the caller is signed out, the id is
+ * malformed, the scenario doesn't exist, or it belongs to someone else —
+ * these cases must never be distinguishable to the client.
+ */
+async function resolveEditContext(
+  query: Record<string, string | string[] | undefined>,
+): Promise<TrustedEditContext | null> {
+  const savedScenarioIdParam = extractSavedScenarioIdParam(query);
+  if (!savedScenarioIdParam) return null;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  // RLS's "select own scenarios" policy is the real ownership boundary;
+  // .eq("user_id", ...) is the normal, expected app-level filter on top
+  // of it, using the signed-in user's own session — never a service-role
+  // key.
+  const { data: row, error } = await supabase
+    .from("mortgage_scenarios")
+    .select("id, name, updated_at")
+    .eq("id", savedScenarioIdParam)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (error) {
+    // Safe fields only — the user never sees this raw error, only the
+    // generic "couldn't be loaded for editing" notice.
+    console.error("[calculator] failed to load scenario for edit mode:", {
+      code: error.code,
+      message: error.message,
+      hint: error.hint,
+    });
+  }
+
+  return buildTrustedEditContext(row);
+}
 
 export async function generateMetadata({
   params,
@@ -58,16 +111,20 @@ export default async function CalculatorPage({
   // serializable data crosses to the client — the latest curve plus any
   // explicitly requested historical curves (the real curve stays server-
   // side until CPI tracks exist).
-  const [marketSnapshot, forecastData, makamData] = await Promise.all([
-    getMarketSnapshot(),
-    getMortgageForecastData(requestedCurveIds),
-    getMakamAnchorData(requestedMakamIds),
-  ]);
+  const [marketSnapshot, forecastData, makamData, editContext] =
+    await Promise.all([
+      getMarketSnapshot(),
+      getMortgageForecastData(requestedCurveIds),
+      getMakamAnchorData(requestedMakamIds),
+      resolveEditContext(query),
+    ]);
   const marketData = buildCalculatorMarketData(
     marketSnapshot,
     forecastData,
     makamData,
   );
+  const editContextUnavailable = isEditContextUnavailable(query, editContext);
+  const calculatorInstanceKey = computeCalculatorInstanceKey(editContext);
 
   return (
     <main className="bg-slate-50 text-slate-900">
@@ -89,10 +146,14 @@ export default async function CalculatorPage({
 
         <Suspense fallback={null}>
           <MortgageCalculator
+            key={calculatorInstanceKey}
             locale={locale}
             labels={t}
             marketData={marketData}
             saveScenarioLabels={dict.saveScenarioDialog}
+            editScenarioLabels={dict.editScenarioDialog}
+            editContext={editContext}
+            editContextUnavailable={editContextUnavailable}
           />
         </Suspense>
       </section>

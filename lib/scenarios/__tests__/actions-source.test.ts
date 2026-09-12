@@ -15,26 +15,30 @@ import { describe, expect, it } from "vitest";
  */
 const here = dirname(fileURLToPath(import.meta.url));
 const source = readFileSync(join(here, "..", "actions.ts"), "utf8");
+const computeSource = readFileSync(join(here, "..", "compute.ts"), "utf8");
 
 const ACTION_NAMES = [
   "createScenario",
   "deleteScenario",
   "renameScenario",
   "duplicateScenario",
+  "updateScenario",
 ] as const;
 
 function bodyOf(name: (typeof ACTION_NAMES)[number]): string {
   const start = source.indexOf(`export async function ${name}`);
   expect(start, `${name} not found in actions.ts`).toBeGreaterThan(-1);
   const nextIndex = ACTION_NAMES.map((other) =>
-    other === name ? Infinity : source.indexOf(`export async function ${other}`, start + 1),
+    other === name
+      ? Infinity
+      : source.indexOf(`export async function ${other}`, start + 1),
   ).filter((index) => index > start);
   const end = nextIndex.length > 0 ? Math.min(...nextIndex) : source.length;
   return source.slice(start, end);
 }
 
 describe("lib/scenarios/actions.ts — auth boundary", () => {
-  it("checks auth.getUser() before any database call in all four actions", () => {
+  it("checks auth.getUser() before any database call in all five actions", () => {
     for (const name of ACTION_NAMES) {
       const body = bodyOf(name);
       const authCheckIndex = body.indexOf("auth.getUser()");
@@ -47,7 +51,7 @@ describe("lib/scenarios/actions.ts — auth boundary", () => {
     }
   });
 
-  it("rejects unauthenticated callers in all four actions instead of proceeding", () => {
+  it("rejects unauthenticated callers in all five actions instead of proceeding", () => {
     const matches = source.match(/if \(!user\) return \{ ok: false, error: "unauthenticated" \};/g);
     expect(matches?.length).toBe(ACTION_NAMES.length);
   });
@@ -59,8 +63,13 @@ describe("lib/scenarios/actions.ts — auth boundary", () => {
     expect(source).not.toMatch(/input\.user_id/);
   });
 
-  it("scopes delete, rename, and duplicate's load to the authenticated user's own id (defense-in-depth on top of RLS)", () => {
-    for (const name of ["deleteScenario", "renameScenario", "duplicateScenario"] as const) {
+  it("scopes delete/rename/duplicate/update to the authenticated user's own id (defense-in-depth on top of RLS)", () => {
+    for (const name of [
+      "deleteScenario",
+      "renameScenario",
+      "duplicateScenario",
+      "updateScenario",
+    ] as const) {
       const body = bodyOf(name);
       expect(body, `${name} missing .eq("user_id", user.id)`).toMatch(
         /\.eq\("user_id", user\.id\)/,
@@ -74,11 +83,27 @@ describe("lib/scenarios/actions.ts — auth boundary", () => {
   });
 });
 
-describe("lib/scenarios/actions.ts — createScenario never trusts client math", () => {
+describe("lib/scenarios/compute.ts — shared calculation pipeline never trusts client math", () => {
   it("re-derives result_snapshot from a fresh server-side calculation rather than trusting a client-supplied summary", () => {
-    expect(source).toMatch(/calculateScenarioSummary/);
-    expect(source).toMatch(/buildResultSnapshot\(inputs, summary\)/);
-    // The exported input type never accepts a pre-computed snapshot/summary.
+    expect(computeSource).toMatch(/calculateScenarioSummary/);
+    expect(computeSource).toMatch(/buildResultSnapshot\(inputs, summary\)/);
+    expect(computeSource).toMatch(/buildMarketReferences\(/);
+  });
+
+  it("makes no database call itself — callers check auth first, this only prepares data", () => {
+    expect(computeSource).not.toMatch(/\.from\("mortgage_scenarios"\)/);
+    expect(computeSource).not.toMatch(/auth\.getUser\(\)/);
+    expect(computeSource).not.toMatch(/createClient/);
+  });
+});
+
+describe("lib/scenarios/actions.ts — createScenario and updateScenario delegate to the shared pipeline", () => {
+  it("both call prepareScenarioSave rather than reimplementing validation/calculation", () => {
+    const createBody = bodyOf("createScenario");
+    const updateBody = bodyOf("updateScenario");
+    expect(createBody).toMatch(/prepareScenarioSave\(input\)/);
+    expect(updateBody).toMatch(/prepareScenarioSave\(input\)/);
+    // Neither exported input type accepts a pre-computed snapshot/summary.
     expect(source).not.toMatch(/resultSnapshot: unknown/);
     expect(source).not.toMatch(/summary: unknown/);
   });
@@ -122,12 +147,45 @@ describe("lib/scenarios/actions.ts — duplicateScenario", () => {
   });
 });
 
+describe("lib/scenarios/actions.ts — updateScenario", () => {
+  const body = bodyOf("updateScenario");
+
+  it("requires an expectedUpdatedAt concurrency token before preparing the save", () => {
+    expect(body).toMatch(/expectedUpdatedAt/);
+    const tokenCheckIndex = body.indexOf("expectedUpdatedAt");
+    const prepareIndex = body.indexOf("prepareScenarioSave(input)");
+    expect(tokenCheckIndex).toBeGreaterThan(-1);
+    expect(prepareIndex).toBeGreaterThan(-1);
+    expect(tokenCheckIndex).toBeLessThan(prepareIndex);
+  });
+
+  it("compares expectedUpdatedAt against the row's own updated_at as part of the write, not as authorization", () => {
+    expect(body).toMatch(/\.eq\("updated_at", input\.expectedUpdatedAt\)/);
+    // Ownership is still enforced by the ordinary user_id filter alongside it.
+    expect(body).toMatch(/\.eq\("user_id", user\.id\)[\s\S]*?\.eq\("updated_at", input\.expectedUpdatedAt\)/);
+  });
+
+  it("never writes id, user_id, or created_at in the update payload — only the identified row's content changes", () => {
+    const updateCallIndex = body.indexOf(".update({");
+    const updatePayload = body.slice(updateCallIndex, body.indexOf("})", updateCallIndex));
+    expect(updatePayload).not.toMatch(/\bid:/);
+    expect(updatePayload).not.toMatch(/user_id:/);
+    expect(updatePayload).not.toMatch(/created_at:/);
+    expect(updatePayload).not.toMatch(/updated_at:/);
+  });
+
+  it("returns scenario-changed when the row exists but updated_at no longer matches, and not-found when it doesn't exist at all", () => {
+    expect(body).toMatch(/error:\s*existing \? "scenario-changed" : "not-found"/);
+  });
+});
+
 describe("lib/scenarios/actions.ts — safe error contract", () => {
   const ALLOWED_ERROR_CODES = [
     "unauthenticated",
     "invalid-name",
     "invalid-scenario",
     "not-found",
+    "scenario-changed",
     "database-error",
   ];
 

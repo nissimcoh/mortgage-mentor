@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   buildDuplicateName,
   buildDuplicateRow,
+  buildNewVersionName,
   coerceTrackDraftFromUnknown,
   extractPinnedCurveIds,
   extractPinnedMakamSnapshotIds,
+  isUuidLike,
   isValidMarketReferences,
   isValidResultSnapshot,
   MAX_SCENARIO_NAME_LENGTH,
@@ -374,6 +376,62 @@ describe("buildDuplicateName", () => {
     const result = buildDuplicateName("A fairly long original name here", "en", 20);
     expect(result.length).toBeLessThanOrEqual(20);
     expect(result.endsWith(" — Copy")).toBe(true);
+  });
+});
+
+describe("buildNewVersionName", () => {
+  it("appends the Hebrew suffix for a Hebrew-locale source scenario", () => {
+    expect(buildNewVersionName("תמהיל לדוגמה", "he")).toBe(
+      "תמהיל לדוגמה — גרסה חדשה",
+    );
+  });
+
+  it("appends the English suffix for an English-locale source scenario", () => {
+    expect(buildNewVersionName("Sample scenario", "en")).toBe(
+      "Sample scenario — New version",
+    );
+  });
+
+  it("falls back to the default locale's suffix for an invalid/missing locale", () => {
+    expect(buildNewVersionName("Sample scenario", "fr")).toBe(
+      buildNewVersionName("Sample scenario", undefined),
+    );
+  });
+
+  it("truncates a long name so the combined result stays within the limit, keeping the suffix intact", () => {
+    const longName = "a".repeat(MAX_SCENARIO_NAME_LENGTH);
+    const result = buildNewVersionName(longName, "en");
+    expect(result.length).toBeLessThanOrEqual(MAX_SCENARIO_NAME_LENGTH);
+    expect(result.endsWith(" — New version")).toBe(true);
+  });
+
+  it("produces a name distinct from buildDuplicateName for the same input", () => {
+    expect(buildNewVersionName("My mortgage", "en")).not.toBe(
+      buildDuplicateName("My mortgage", "en"),
+    );
+  });
+});
+
+describe("isUuidLike", () => {
+  it("accepts well-formed v4-shaped UUIDs, case-insensitively", () => {
+    expect(isUuidLike("123e4567-e89b-12d3-a456-426614174000")).toBe(true);
+    expect(isUuidLike("123E4567-E89B-12D3-A456-426614174000")).toBe(true);
+  });
+
+  it("rejects malformed values instead of throwing", () => {
+    expect(isUuidLike("not-a-uuid")).toBe(false);
+    expect(isUuidLike("123e4567-e89b-12d3-a456")).toBe(false);
+    expect(isUuidLike("123e4567-e89b-12d3-a456-426614174000; DROP TABLE")).toBe(
+      false,
+    );
+    expect(isUuidLike("")).toBe(false);
+  });
+
+  it("rejects non-string input", () => {
+    expect(isUuidLike(null)).toBe(false);
+    expect(isUuidLike(undefined)).toBe(false);
+    expect(isUuidLike(42)).toBe(false);
+    expect(isUuidLike(["123e4567-e89b-12d3-a456-426614174000"])).toBe(false);
   });
 });
 

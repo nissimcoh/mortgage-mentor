@@ -57,16 +57,22 @@ export interface StoredScenarioMarketReferences {
 
 /**
  * Shared result contract for every scenario Server Action
- * (create/rename/duplicate/delete). A small, stable, closed set of codes
- * — never a raw database/Postgres error message — so the client can
- * always show a safe, translated message no matter what actually failed
- * server-side.
+ * (create/rename/duplicate/delete/update). A small, stable, closed set of
+ * codes — never a raw database/Postgres error message — so the client
+ * can always show a safe, translated message no matter what actually
+ * failed server-side.
+ *
+ * "scenario-changed" is updateScenario's optimistic-concurrency code: the
+ * row's updated_at no longer matches the value captured when edit mode
+ * began, so the update was refused rather than silently overwriting a
+ * change made elsewhere in the meantime.
  */
 export type ScenarioActionError =
   | "unauthenticated"
   | "invalid-name"
   | "invalid-scenario"
   | "not-found"
+  | "scenario-changed"
   | "database-error";
 
 export interface ScenarioActionFailure {

@@ -12,32 +12,25 @@
  * message. Server-side logging (logDatabaseError) may include the
  * error's own safe fields (code/message/hint) for debugging; it never
  * logs the caller's session, tokens, or environment values.
+ *
+ * createScenario and updateScenario share the mortgage-calculation
+ * pipeline via prepareScenarioSave (compute.ts) — neither trusts a
+ * client-supplied result_snapshot/market_references; both re-derive them
+ * server-side from the (re-validated) tracks.
  */
 
 import type { PostgrestError } from "@supabase/supabase-js";
-import { isValidLocale, defaultLocale, type Locale } from "../i18n/config";
-import { buildCalculatorMarketData } from "../market-data/build-calculator-market-data";
-import { getMarketSnapshot } from "../market-data/get-market-snapshot";
-import { getMakamAnchorData } from "../market-data/sources/boi-makam";
-import { getMortgageForecastData } from "../market-data/sources/boi-mortgage-forecast";
 import { CALCULATOR_VERSION } from "../mortgage/calculator-version";
-import { calculateScenarioSummary } from "../mortgage/calculations";
-import {
-  parseAllTrackDrafts,
-  type MarketContextForParsing,
-} from "../mortgage/scenario-form";
 import { createClient } from "../supabase/server";
+import { prepareScenarioSave, type PrepareScenarioSaveInput } from "./compute";
 import { SCENARIO_SCHEMA_VERSION, type ScenarioActionFailure } from "./contract";
 import {
   buildDuplicateRow,
-  extractPinnedCurveIds,
-  extractPinnedMakamSnapshotIds,
   isValidMarketReferences,
   isValidResultSnapshot,
   validateInputPayload,
   validateScenarioName,
 } from "./payload";
-import { buildMarketReferences, buildResultSnapshot } from "./snapshot";
 
 /** Safe fields only — a PostgrestError never carries tokens/secrets, but
  * logging the whole error object as a habit is exactly how a stray
@@ -54,11 +47,7 @@ export type CreateScenarioResult =
   | { ok: true; id: string }
   | ScenarioActionFailure;
 
-export interface CreateScenarioInput {
-  name: unknown;
-  locale: unknown;
-  tracks: unknown;
-}
+export type CreateScenarioInput = PrepareScenarioSaveInput;
 
 export async function createScenario(
   input: CreateScenarioInput,
@@ -69,55 +58,8 @@ export async function createScenario(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "unauthenticated" };
 
-  const name = validateScenarioName(input.name);
-  if (name === null) return { ok: false, error: "invalid-name" };
-
-  const locale: Locale =
-    typeof input.locale === "string" && isValidLocale(input.locale)
-      ? input.locale
-      : defaultLocale;
-
-  const payload = validateInputPayload({
-    schemaVersion: SCENARIO_SCHEMA_VERSION,
-    tracks: input.tracks,
-  });
-  if (payload === null) return { ok: false, error: "invalid-scenario" };
-
-  // Re-fetch market data server-side, scoped to exactly the curve/Makam
-  // IDs the tracks pinned — the same three calls calculator/page.tsx
-  // makes, so a reopened/recalculated scenario is reproducible.
-  const [marketSnapshot, forecastData, makamData] = await Promise.all([
-    getMarketSnapshot(),
-    getMortgageForecastData(extractPinnedCurveIds(payload)),
-    getMakamAnchorData(extractPinnedMakamSnapshotIds(payload)),
-  ]);
-  const marketData = buildCalculatorMarketData(
-    marketSnapshot,
-    forecastData,
-    makamData,
-  );
-  const market: MarketContextForParsing = {
-    boiRatePercent: marketData.boiRatePercent,
-    curves: marketData.curves,
-    makamSnapshots: marketData.makamSnapshots,
-  };
-
-  const inputs = parseAllTrackDrafts(payload.tracks, market);
-  if (inputs === null) return { ok: false, error: "invalid-scenario" };
-
-  let summary;
-  try {
-    summary = calculateScenarioSummary({ tracks: inputs });
-  } catch {
-    return { ok: false, error: "invalid-scenario" };
-  }
-
-  const resultSnapshot = buildResultSnapshot(inputs, summary);
-  const marketReferences = buildMarketReferences(
-    payload.tracks,
-    inputs,
-    marketData,
-  );
+  const prepared = await prepareScenarioSave(input);
+  if (!prepared.ok) return prepared;
 
   const { data, error } = await supabase
     .from("mortgage_scenarios")
@@ -126,14 +68,14 @@ export async function createScenario(
       // caller — RLS's "insert own scenarios" policy would reject any
       // other value here regardless.
       user_id: user.id,
-      name,
+      name: prepared.name,
       schema_version: SCENARIO_SCHEMA_VERSION,
       calculator_version: CALCULATOR_VERSION,
-      locale,
-      input_payload: payload,
-      result_snapshot: resultSnapshot,
-      market_references: marketReferences,
-      calculated_at: new Date().toISOString(),
+      locale: prepared.locale,
+      input_payload: prepared.payload,
+      result_snapshot: prepared.resultSnapshot,
+      market_references: prepared.marketReferences,
+      calculated_at: prepared.calculatedAt,
     })
     .select("id")
     .single();
@@ -301,4 +243,93 @@ export async function duplicateScenario(
   }
   if (!inserted) return { ok: false, error: "database-error" };
   return { ok: true, id: inserted.id as string };
+}
+
+export type UpdateScenarioResult = { ok: true } | ScenarioActionFailure;
+
+export interface UpdateScenarioInput extends PrepareScenarioSaveInput {
+  id: unknown;
+  /** The row's updated_at value at the moment edit mode began — an
+   * optimistic-concurrency token, NEVER an authorization check. If it no
+   * longer matches the row's current updated_at, the update is refused
+   * with "scenario-changed" rather than silently overwriting whatever
+   * changed the row in the meantime. */
+  expectedUpdatedAt: unknown;
+}
+
+/**
+ * Overwrites an existing scenario the caller owns with a freshly
+ * server-calculated snapshot — the explicit "update original scenario"
+ * choice from edit mode. Updates name/schema_version/calculator_version/
+ * locale/input_payload/result_snapshot/market_references/calculated_at;
+ * id, user_id, and created_at are never touched, and updated_at comes
+ * from the table's own trigger, not application code.
+ */
+export async function updateScenario(
+  input: UpdateScenarioInput,
+): Promise<UpdateScenarioResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "unauthenticated" };
+
+  if (typeof input.id !== "string" || input.id.trim() === "") {
+    return { ok: false, error: "not-found" };
+  }
+  if (
+    typeof input.expectedUpdatedAt !== "string" ||
+    input.expectedUpdatedAt.trim() === ""
+  ) {
+    // Malformed edit context shouldn't happen from the app's own UI —
+    // treat it the same as any other structurally invalid request.
+    return { ok: false, error: "invalid-scenario" };
+  }
+
+  const prepared = await prepareScenarioSave(input);
+  if (!prepared.ok) return prepared;
+
+  // Atomic compare-and-write: only succeeds if updated_at still matches
+  // what the client captured when edit mode began. RLS's "update own
+  // scenarios" policy (via .eq("user_id", ...)) remains the real
+  // ownership boundary; the .eq("updated_at", ...) here is purely the
+  // concurrency check, never an authorization mechanism.
+  const { data, error } = await supabase
+    .from("mortgage_scenarios")
+    .update({
+      name: prepared.name,
+      schema_version: SCENARIO_SCHEMA_VERSION,
+      calculator_version: CALCULATOR_VERSION,
+      locale: prepared.locale,
+      input_payload: prepared.payload,
+      result_snapshot: prepared.resultSnapshot,
+      market_references: prepared.marketReferences,
+      calculated_at: prepared.calculatedAt,
+    })
+    .eq("id", input.id)
+    .eq("user_id", user.id)
+    .eq("updated_at", input.expectedUpdatedAt)
+    .select("id");
+
+  if (error) {
+    logDatabaseError("updateScenario failed", error);
+    return { ok: false, error: "database-error" };
+  }
+  if (data && data.length > 0) return { ok: true };
+
+  // Zero rows updated — find out (best-effort) whether that's because the
+  // row doesn't exist/isn't owned by this user, or because it exists but
+  // updated_at has moved on since edit mode began.
+  const { data: existing, error: checkError } = await supabase
+    .from("mortgage_scenarios")
+    .select("id")
+    .eq("id", input.id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (checkError) {
+    logDatabaseError("updateScenario existence check failed", checkError);
+    return { ok: false, error: "database-error" };
+  }
+  return { ok: false, error: existing ? "scenario-changed" : "not-found" };
 }

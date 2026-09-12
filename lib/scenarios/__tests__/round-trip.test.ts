@@ -125,6 +125,92 @@ describe("opening a saved scenario reconstructs calculator query params", () => 
   });
 });
 
+describe("edit-context navigation key coexists with track params (saved scenario detail -> calculator edit mode)", () => {
+  // savedScenarioId is only a lookup key now — the detail page no longer
+  // writes savedScenarioUpdatedAt/savedScenarioName into the URL at all;
+  // the calculator re-derives the trusted name/updatedAt itself via a
+  // server-side, RLS-scoped read (lib/scenarios/edit-context.ts /
+  // calculator/page.tsx's resolveEditContext).
+  const SAVED_SCENARIO_ID = "123e4567-e89b-12d3-a456-426614174000";
+
+  it("the detail page's edit link carries savedScenarioId without colliding with track params", () => {
+    const payload = validateInputPayload(
+      throughJson({
+        schemaVersion: SCENARIO_SCHEMA_VERSION,
+        tracks: [TRACK_TYPE_DRAFTS.fixedUnlinked()],
+      }),
+    )!;
+
+    // Mirrors app/[locale]/saved/[scenarioId]/page.tsx's editHref build.
+    const query = applyTracksToQuery(new URLSearchParams(), payload.tracks);
+    query.set("savedScenarioId", SAVED_SCENARIO_ID);
+
+    // The calculator's own parser only reads track-prefixed keys — the
+    // lookup key must never be mistaken for track data.
+    const reconstructedDrafts = parseTracksFromQuery(query);
+    expect(reconstructedDrafts).toHaveLength(1);
+    expect(reconstructedDrafts![0].trackType).toBe("fixedUnlinked");
+
+    expect(query.get("savedScenarioId")).toBe(SAVED_SCENARIO_ID);
+    expect(query.get("savedScenarioUpdatedAt")).toBeNull();
+    expect(query.get("savedScenarioName")).toBeNull();
+  });
+
+  it("a recalculation (syncQuery-style full querystring copy + applyTracksToQuery) preserves the lookup key untouched", () => {
+    const payload = validateInputPayload(
+      throughJson({
+        schemaVersion: SCENARIO_SCHEMA_VERSION,
+        tracks: [TRACK_TYPE_DRAFTS.fixedUnlinked()],
+      }),
+    )!;
+    const initialQuery = applyTracksToQuery(
+      new URLSearchParams(),
+      payload.tracks,
+    );
+    initialQuery.set("savedScenarioId", SAVED_SCENARIO_ID);
+
+    // Mirrors MortgageCalculator's syncQuery: start from the FULL existing
+    // query string (new URLSearchParams(searchParams.toString())), then
+    // let applyTracksToQuery touch only the track-prefixed keys.
+    const editedDraft = createTrackDraft({
+      amount: "900,000",
+      ratePercent: "5.0",
+      years: "20",
+    });
+    const nextQuery = new URLSearchParams(initialQuery.toString());
+    applyTracksToQuery(nextQuery, [editedDraft]);
+
+    expect(nextQuery.get("track1Amount")).toBe("900000");
+    expect(nextQuery.get("savedScenarioId")).toBe(SAVED_SCENARIO_ID);
+  });
+
+  it("exiting edit mode deletes savedScenarioId (and any legacy name/updatedAt from an old bookmarked link) leaving track params untouched", () => {
+    const payload = validateInputPayload(
+      throughJson({
+        schemaVersion: SCENARIO_SCHEMA_VERSION,
+        tracks: [TRACK_TYPE_DRAFTS.fixedUnlinked()],
+      }),
+    )!;
+    const query = applyTracksToQuery(new URLSearchParams(), payload.tracks);
+    query.set("savedScenarioId", SAVED_SCENARIO_ID);
+    // Simulates a stale bookmark from before this hardening pass, which
+    // may still carry the old (now-ignored) params.
+    query.set("savedScenarioUpdatedAt", "2026-07-01T12:00:00.000Z");
+    query.set("savedScenarioName", "My mortgage");
+
+    // Mirrors MortgageCalculator's exitEditMode.
+    query.delete("savedScenarioId");
+    query.delete("savedScenarioUpdatedAt");
+    query.delete("savedScenarioName");
+
+    expect(query.get("savedScenarioId")).toBeNull();
+    expect(query.get("savedScenarioUpdatedAt")).toBeNull();
+    expect(query.get("savedScenarioName")).toBeNull();
+    expect(query.get("track1Type")).toBe("fixedUnlinked");
+    expect(query.get("track1Amount")).toBe("800000");
+  });
+});
+
 describe("invalid stored input_payload does not crash", () => {
   it("returns null for a malformed track list instead of throwing", () => {
     expect(

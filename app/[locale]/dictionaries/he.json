@@ -81,6 +81,33 @@
     "actionErrorMessage": "משהו השתבש. נסו שוב.",
     "notFoundMessage": "התמהיל הזה כבר לא זמין."
   },
+  "scenarioDetailPage": {
+    "backToSavedLabel": "חזרה לתמהילים שמורים",
+    "calculatedAtLabel": "חושב בתאריך",
+    "editInCalculatorButton": "ערוך במחשבון",
+    "snapshotNote": "העמוד הזה מציג תמונת מצב של התמהיל כפי שנשמר. פתיחה במחשבון עשויה לחשב מחדש לפי הריבית והנתונים העדכניים.",
+    "notFoundTitle": "התמהיל לא נמצא"
+  },
+  "editScenarioDialog": {
+    "title": "שמירת שינויים",
+    "nameLabel": "שם התמהיל",
+    "explanation": [
+      "עדכון התמהיל המקורי יחליף את הגרסה השמורה.",
+      "שמירה כתמהיל חדש תשאיר את המקור ללא שינוי."
+    ],
+    "updateOriginalButton": "עדכן את התמהיל המקורי",
+    "updatingButton": "מעדכן...",
+    "saveAsNewButton": "שמור כתמהיל חדש",
+    "savingAsNewButton": "שומר...",
+    "backButton": "חזרה",
+    "cancelButton": "ביטול",
+    "nameInvalidMessage": "יש להזין שם באורך 1 עד 120 תווים.",
+    "genericErrorMessage": "משהו השתבש. נסו שוב.",
+    "scenarioChangedMessage": "התמהיל השתנה מאז שפתחת אותו לעריכה. רענן את התמהיל לפני עדכון המקור, או שמור את השינויים כתמהיל חדש.",
+    "updateSuccessMessage": "התמהיל עודכן",
+    "viewScenarioLink": "לצפייה בתמהיל",
+    "dismissAriaLabel": "סגור"
+  },
   "saveScenarioDialog": {
     "title": "שמירת תמהיל",
     "nameLabel": "שם התמהיל",
@@ -225,6 +252,9 @@
     "forecastTotalPaymentLabel": "סך תשלומים חזוי",
     "forecastTotalInterestLabel": "סך ריבית חזוי",
     "forecastOverallRateLabel": "הריבית הכוללת החזויה",
+    "editModeBannerTemplate": "אתה עורך את התמהיל \"{name}\"",
+    "editModeExitLabel": "צא ממצב עריכה",
+    "editContextUnavailableNotice": "לא ניתן היה לטעון את התמהיל השמור לעריכה. אפשר להמשיך להשתמש במחשבון כרגיל.",
     "heroFirstPaymentContext": "לפי הריבית המוצעת כיום",
     "mortgageAmountLabel": "סכום המשכנתא",
     "financingCostLabel": "עלות מימון חזויה",

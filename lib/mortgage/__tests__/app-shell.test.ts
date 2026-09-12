@@ -333,6 +333,136 @@ describe("save scenario dialog dictionary keys", () => {
   });
 });
 
+describe("scenario detail page dictionary keys", () => {
+  it("has non-empty detail-page copy in both locales", () => {
+    for (const dict of [heDict, enDict]) {
+      const s = dict.scenarioDetailPage;
+      expect(s.backToSavedLabel.length).toBeGreaterThan(0);
+      expect(s.calculatedAtLabel.length).toBeGreaterThan(0);
+      expect(s.editInCalculatorButton.length).toBeGreaterThan(0);
+      expect(s.snapshotNote.length).toBeGreaterThan(0);
+      expect(s.notFoundTitle.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("has the exact requested Edit-in-calculator button label", () => {
+    expect(heDict.scenarioDetailPage.editInCalculatorButton).toBe(
+      "ערוך במחשבון",
+    );
+    expect(enDict.scenarioDetailPage.editInCalculatorButton).toBe(
+      "Edit in calculator",
+    );
+  });
+
+  it("has a safe not-found title that never distinguishes missing vs. foreign-owned scenarios", () => {
+    expect(heDict.scenarioDetailPage.notFoundTitle).toBe("התמהיל לא נמצא");
+    expect(enDict.scenarioDetailPage.notFoundTitle).toBe(
+      "Scenario not found",
+    );
+  });
+});
+
+describe("edit scenario dialog dictionary keys", () => {
+  it("has non-empty copy for every state in both locales", () => {
+    for (const dict of [heDict, enDict]) {
+      const d = dict.editScenarioDialog;
+      expect(d.title.length).toBeGreaterThan(0);
+      expect(d.nameLabel.length).toBeGreaterThan(0);
+      expect(d.explanation).toHaveLength(2);
+      for (const line of d.explanation) expect(line.length).toBeGreaterThan(0);
+      expect(d.updateOriginalButton.length).toBeGreaterThan(0);
+      expect(d.updatingButton.length).toBeGreaterThan(0);
+      expect(d.saveAsNewButton.length).toBeGreaterThan(0);
+      expect(d.savingAsNewButton.length).toBeGreaterThan(0);
+      expect(d.backButton.length).toBeGreaterThan(0);
+      expect(d.cancelButton.length).toBeGreaterThan(0);
+      expect(d.nameInvalidMessage.length).toBeGreaterThan(0);
+      expect(d.genericErrorMessage.length).toBeGreaterThan(0);
+      expect(d.scenarioChangedMessage.length).toBeGreaterThan(0);
+      expect(d.updateSuccessMessage.length).toBeGreaterThan(0);
+      expect(d.viewScenarioLink.length).toBeGreaterThan(0);
+      expect(d.dismissAriaLabel.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("has the exact requested two-choice explanation copy", () => {
+    expect(heDict.editScenarioDialog.explanation).toEqual([
+      "עדכון התמהיל המקורי יחליף את הגרסה השמורה.",
+      "שמירה כתמהיל חדש תשאיר את המקור ללא שינוי.",
+    ]);
+  });
+
+  it("has the exact requested primary/secondary action labels", () => {
+    expect(heDict.editScenarioDialog.updateOriginalButton).toBe(
+      "עדכן את התמהיל המקורי",
+    );
+    expect(enDict.editScenarioDialog.updateOriginalButton).toBe(
+      "Update original scenario",
+    );
+    expect(heDict.editScenarioDialog.saveAsNewButton).toBe(
+      "שמור כתמהיל חדש",
+    );
+    expect(enDict.editScenarioDialog.saveAsNewButton).toBe(
+      "Save as new scenario",
+    );
+  });
+
+  it("has the exact requested stale-edit (scenario-changed) copy", () => {
+    expect(heDict.editScenarioDialog.scenarioChangedMessage).toBe(
+      "התמהיל השתנה מאז שפתחת אותו לעריכה. רענן את התמהיל לפני עדכון המקור, או שמור את השינויים כתמהיל חדש.",
+    );
+    expect(enDict.editScenarioDialog.scenarioChangedMessage.length).toBeGreaterThan(
+      0,
+    );
+  });
+
+  it("has the exact requested update-success toast copy", () => {
+    expect(heDict.editScenarioDialog.updateSuccessMessage).toBe(
+      "התמהיל עודכן",
+    );
+    expect(enDict.editScenarioDialog.updateSuccessMessage).toBe(
+      "Scenario updated",
+    );
+    expect(heDict.editScenarioDialog.viewScenarioLink).toBe(
+      "לצפייה בתמהיל",
+    );
+    expect(enDict.editScenarioDialog.viewScenarioLink).toBe("View scenario");
+  });
+});
+
+describe("calculator edit-mode dictionary keys", () => {
+  it("has a banner template with the {name} token, and non-empty exit/unavailable copy, in both locales", () => {
+    for (const dict of [heDict, enDict]) {
+      const c = dict.calculator;
+      expect(c.editModeBannerTemplate).toContain("{name}");
+      expect(c.editModeExitLabel.length).toBeGreaterThan(0);
+      expect(c.editContextUnavailableNotice.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("has the exact requested banner template and exit label", () => {
+    expect(heDict.calculator.editModeBannerTemplate).toBe(
+      'אתה עורך את התמהיל "{name}"',
+    );
+    expect(enDict.calculator.editModeBannerTemplate).toBe(
+      'You are editing the scenario "{name}"',
+    );
+    expect(heDict.calculator.editModeExitLabel).toBe("צא ממצב עריכה");
+    expect(enDict.calculator.editModeExitLabel).toBe("Exit edit mode");
+  });
+
+  it("the banner template fills in a scenario name exactly like MortgageCalculator's replace() call", () => {
+    for (const dict of [heDict, enDict]) {
+      const filled = dict.calculator.editModeBannerTemplate.replace(
+        "{name}",
+        "הצעת לאומי אוגוסט",
+      );
+      expect(filled).toContain("הצעת לאומי אוגוסט");
+      expect(filled).not.toContain("{name}");
+    }
+  });
+});
+
 describe("results hierarchy dictionary keys (hero, secondary metrics, insight sentence)", () => {
   it("has non-empty hero and secondary-metric copy in both locales", () => {
     for (const dict of [heDict, enDict]) {

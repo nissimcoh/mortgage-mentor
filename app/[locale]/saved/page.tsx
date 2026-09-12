@@ -2,11 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { isValidLocale } from "@/lib/i18n/config";
-import { applyTracksToQuery } from "@/lib/mortgage/scenario-form";
-import {
-  isValidResultSnapshot,
-  validateInputPayload,
-} from "@/lib/scenarios/payload";
+import { isValidResultSnapshot } from "@/lib/scenarios/payload";
 import { createClient } from "@/lib/supabase/server";
 import ScenarioCard from "@/components/ScenarioCard";
 import { getDictionary } from "../dictionaries";
@@ -49,7 +45,7 @@ export default async function SavedPage({
   // top of it, using the signed-in user's own session as usual.
   const { data: rows, error } = await supabase
     .from("mortgage_scenarios")
-    .select("id, name, input_payload, result_snapshot, updated_at")
+    .select("id, name, result_snapshot, updated_at")
     .eq("user_id", user.id)
     .order("updated_at", { ascending: false });
 
@@ -110,13 +106,6 @@ export default async function SavedPage({
         {!error && rows && rows.length > 0 && (
           <div className="grid gap-3 sm:grid-cols-2">
             {rows.map((row) => {
-              const payload = validateInputPayload(row.input_payload);
-              const openHref = payload
-                ? `/${locale}/calculator?${applyTracksToQuery(
-                    new URLSearchParams(),
-                    payload.tracks,
-                  ).toString()}`
-                : null;
               const resultSnapshot = isValidResultSnapshot(row.result_snapshot)
                 ? row.result_snapshot
                 : null;
@@ -129,7 +118,6 @@ export default async function SavedPage({
                   updatedAt={row.updated_at}
                   locale={locale}
                   resultSnapshot={resultSnapshot}
-                  openHref={openHref}
                   labels={dict.savedPage}
                 />
               );

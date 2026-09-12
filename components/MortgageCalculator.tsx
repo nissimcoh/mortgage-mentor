@@ -52,9 +52,11 @@ import {
 } from "@/lib/mortgage/scenario-form";
 import type { MakamAnchorSnapshot } from "@/lib/market-data/mortgage-forecast-types";
 import type { MortgageForecastCurveSnapshot } from "@/lib/market-data/mortgage-forecast-types";
+import type { TrustedEditContext } from "@/lib/scenarios/edit-context";
 import AmortizationSchedule from "./AmortizationSchedule";
 import CopyLinkButton from "./CopyLinkButton";
 import SaveScenarioButton from "./SaveScenarioButton";
+import EditScenarioSaveButton from "./EditScenarioSaveButton";
 import StabilityMeter from "./StabilityMeter";
 import MortgageTrackCard, {
   type TrackCardMarketInfo,
@@ -70,6 +72,16 @@ interface MortgageCalculatorProps {
   labels: CalculatorLabels;
   marketData: CalculatorMarketData;
   saveScenarioLabels: Dictionary["saveScenarioDialog"];
+  editScenarioLabels: Dictionary["editScenarioDialog"];
+  /** Server-resolved (RLS-scoped, auth-checked) edit context, or null.
+   * Never derived client-side from URL metadata — savedScenarioName/
+   * savedScenarioUpdatedAt in the URL are not authoritative and must
+   * never be read directly into the UI. */
+  editContext: TrustedEditContext | null;
+  /** True when the request asked for edit mode (a savedScenarioId was
+   * present) but it couldn't be resolved — signed out, not found,
+   * malformed, or owned by someone else all look identical here. */
+  editContextUnavailable: boolean;
 }
 
 /** A successfully calculated mix: the inputs it was computed from + result. */
@@ -156,10 +168,36 @@ export default function MortgageCalculator({
   labels,
   marketData,
   saveScenarioLabels,
+  editScenarioLabels,
+  editContext: editContextFromServer,
+  editContextUnavailable,
 }: MortgageCalculatorProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+
+  // Captured ONCE on mount, not re-read from props on every render. The
+  // Server Component parent re-resolves editContext on every navigation
+  // (including the recalculation-triggered router.replace below), which
+  // would otherwise silently refresh the optimistic-concurrency token on
+  // every keystroke's recalculation — defeating the whole point of
+  // capturing "the version I started editing" once, up front. This
+  // relies on the same component-identity persistence across
+  // searchParams-only navigations that the drafts/submitted state below
+  // already depends on.
+  const [editState, setEditState] = useState(() => ({
+    context: editContextFromServer,
+    unavailable: editContextUnavailable,
+  }));
+
+  function exitEditMode() {
+    const query = new URLSearchParams(searchParams.toString());
+    query.delete("savedScenarioId");
+    query.delete("savedScenarioUpdatedAt");
+    query.delete("savedScenarioName");
+    router.replace(`${pathname}?${query.toString()}`, { scroll: false });
+    setEditState({ context: null, unavailable: false });
+  }
 
   const market: MarketContextForParsing = {
     boiRatePercent: marketData.boiRatePercent,
@@ -631,6 +669,30 @@ export default function MortgageCalculator({
 
   return (
     <div className="w-full">
+      {editState.context ? (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-accent/30 bg-accent-soft px-4 py-2.5 text-sm text-slate-700">
+          <span>
+            {labels.editModeBannerTemplate.replace(
+              "{name}",
+              editState.context.name,
+            )}
+          </span>
+          <button
+            type="button"
+            onClick={exitEditMode}
+            className="text-sm font-medium text-accent underline underline-offset-2"
+          >
+            {labels.editModeExitLabel}
+          </button>
+        </div>
+      ) : (
+        editState.unavailable && (
+          <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-600">
+            {labels.editContextUnavailableNotice}
+          </div>
+        )
+      )}
+
       <form
         onSubmit={handleSubmit}
         noValidate
@@ -757,7 +819,21 @@ export default function MortgageCalculator({
                 Compare stub here — it would compete with real actions for
                 no reason until saved scenarios exist to compare against. */}
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              {submittedDrafts && (
+              {submittedDrafts && editState.context && (
+                <EditScenarioSaveButton
+                  locale={locale}
+                  buttonLabel={labels.saveScenarioButton}
+                  drafts={submittedDrafts}
+                  editContext={{
+                    id: editState.context.id,
+                    name: editState.context.name,
+                    expectedUpdatedAt: editState.context.updatedAt,
+                  }}
+                  labels={editScenarioLabels}
+                  saveScenarioLabels={saveScenarioLabels}
+                />
+              )}
+              {submittedDrafts && !editState.context && (
                 <SaveScenarioButton
                   locale={locale}
                   buttonLabel={labels.saveScenarioButton}

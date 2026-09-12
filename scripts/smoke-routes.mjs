@@ -25,6 +25,15 @@ const ROUTES = [
   { path: "/en/learn", expected: 200 },
   { path: "/he/saved", expected: 307 },
   { path: "/en/saved", expected: 307 },
+  // Detail page requires auth too — same redirect-to-signin behavior,
+  // before it ever gets a chance to query a row.
+  {
+    path: "/he/saved/123e4567-e89b-12d3-a456-426614174000",
+    expected: 307,
+  },
+  // A syntactically malformed id is never sent to a uuid-typed column —
+  // still gated by the same auth redirect first.
+  { path: "/en/saved/not-a-real-id", expected: 307 },
   { path: "/he/signin", expected: 200 },
   { path: "/en/signin", expected: 200 },
   // /compare is retired (see "Realign navigation" milestone) and redirects
@@ -65,6 +74,14 @@ const ROUTES = [
   // Legacy single-track format
   {
     path: "/he/calculator?loanAmount=800000&annualInterestRatePercent=4.8&years=25",
+    expected: 200,
+  },
+  // Edit-mode entry from a saved-scenario detail page: savedScenarioId/
+  // UpdatedAt/Name are UI-only edit-context hints, never trusted for
+  // authorization, so the calculator still renders fine with no matching
+  // (or even real) row behind them.
+  {
+    path: "/he/calculator?trackCount=1&track1Amount=800000&track1Type=fixedUnlinked&track1RepaymentMethod=spitzer&track1Years=25&track1AnnualInterestRatePercent=4.8&savedScenarioId=123e4567-e89b-12d3-a456-426614174000&savedScenarioUpdatedAt=2026-07-01T12%3A00%3A00.000Z&savedScenarioName=%D7%94%D7%A6%D7%A2%D7%AA%20%D7%9C%D7%90%D7%95%D7%9E%D7%99",
     expected: 200,
   },
   // Locale-less path redirects via the proxy

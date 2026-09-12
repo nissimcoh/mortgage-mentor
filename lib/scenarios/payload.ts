@@ -207,27 +207,79 @@ const DUPLICATE_NAME_SUFFIX: Record<Locale, string> = {
   en: " — Copy",
 };
 
+/** Appended when saving an edited scenario as a new one, distinct from
+ * the duplicate-action suffix so the two flows read differently. */
+const NEW_VERSION_NAME_SUFFIX: Record<Locale, string> = {
+  he: " — גרסה חדשה",
+  en: " — New version",
+};
+
+function resolveSuffix(locale: unknown, table: Record<Locale, string>): string {
+  return typeof locale === "string" && isValidLocale(locale)
+    ? table[locale]
+    : table[defaultLocale];
+}
+
 /**
- * Builds a duplicate's default name: "{name}{suffix}", truncating the
- * ORIGINAL name (never the suffix) if the combined length would exceed
- * the product's 120-character limit, so the "— Copy" marker always stays
- * intact and visible rather than silently disappearing off the end.
+ * Builds "{name}{suffix}", truncating the ORIGINAL name (never the
+ * suffix) if the combined length would exceed maxLength, so the marker
+ * always stays intact and visible rather than silently disappearing off
+ * the end. Shared by buildDuplicateName and buildNewVersionName — the
+ * only difference between them is which suffix table they pass in.
  */
-export function buildDuplicateName(
+function buildSuffixedName(
   originalName: string,
-  locale: unknown,
-  maxLength: number = MAX_SCENARIO_NAME_LENGTH,
+  suffix: string,
+  maxLength: number,
 ): string {
-  const suffix =
-    typeof locale === "string" && isValidLocale(locale)
-      ? DUPLICATE_NAME_SUFFIX[locale]
-      : DUPLICATE_NAME_SUFFIX[defaultLocale];
   const combined = `${originalName}${suffix}`;
   if (combined.length <= maxLength) return combined;
 
   const availableForName = Math.max(0, maxLength - suffix.length);
   const truncatedName = originalName.slice(0, availableForName).trimEnd();
   return `${truncatedName}${suffix}`;
+}
+
+/** Builds a duplicate's default name: "{name} — Copy" (or the Hebrew
+ * equivalent), in the source scenario's own stored locale. */
+export function buildDuplicateName(
+  originalName: string,
+  locale: unknown,
+  maxLength: number = MAX_SCENARIO_NAME_LENGTH,
+): string {
+  return buildSuffixedName(
+    originalName,
+    resolveSuffix(locale, DUPLICATE_NAME_SUFFIX),
+    maxLength,
+  );
+}
+
+/** Builds the proposed default name when saving an edited scenario as a
+ * new one: "{name} — New version" (or the Hebrew equivalent), in the
+ * scenario's own locale — the user can still edit it before saving. */
+export function buildNewVersionName(
+  originalName: string,
+  locale: unknown,
+  maxLength: number = MAX_SCENARIO_NAME_LENGTH,
+): string {
+  return buildSuffixedName(
+    originalName,
+    resolveSuffix(locale, NEW_VERSION_NAME_SUFFIX),
+    maxLength,
+  );
+}
+
+/** True for a syntactically well-formed UUID (any version/variant). Used
+ * to safely reject an obviously-malformed scenario id before it ever
+ * reaches a query, so a garbage id degrades to the same "not found" state
+ * as a genuinely missing/foreign one, not a raw database type error. */
+export function isUuidLike(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      value,
+    )
+  );
 }
 
 export interface DuplicateScenarioSource {
