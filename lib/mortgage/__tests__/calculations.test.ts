@@ -178,9 +178,9 @@ describe("unsupported inputs fail loudly", () => {
     expect(() =>
       calculateTrackSummary({
         ...referenceTrack,
-        type: "variableLinked",
+        type: "eligibility",
       } as unknown as MortgageTrackInput),
-    ).toThrow(/"variableLinked" is not implemented yet/);
+    ).toThrow(/"eligibility" is not implemented yet/);
   });
 
   it("throws a clear error for a not-yet-implemented repayment method", () => {
@@ -388,5 +388,25 @@ describe("multi-track scenario", () => {
     expect(scenario.forecastCombinedFirstPayment).toBe(
       scenario.combinedSchedule[0].payment,
     );
+  });
+});
+
+
+describe("near-zero positive interest rates", () => {
+  it.each(["nominalAnnual", "effectiveAnnual"] as const)("keeps %s payments finite and approaches a zero-interest loan", (interestRateInputMode) => {
+    const summary = calculateTrackSummary({
+      ...referenceTrack,
+      loanAmount: 500_000,
+      years: 20,
+      annualInterestRatePercent: 0.000000000000001,
+      interestRateInputMode,
+    });
+    expect(summary.monthlyPayment).toBe(2083.33);
+    expect(summary.totalPayment).toBeCloseTo(500_000, 2);
+    expect(summary.finalBalance).toBe(0);
+    for (const entry of summary.schedule) {
+      expect(Number.isFinite(entry.payment)).toBe(true);
+      expect(entry.remainingBalance).toBeGreaterThanOrEqual(0);
+    }
   });
 });

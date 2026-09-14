@@ -50,6 +50,7 @@ const TRACK_TYPE_DRAFTS: Record<string, () => TrackDraft> = {
       forecastCurveId: CURVE.id,
       makamSnapshotId: "2026-06",
     }),
+  variableLinked: () => createTrackDraft({trackType: "variableLinked", amount: "500000", years: "20", currentRatePercent: "3", resetPeriodMonths: "60", forecastCurveId: CURVE.id, forecastMode: "stress", stressShift: "1", inflationStressShift: "2"}),
   fixedLinked: () =>
     createTrackDraft({
       trackType: "fixedLinked",

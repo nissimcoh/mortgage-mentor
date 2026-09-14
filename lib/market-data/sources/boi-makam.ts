@@ -5,6 +5,7 @@
  */
 
 import "server-only";
+import { dailyServerCache } from "../daily-server-cache";
 
 import type { MakamAnchorData } from "../mortgage-forecast-types";
 import { createFallbackMakamSnapshot } from "../makam-fallback";
@@ -19,6 +20,18 @@ import {
 // realistic snapshot pinning for shared links.
 export const MAKAM_SERIES_URL = `https://edge.boi.gov.il/FusionEdgeServer/sdmx/v2/data/dataflow/BOI.STATISTICS/SECDWH/1.0/${MAKAM_SERIES_KEY}?lastNObservations=24&format=csv`;
 
+const readDailyMakam = dailyServerCache("makam-history", async () => {
+    const response = await fetch(MAKAM_SERIES_URL, {
+      cache: "no-store", // parsed snapshots are cached for one day
+      signal: AbortSignal.timeout(9000),
+    });
+    if (!response.ok) {
+      throw new Error(`BOI SECDWH API responded with status ${response.status}`);
+    }
+
+    return parseMakamCsv(await response.text(), new Date().toISOString());
+ });
+
 /**
  * Fetch and resolve the official Makam anchor snapshots for one request.
  * Never throws: on failure it returns the dated bundled fallback with
@@ -29,15 +42,7 @@ export async function getMakamAnchorData(
 ): Promise<MakamAnchorData> {
   const fetchedAt = new Date().toISOString();
   try {
-    const response = await fetch(MAKAM_SERIES_URL, {
-      next: { revalidate: 21600 }, // ~6h: the series updates monthly
-      signal: AbortSignal.timeout(9000),
-    });
-    if (!response.ok) {
-      throw new Error(`BOI SECDWH API responded with status ${response.status}`);
-    }
-
-    const available = parseMakamCsv(await response.text(), fetchedAt);
+    const available = (await readDailyMakam()).value;
     const { snapshots, missingSnapshotIds } = pickMakamSnapshotsForRequest(
       available,
       requestedSnapshotIds,

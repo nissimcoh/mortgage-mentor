@@ -1,3 +1,4 @@
+import { dailyServerCache } from "../daily-server-cache";
 /**
  * Central Bureau of Statistics (הלמ״ס) adapter.
  *
@@ -8,6 +9,7 @@
  * touches the network and it must be called from server code only.
  */
 
+import { fetchCurrent } from "./fetch-current";
 import type { FetchedCpi } from "../derive";
 
 export const CBS_CPI_SERIES_ID = 120010;
@@ -46,12 +48,12 @@ export function parseCbsCpiResponse(payload: unknown): FetchedCpi {
     const percent = entry.percent;
     const indexValue = entry.currBase?.value;
     if (
-      typeof year !== "number" ||
-      typeof month !== "number" ||
+      typeof year !== "number" || !Number.isInteger(year) ||
+      typeof month !== "number" || !Number.isInteger(month) ||
       month < 1 ||
       month > 12 ||
-      typeof percent !== "number" ||
-      typeof indexValue !== "number"
+      typeof percent !== "number" || !Number.isFinite(percent) ||
+      typeof indexValue !== "number" || !Number.isFinite(indexValue) || indexValue <= 0
     ) {
       continue;
     }
@@ -75,14 +77,12 @@ export function parseCbsCpiResponse(payload: unknown): FetchedCpi {
   return latest;
 }
 
-/** Server-side fetch of the latest CPI figures. Cached for an hour. */
+const readDaily = dailyServerCache("cbs-cpi", () =>
+  fetchCurrent(CBS_CPI_URL, async (response) => parseCbsCpiResponse(await response.json())),
+);
+
+/** Serve the daily server snapshot, retaining its actual source check time. */
 export async function fetchLatestCpi(): Promise<FetchedCpi> {
-  const response = await fetch(CBS_CPI_URL, {
-    next: { revalidate: 3600 },
-    signal: AbortSignal.timeout(8000),
-  });
-  if (!response.ok) {
-    throw new Error(`CBS index API responded with status ${response.status}`);
-  }
-  return parseCbsCpiResponse(await response.json());
+  const cached = await readDaily();
+  return { ...cached.value, fetchedAt: cached.fetchedAt };
 }

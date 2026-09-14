@@ -21,25 +21,44 @@
     "signOut": "Sign out"
   },
   "home": {
-    "heroTitle": "Get a clearer picture of your mortgage",
-    "heroSubtitle": "A mortgage calculator that brings together tracks, forecasts, stability, and payments — in plain language, with no sign-up required.",
+    "heroTitle": "Understand the numbers.\nPlan your mortgage.",
+    "heroSubtitle": "Build a mix, explore how payments may change, and see the cost over time. Start without signing up.",
     "heroPrimaryCta": "Start calculating",
-    "heroSecondaryCta": "See what you can check",
+    "heroSecondaryCta": "Explore market data",
     "heroTrustNote": "This calculator is for learning and comparing scenarios, and is not mortgage advice.",
     "calcCardTitle": "Free-form calculator",
     "calcCardBody": "Build a mix with several tracks, and check the first payment, maximum payment, and total payments.",
     "calcCardCta": "Open calculator",
     "learnCardTitle": "Learning center",
-    "learnCardBody": "Short guides on tracks, rates, and CPI linkage — before you decide.",
+    "learnCardBody": "Short explanations of tracks, CPI linkage, and payments to help you read your results.",
     "learnCardCta": "Open learning center",
     "savedCardTitle": "Saving offers",
-    "savedCardBody": "Coming soon: save scenarios under a name like \"Leumi offer, July 2026\".",
+    "savedCardBody": "Sign in to name and save scenarios, revisit previous offers, and edit them.",
     "comingSoonBadge": "Coming soon",
-    "comingSoonCta": "Learn more"
+    "comingSoonCta": "Learn more",
+    "eyebrow": "Your mortgage, in one view",
+    "overviewTitle": "Three numbers to understand",
+    "overviewItems": [
+      {
+        "title": "First payment",
+        "body": "Your payment at the rates you enter today."
+      },
+      {
+        "title": "Maximum forecast payment",
+        "body": "How high payments may rise under the rate and CPI forecast."
+      },
+      {
+        "title": "Total payments",
+        "body": "Principal and financing cost over the life of the mortgage."
+      }
+    ],
+    "toolsTitle": "From market data to your mortgage mix",
+    "toolsSubtitle": "Calculate, understand the differences, and save scenarios to revisit.",
+    "savedCardCta": "View saved scenarios"
   },
   "learnPage": {
     "title": "Learn mortgages in plain language",
-    "intro": "Short guides to help you understand tracks, rates, CPI linkage, and amortization schedules before you decide.",
+    "intro": "Clear definitions and examples to help you read offers and build a mix. Search for a term or choose a topic.",
     "topics": [
       "What is a mortgage track?",
       "Prime, fixed, and variable rates",
@@ -47,6 +66,230 @@
       "How to read an amortization schedule",
       "First payment versus maximum payment",
       "What is the stability score?"
+    ],
+    "topicBodies": [
+      "A mortgage mix combines several loans. Each track has its own amount, term, and rate. The calculator works out each track separately and adds the active payments for every month.",
+      "A fixed unlinked Spitzer loan has a constant payment. Prime rates may move with the Bank of Israel rate. Other variable-rate tracks reset at the selected intervals.",
+      "In a linked track, CPI affects the principal balance and payment. Even with a fixed rate, payments may rise with CPI. The calculator treats indexation and rate changes separately.",
+      "Each row shows the month, payment, principal and interest components, and balance after payment. With CPI linkage, indexation also changes the balance, so the balance reduction may differ from the principal component.",
+      "The first payment uses the rate entered today. The maximum payment is the highest in the forecast schedule. For a linked track, even the forecast’s first month may include indexation and differ.",
+      "This is an internal educational measure of track structure, covering rate, principal, and payment stability. It is not an official rating, a measure of mortgage cost, or a recommendation."
+    ],
+    "glossaryTitle": "Your mortgage glossary",
+    "searchLabel": "What would you like to understand?",
+    "searchPlaceholder": "Try prime, CPI, refinancing…",
+    "allLabel": "All terms",
+    "exampleLabel": "Example and what to check",
+    "emptyLabel": "No matching terms. Try another word or category.",
+    "countLabel": "terms",
+    "sourceTitle": "Read the official sources",
+    "sourceGuide": "Bank of Israel mortgage comparison guide",
+    "sourceFees": "Interest and early repayment information",
+    "categories": [
+      {
+        "id": "basics",
+        "label": "Basics and budget"
+      },
+      {
+        "id": "rates",
+        "label": "Rates and tracks"
+      },
+      {
+        "id": "payments",
+        "label": "Payments and schedule"
+      },
+      {
+        "id": "forecast",
+        "label": "CPI and forecasts"
+      },
+      {
+        "id": "process",
+        "label": "Process and costs"
+      }
+    ],
+    "entries": [
+      {
+        "id": "term-0",
+        "category": "basics",
+        "title": "Principal",
+        "body": "The loan balance still to be repaid, excluding future interest. CPI linkage can also change this balance.",
+        "example": "A 500,000 ILS loan starts with 500,000 ILS of principal."
+      },
+      {
+        "id": "term-1",
+        "category": "basics",
+        "title": "Mortgage mix",
+        "body": "Several loan tracks combined, each with its own amount, rate and term. The monthly total adds the active tracks.",
+        "example": "300,000 ILS fixed unlinked plus 200,000 ILS prime makes a 500,000 ILS mortgage."
+      },
+      {
+        "id": "term-2",
+        "category": "basics",
+        "title": "Equity and loan-to-value",
+        "body": "Equity is your own money toward the purchase. Loan-to-value compares the mortgage with property value; it does not include every purchase expense.",
+        "example": "A 900,000 ILS mortgage on a 1,500,000 ILS property is 60% LTV. Budget separately for additional costs."
+      },
+      {
+        "id": "term-3",
+        "category": "basics",
+        "title": "Payment-to-income ratio",
+        "body": "Monthly payment as a share of income helps describe budget pressure. A bank may also adjust for fixed obligations and eligible income.",
+        "example": "5,000 ILS divided by 20,000 ILS net income is 25%, before other adjustments."
+      },
+      {
+        "id": "term-4",
+        "category": "rates",
+        "title": "Bank of Israel and prime rates",
+        "body": "Israeli prime is the Bank of Israel rate plus 1.5 percentage points. Your offered prime-track rate also includes the agreed spread.",
+        "example": "A hypothetical BOI rate of 3% gives 4.5% prime. This is not a statement of the current rate."
+      },
+      {
+        "id": "term-5",
+        "category": "rates",
+        "title": "Rate spread: P−0.5",
+        "body": "The difference between an anchor and your offered rate. P−0.5 subtracts half a percentage point from prime, so the offered rate moves with prime.",
+        "example": "If prime is 5%, P−0.5 means 4.5% annual interest."
+      },
+      {
+        "id": "term-6",
+        "category": "rates",
+        "title": "Fixed unlinked",
+        "body": "The rate is fixed and principal is not CPI-linked. A Spitzer payment generally stays constant, excluding extra costs or contract changes.",
+        "example": "A BOI rate increase does not change the contracted rate on an existing fixed unlinked loan."
+      },
+      {
+        "id": "term-7",
+        "category": "rates",
+        "title": "Fixed CPI-linked",
+        "body": "The rate is fixed, but principal and payments respond to CPI. Fixed interest does not mean a fixed payment in shekels.",
+        "example": "Payments may rise with CPI even when the contractual rate stays unchanged."
+      },
+      {
+        "id": "term-8",
+        "category": "rates",
+        "title": "Variable linked and unlinked",
+        "body": "The rate resets at specified dates using an anchor and spread. A linked track also applies CPI indexation between rate resets.",
+        "example": "A five-year track first resets after 60 months; CPI linkage does not wait for that reset."
+      },
+      {
+        "id": "term-9",
+        "category": "rates",
+        "title": "Anchor and rate reset",
+        "body": "An anchor is a reference such as bond yields or Makam. At a reset, the rate follows the contract’s anchor rules and payments are recalculated for the remaining balance.",
+        "example": "A 3% anchor plus a 1 percentage point spread gives 4% in a simple example."
+      },
+      {
+        "id": "term-10",
+        "category": "rates",
+        "title": "Nominal and effective interest",
+        "body": "Nominal interest states an annual rate. Effective interest accounts for compounding frequency within the year.",
+        "example": "6% nominal compounded monthly is about 6.17% effective annually."
+      },
+      {
+        "id": "term-11",
+        "category": "payments",
+        "title": "Spitzer payments",
+        "body": "Payments stay constant when the rate is constant and there is no indexation. Interest takes a larger share early on; principal takes a larger share later.",
+        "example": "A fixed 3,000 ILS payment does not reduce principal by 3,000 ILS each month."
+      },
+      {
+        "id": "term-12",
+        "category": "payments",
+        "title": "Equal principal",
+        "body": "The same principal amount is repaid monthly, plus interest on the balance. With a fixed rate and no indexation, payments decline.",
+        "example": "120,000 ILS over 120 months means 1,000 ILS principal monthly, plus interest."
+      },
+      {
+        "id": "term-13",
+        "category": "payments",
+        "title": "Amortization schedule",
+        "body": "A monthly table of payment, principal, interest and balance. Check distant months and rate-reset dates too.",
+        "example": "100,000 ILS balance plus 1,000 indexation minus 800 principal leaves 100,200 ILS."
+      },
+      {
+        "id": "term-14",
+        "category": "payments",
+        "title": "Loan term",
+        "body": "Time until repayment. For the same amount and positive interest rate, a longer term generally lowers monthly payments but increases total interest.",
+        "example": "Compare 20 and 25 years and examine both the monthly payment and total paid."
+      },
+      {
+        "id": "term-15",
+        "category": "forecast",
+        "title": "Consumer Price Index",
+        "body": "CBS publishes CPI to describe changes in the price of a basket of goods and services. Linked loans apply it under their contract rules.",
+        "example": "A 0.3% monthly increase is not a 0.3% annual forecast."
+      },
+      {
+        "id": "term-16",
+        "category": "forecast",
+        "title": "Observed CPI and inflation expectations",
+        "body": "Observed CPI describes a measured past period. Expectations estimate future changes and supply the calculator’s projection path.",
+        "example": "A 0.3% monthly reading and a 2% expectation for the next year measure different things."
+      },
+      {
+        "id": "term-17",
+        "category": "forecast",
+        "title": "First and maximum forecast payment",
+        "body": "The first payment uses the entered rate. The forecast maximum is the peak in the projected schedule, not a guaranteed cap.",
+        "example": "If the first payment is 4,000 ILS and the forecast maximum 5,300, check when the peak occurs and why."
+      },
+      {
+        "id": "term-18",
+        "category": "forecast",
+        "title": "Total payments and financing cost",
+        "body": "Total payments add all repayments. The calculator’s financing cost subtracts the original loan amount, including CPI effects in linked tracks.",
+        "example": "A 500,000 ILS loan with 750,000 ILS total payments has 250,000 ILS financing cost in the model."
+      },
+      {
+        "id": "term-19",
+        "category": "forecast",
+        "title": "Forecast overall rate — IRR",
+        "body": "An annual measure derived from the loan amount and timing of forecast repayments. The calculator excludes some fees and terms that a bank quote may include.",
+        "example": "Compare IRR together with amount, term, forecast and additional costs."
+      },
+      {
+        "id": "term-20",
+        "category": "forecast",
+        "title": "Stress scenario",
+        "body": "Changes an assumption such as interest or inflation to explore its effect. It is a sensitivity check, not a prediction.",
+        "example": "Try an extra percentage point of interest, then change inflation separately."
+      },
+      {
+        "id": "term-21",
+        "category": "process",
+        "title": "Approval in principle",
+        "body": "A preliminary bank offer based on supplied information and subject to checks and conditions. It provides rates, a mix and cost measures for comparison.",
+        "example": "Compare the same amount and terms, and read validity and conditions on the offer itself."
+      },
+      {
+        "id": "term-22",
+        "category": "process",
+        "title": "Refinancing",
+        "body": "Replacing all or part of a mortgage with new terms. Include transition and early-repayment costs, not just the monthly saving.",
+        "example": "A lower payment achieved by extending the term may increase the total paid."
+      },
+      {
+        "id": "term-23",
+        "category": "process",
+        "title": "Early repayment and discounting fees",
+        "body": "Repaying part or all of a loan early may incur charges depending on the track and contract, including charges affected by rate differences.",
+        "example": "Request a dated settlement balance and fee breakdown before comparing refinancing options."
+      },
+      {
+        "id": "term-24",
+        "category": "process",
+        "title": "Grace periods and balloon loans",
+        "body": "Grace periods defer principal and sometimes interest; a balloon leaves a significant balance for the end. Deferral can add interest.",
+        "example": "Low early payments may become much higher later. These products are not currently supported by this calculator."
+      },
+      {
+        "id": "term-25",
+        "category": "process",
+        "title": "Additional expenses",
+        "body": "Appraisal, registration and insurance may add to costs depending on the transaction and bank requirements. They affect your budget outside the repayment schedule.",
+        "example": "Allow for upfront costs and insurance; the current calculator does not include them in total payments."
+      }
     ]
   },
   "savedPage": {
@@ -128,8 +371,8 @@
     "callbackErrorMessage": "Sign-in failed or expired. You can try again."
   },
   "market": {
-    "title": "Market now",
-    "subtitle": "Official data from the Bank of Israel and the Central Bureau of Statistics (CBS).",
+    "title": "The data behind your mortgage",
+    "subtitle": "Rates and forecasts from the Bank of Israel; CPI from CBS. Each figure includes its source and reference date.",
     "boiRateLabel": "Bank of Israel rate",
     "boiRateHelp": "The rate set by the Bank of Israel — the basis for the prime rate.",
     "primeRateLabel": "Prime rate",
@@ -137,9 +380,9 @@
     "nextDecisionLabel": "Next rate decision",
     "nextDecisionHelp": "The next scheduled date on which the Bank of Israel sets the interest rate.",
     "nextDecisionUnknown": "Next date not yet published",
-    "cpiLabel": "Consumer Price Index",
-    "cpiHelp": "The latest monthly change in the CPI. It affects CPI-linked mortgage tracks.",
-    "cpiIndexValueLabel": "Index value",
+    "cpiLabel": "Monthly change in consumer prices",
+    "cpiHelp": "CPI measures price changes in the stated month and is published the following month. In a CPI-linked loan, a rising index increases the principal and payment.",
+    "cpiIndexValueLabel": "Index points (CBS current base)",
     "forecastTitle": "Bank of Israel inflation forecast",
     "forecastHelp": "The Bank of Israel Research Department's forecast for the pace of price increases.",
     "forecastHorizonPrefix": "for the four quarters ending ",
@@ -150,14 +393,31 @@
     "sourceBoi": "Bank of Israel",
     "sourceCbs": "CBS",
     "sourceDerived": "Derived from the Bank of Israel rate",
-    "statusLive": "Up to date",
-    "statusStale": "May be outdated",
+    "statusLive": "Retrieved from source",
+    "statusStale": "Freshness check needed",
     "statusFallbackPrefix": "Saved data, verified ",
-    "lastCheckedPrefix": "Last checked: "
+    "observedAt": "Latest observation: ",
+    "curveTitle": "Active mortgage forecast",
+    "curveHelp": "Rate curves and CPI expectations used to project payments. This is a forecast, not a bank’s offered rate.",
+    "curveCalendar": "Calendar average",
+    "curveIndex": "Index average",
+    "publicationPrefix": "Published: ",
+    "expectedCpiTitle": "Market CPI expectation over 12 months",
+    "expectedCpiHelp": "Derived from the active curve’s CPI path; a market expectation, not observed inflation.",
+    "unavailable": "Unavailable",
+    "sourceOpen": "Open source data",
+    "curveFallback": "Saved fallback curve",
+    "refreshNote": "Data is stored on the server and refreshed after 24 hours, on the next request. A delayed update does not erase the last valid data.",
+    "refreshNow": "Reload the server snapshot",
+    "dataWarning": "Some data could not be verified as current. Check each status and date; fallback values are not verified current rates.",
+    "sourceCheckedAt": "Checked against source: ",
+    "cpiReferenceMonth": "Index reference month: ",
+    "cpiFallbackMonth": "Saved index month: ",
+    "fallbackVerifiedLabel": "Fallback verified: "
   },
   "calculator": {
     "title": "Mortgage Calculator",
-    "subtitle": "Monthly payment calculation for a mortgage mix — one or more fixed-rate unlinked tracks, using the Spitzer or equal-principal method.",
+    "subtitle": "Build your mortgage mix, explore monthly payments and total cost, and see how repayments may change over time.",
     "repaymentMethodsHelp": "With Spitzer the total payment is generally stable while the split between principal and interest changes over time. With equal principal the same principal amount is repaid each month, so the payment starts higher and decreases over time.",
     "trackLabel": "Track",
     "trackAmountLabel": "Track amount",
@@ -313,6 +573,22 @@
     "freshnessSource": "Source",
     "freshnessSourceBoi": "Bank of Israel",
     "disclaimer": "This is a monthly simulation for illustration only, not a binding bank offer.",
-    "backToHome": "Back to home"
+    "backToHome": "Back to home",
+    "resultsStaleNotice": "Inputs have changed since the last calculation. Results, saving and sharing still refer to the previous calculation. Calculate again to update.",
+    "timelineTitle": "Your payments over time",
+    "timelineHelp": "Choose a month to explore its payment and remaining balance. Interest and inflation forecasts may change.",
+    "timelineMonth": "Month",
+    "timelinePayment": "Payment in selected month",
+    "timelineBalance": "Balance after payment",
+    "timelineStart": "Loan start",
+    "timelineEnd": "Loan end",
+    "trackTypeVariableLinked": "Variable CPI-linked — every 5 years",
+    "variableLinkedHelp": "The rate resets every 5 years using the real yield curve. Principal and payments are indexed to CPI between resets too.",
+    "variableLinkedCalibrationNote": "Simulation — this track has not yet been calibrated against a bank result.",
+    "linkedForecastModeLabel": "Interest and inflation forecast",
+    "linkedForecastModeConstant": "Constant rate and no inflation",
+    "freshnessObserved": "Latest source observation",
+    "freshnessStale": "Old observation — check source",
+    "rateDataWarning": "The BOI rate could not be verified as current. Prime calculations use the value shown under Data sources & freshness; check it before comparing results."
   }
 }

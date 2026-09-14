@@ -31,15 +31,10 @@ export default function BottomNav({ locale, labels }: BottomNavProps) {
   }
 
   return (
-    // A fully opaque bg (no /alpha, no backdrop-blur) so nothing beneath —
-    // including the safe-area strip below the tab bar itself — can ever
-    // show through. paddingBottom (inside this same opaque box, so the
-    // color extends all the way into it) reserves the iOS home-indicator
-    // area; it only resolves to a real value because `viewportFit: "cover"`
-    // is set in layout.tsx's `viewport` export.
+    // The glass surface includes the iOS home-indicator safe area.
     <nav
       aria-label={labels.ariaLabel}
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white shadow-[0_-2px_10px_rgba(15,23,42,0.05)] md:hidden"
+      className="glass-nav fixed inset-x-0 bottom-0 z-40 rounded-t-3xl md:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <div className="mx-auto flex max-w-6xl">
@@ -55,7 +50,7 @@ export default function BottomNav({ locale, labels }: BottomNavProps) {
               <span
                 className={`flex flex-col items-center gap-0.5 rounded-xl px-4 py-1 text-xs transition ${
                   active
-                    ? "bg-slate-100 text-slate-900"
+                    ? "glass-active"
                     : "text-slate-500"
                 }`}
               >

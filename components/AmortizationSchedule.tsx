@@ -44,7 +44,7 @@ function PaymentBreakdownCard({
   const interestShare = entry.interestPayment / entry.payment;
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="glass-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex items-baseline justify-between gap-2">
         <span className="text-sm font-medium text-slate-700">{title}</span>
         <span className="text-sm text-slate-500">
@@ -194,7 +194,7 @@ export default function AmortizationSchedule({
       >
         <div
           ref={scrollRef}
-          className="max-h-[500px] overflow-auto rounded-2xl border border-slate-200 bg-white shadow-sm"
+          className="max-h-[500px] overflow-auto glass-panel rounded-2xl border border-slate-200 bg-white shadow-sm"
         >
           <table className="w-full min-w-[560px] text-sm">
           <thead>

@@ -46,7 +46,7 @@ export function annualPercentToMonthlyRate(
     case "nominalAnnual":
       return annualRate / MONTHS_PER_YEAR;
     case "effectiveAnnual":
-      return Math.pow(1 + annualRate, 1 / MONTHS_PER_YEAR) - 1;
+      return Math.expm1(Math.log1p(annualRate) / MONTHS_PER_YEAR);
     default: {
       const unsupported: never = mode;
       throw new Error(`Unsupported interest rate input mode: ${unsupported}`);
@@ -70,5 +70,5 @@ export function nominalAnnualPercentToEffectiveAnnualPercent(
     annualInterestRatePercent,
     "nominalAnnual",
   );
-  return (Math.pow(1 + monthlyRate, MONTHS_PER_YEAR) - 1) * 100;
+  return Math.expm1(MONTHS_PER_YEAR * Math.log1p(monthlyRate)) * 100;
 }

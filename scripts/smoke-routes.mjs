@@ -15,8 +15,8 @@ const BASE = `http://localhost:${PORT}`;
 
 /** Every route the calculator must keep serving. */
 const ROUTES = [
-  { path: "/he", expected: 200 },
-  { path: "/en", expected: 200 },
+  { path: "/he", expected: 200, content: 'data-forecast-status=' },
+  { path: "/en", expected: 200, content: 'data-forecast-status=' },
   { path: "/he/calculator", expected: 200 },
   { path: "/en/calculator", expected: 200 },
   // App-shell surfaces: learn and sign-in are real pages; /saved requires
@@ -71,6 +71,17 @@ const ROUTES = [
     path: "/he/calculator?trackCount=1&track1Amount=500000&track1Type=fixedLinked&track1RepaymentMethod=spitzer&track1Years=20&track1CurrentRatePercent=4.5&track1ForecastMode=official&track1ForecastCurveId=2026-06-calendar",
     expected: 200,
   },
+  // Variable CPI-linked: real curve, CPI indexation and separate stress inputs.
+  {
+    path: "/he/calculator?trackCount=1&track1Amount=500000&track1Type=variableLinked&track1Years=20&track1ResetPeriodMonths=60&track1CurrentRatePercent=3&track1ForecastMode=official",
+    expected: 200,
+    content: 'id="results"',
+  },
+  {
+    path: "/en/calculator?trackCount=1&track1Amount=500000&track1Type=variableLinked&track1Years=20&track1ResetPeriodMonths=60&track1CurrentRatePercent=3&track1ForecastMode=stress&track1ForecastStressShift=1&track1InflationStressShift=2",
+    expected: 200,
+    content: 'id="results"',
+  },
   // Legacy single-track format
   {
     path: "/he/calculator?loanAmount=800000&annualInterestRatePercent=4.8&years=25",
@@ -114,15 +125,17 @@ const server = spawn("npx", ["next", "start", "-p", PORT], {
 let failures = 0;
 try {
   await waitForServer();
-  for (const { path, expected } of ROUTES) {
+  for (const { path, expected, content } of ROUTES) {
     let status;
+    let contentOk = true;
     try {
       const response = await fetch(`${BASE}${path}`, { redirect: "manual" });
       status = response.status;
+      if (content) contentOk = (await response.text()).includes(content);
     } catch (error) {
       status = `error: ${error.message}`;
     }
-    const ok = status === expected;
+    const ok = status === expected && contentOk;
     if (!ok) failures += 1;
     console.log(`${ok ? "PASS" : "FAIL"}  ${status}  ${path}`);
   }

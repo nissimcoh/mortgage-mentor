@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -109,8 +108,8 @@ export default async function CalculatorPage({
   // Server-side only: BOI rate + official Directive-451 forecast curves.
   // Both degrade to dated fallbacks and never throw. Only normalized,
   // serializable data crosses to the client — the latest curve plus any
-  // explicitly requested historical curves (the real curve stays server-
-  // side until CPI tracks exist).
+  // explicitly requested historical curves, including real yields for
+  // variable CPI-linked tracks.
   const [marketSnapshot, forecastData, makamData, editContext] =
     await Promise.all([
       getMarketSnapshot(),
@@ -127,7 +126,7 @@ export default async function CalculatorPage({
   const calculatorInstanceKey = computeCalculatorInstanceKey(editContext);
 
   return (
-    <main className="bg-slate-50 text-slate-900">
+    <main className="bg-transparent text-slate-900">
       <section className="mx-auto max-w-6xl px-6 pt-10 pb-14 sm:pt-12">
         <Link
           href={`/${locale}`}
@@ -144,18 +143,19 @@ export default async function CalculatorPage({
           {t.repaymentMethodsHelp}
         </p>
 
-        <Suspense fallback={null}>
-          <MortgageCalculator
-            key={calculatorInstanceKey}
-            locale={locale}
-            labels={t}
-            marketData={marketData}
-            saveScenarioLabels={dict.saveScenarioDialog}
-            editScenarioLabels={dict.editScenarioDialog}
-            editContext={editContext}
-            editContextUnavailable={editContextUnavailable}
-          />
-        </Suspense>
+        {/* This route already awaits searchParams and renders dynamically.
+            Keep its form in the initial page instead of an empty streamed
+            boundary, so direct navigation never shows a header-only shell. */}
+        <MortgageCalculator
+          key={calculatorInstanceKey}
+          locale={locale}
+          labels={t}
+          marketData={marketData}
+          saveScenarioLabels={dict.saveScenarioDialog}
+          editScenarioLabels={dict.editScenarioDialog}
+          editContext={editContext}
+          editContextUnavailable={editContextUnavailable}
+        />
       </section>
     </main>
   );

@@ -28,6 +28,7 @@ export const SUPPORTED_TRACK_TYPES = [
   "variableGovernmentBond",
   "variableMakam",
   "fixedLinked",
+  "variableLinked",
 ] as const;
 export type SupportedTrackType = (typeof SUPPORTED_TRACK_TYPES)[number];
 export const SUPPORTED_TRACK_TYPE = "fixedUnlinked"; // default track type
@@ -43,7 +44,7 @@ export function isVariableStyleTrackType(value: string): boolean {
     value === "prime" ||
     value === "variableGovernmentBond" ||
     value === "variableMakam" ||
-    value === "fixedLinked"
+    value === "fixedLinked" || value === "variableLinked"
   );
 }
 
@@ -64,6 +65,7 @@ export interface MarketContextForParsing {
     id: string;
     publicationDate: string;
     nominalZeroYieldsPercent: readonly number[];
+    realZeroYieldsPercent?: readonly number[];
     /** Cumulative expected CPI index (base 100, months 0..360). */
     expectedCpiIndex?: readonly number[];
   }>;
@@ -317,9 +319,9 @@ export function validateTrackDraft(draft: TrackDraft): TrackFieldErrors {
   }
 
   const years = Number(draft.years);
-  if (draft.trackType === "variableGovernmentBond") {
+  if (draft.trackType === "variableGovernmentBond" || draft.trackType === "variableLinked") {
     const reset = Number(draft.resetPeriodMonths);
-    if (!isGovernmentBondResetMonths(reset)) {
+    if (!isGovernmentBondResetMonths(reset) || (draft.trackType === "variableLinked" && reset !== 60)) {
       errors.resetPeriodMonths = "resetPeriodInvalid";
     } else if (draft.years === "") {
       errors.years = "yearsInvalid";
@@ -369,7 +371,7 @@ export function parseTrackDraft(
   const years = Number(draft.years);
   // Years validation is product-specific: catalog options for the two
   // variable products, whole 1..30 years for fixed/prime.
-  if (draft.trackType === "variableGovernmentBond") {
+  if (draft.trackType === "variableGovernmentBond" || draft.trackType === "variableLinked") {
     const reset = Number(draft.resetPeriodMonths);
     if (
       !isGovernmentBondResetMonths(reset) ||
@@ -393,9 +395,13 @@ export function parseTrackDraft(
     if (!curve || curve.nominalZeroYieldsPercent.length < years * 12) {
       return null;
     }
+    if (draft.trackType === "variableLinked" && (
+      draft.resetPeriodMonths !== "60" ||
+      (curve.realZeroYieldsPercent ?? []).length < years * 12
+    )) return null;
     // CPI-linked tracks additionally need the expected-CPI-index path.
     if (
-      draft.trackType === "fixedLinked" &&
+      (draft.trackType === "fixedLinked" || draft.trackType === "variableLinked") &&
       (curve.expectedCpiIndex ?? []).length < years * 12 + 1
     ) {
       return null;
@@ -428,6 +434,18 @@ export function parseTrackDraft(
       forecastCurveId: curve.id,
       forecastCurvePublicationDate: curve.publicationDate,
     } as const;
+
+    if (draft.trackType === "variableLinked") {
+      const inflationShift = forecastMode === "stress" ? parseSignedDecimal(draft.inflationStressShift || "0") : 0;
+      if (inflationShift === null || inflationShift <= -100) return null;
+      return {
+        type: "variableLinked", repaymentMethod: "spitzer", ...shared,
+        resetPeriodMonths: 60,
+        forecastRealZeroYieldsPercent: curve.realZeroYieldsPercent ?? [],
+        expectedCpiIndexPath: curve.expectedCpiIndex ?? [],
+        inflationStressShiftPercent: inflationShift,
+      };
+    }
 
     if (draft.trackType === "variableGovernmentBond") {
       const reset = Number(draft.resetPeriodMonths);
@@ -556,7 +574,7 @@ export function applyTracksToQuery(
     // Years serialization is product-specific: catalog decimals allowed
     // only for the government-bond product.
     const years =
-      draft.trackType === "variableGovernmentBond"
+      (draft.trackType === "variableGovernmentBond" || draft.trackType === "variableLinked")
         ? sanitizeGovernmentBondYears(draft.resetPeriodMonths, draft.years)
         : draft.trackType === "variableMakam"
           ? sanitizeMakamYears(draft.years)
@@ -568,7 +586,7 @@ export function applyTracksToQuery(
     // Preset products are Spitzer-only; never serialize another method.
     query.set(
       `${prefix}RepaymentMethod`,
-      draft.trackType === "variableGovernmentBond" ||
+      (draft.trackType === "variableGovernmentBond" || draft.trackType === "variableLinked") ||
         draft.trackType === "variableMakam" ||
         draft.trackType === "fixedLinked"
         ? "spitzer"
@@ -581,7 +599,7 @@ export function applyTracksToQuery(
       if (currentRate !== null) {
         query.set(`${prefix}CurrentRatePercent`, String(currentRate));
       }
-      if (draft.trackType === "variableGovernmentBond") {
+      if (draft.trackType === "variableGovernmentBond" || draft.trackType === "variableLinked") {
         // Reset period is gov-bond-only; never written for prime/Makam.
         const reset = sanitizeGovernmentBondReset(draft.resetPeriodMonths);
         if (reset !== "") {
@@ -601,6 +619,9 @@ export function applyTracksToQuery(
           const shift = parseSignedDecimal(draft.inflationStressShift);
           query.set(`${prefix}InflationStressShift`, String(shift ?? 0));
         } else {
+          if (draft.trackType === "variableLinked") {
+            query.set(`${prefix}InflationStressShift`, String(parseSignedDecimal(draft.inflationStressShift) ?? 0));
+          }
           const shift = parseSignedDecimal(draft.stressShift);
           query.set(`${prefix}ForecastStressShift`, String(shift ?? 0));
         }
@@ -667,14 +688,14 @@ export function parseTracksFromQuery(
       const mode = query.get(`${prefix}ForecastMode`);
 
       const resetPeriodMonths =
-        trackType === "variableGovernmentBond"
+        (trackType === "variableGovernmentBond" || trackType === "variableLinked")
           ? sanitizeGovernmentBondReset(
               query.get(`${prefix}ResetPeriodMonths`),
             )
           : "";
       const yearsRaw = query.get(`${prefix}Years`);
       const years =
-        trackType === "variableGovernmentBond"
+        (trackType === "variableGovernmentBond" || trackType === "variableLinked")
           ? sanitizeGovernmentBondYears(resetPeriodMonths, yearsRaw)
           : trackType === "variableMakam"
             ? sanitizeMakamYears(yearsRaw)
@@ -689,7 +710,7 @@ export function parseTracksFromQuery(
           years,
           trackType,
           repaymentMethod:
-            trackType === "variableGovernmentBond" ||
+            trackType === "variableGovernmentBond" || trackType === "variableLinked" ||
             trackType === "variableMakam"
               ? "spitzer"
               : isSupportedRepaymentMethod(method)
@@ -707,7 +728,7 @@ export function parseTracksFromQuery(
               ? ""
               : (query.get(`${prefix}ForecastStressShift`) ?? ""),
           inflationStressShift:
-            trackType === "fixedLinked"
+            (trackType === "fixedLinked" || trackType === "variableLinked")
               ? (query.get(`${prefix}InflationStressShift`) ?? "")
               : "",
           forecastCurveId: isVariableStyle
@@ -744,4 +765,20 @@ export function parseTracksFromQuery(
         : DEFAULT_REPAYMENT_METHOD,
     }),
   ];
+}
+
+/** Pin every calculated forecast to its source, including CPI-linked tracks. */
+export function pinCalculatedDrafts(
+  drafts: TrackDraft[],
+  inputs: MortgageTrackInput[],
+): TrackDraft[] {
+  return drafts.map((draft, index) => {
+    const input = inputs[index];
+    if (!input || input.type === "fixedUnlinked") return { ...draft };
+    return {
+      ...draft,
+      forecastCurveId: "forecastCurveId" in input ? input.forecastCurveId ?? "" : "",
+      ...(input.type === "variableMakam" ? { makamSnapshotId: input.makamSnapshotId ?? "" } : {}),
+    };
+  });
 }

@@ -24,6 +24,8 @@ export interface MarketSourceError {
 }
 
 export interface BoiRateData {
+  /** Actual successful source check, retained with daily cached data. */
+  fetchedAt?: string;
   ratePercent: number;
   /** ISO date the current rate took effect (start of the latest value run). */
   effectiveDate: string;
@@ -50,6 +52,7 @@ export interface NextDecisionData {
 }
 
 export interface CpiData {
+  fetchedAt?: string;
   referenceYear: number;
   /** 1-12 */
   referenceMonth: number;

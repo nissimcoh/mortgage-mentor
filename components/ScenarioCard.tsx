@@ -46,7 +46,7 @@ export default function ScenarioCard({
   });
 
   return (
-    <div className="relative rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div className="relative glass-panel rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="absolute end-2 top-2 z-10">
         <ScenarioActionsMenu id={id} currentName={name} labels={labels} />
       </div>

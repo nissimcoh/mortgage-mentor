@@ -184,7 +184,7 @@ function AccountMenu({ user, locale, labels }: AccountMenuProps) {
       {open && (
         <div
           role="menu"
-          className="absolute end-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-md"
+          className="absolute end-0 top-full z-50 mt-2 w-56 glass-menu overflow-hidden rounded-xl border border-slate-200 bg-white shadow-md"
         >
           {(displayName || user.email) && (
             <div className="border-b border-slate-100 px-4 py-3">

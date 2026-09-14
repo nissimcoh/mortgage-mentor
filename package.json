@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "smoke": "node scripts/smoke-routes.mjs"
+    "smoke": "node scripts/smoke-routes.mjs",
+    "check:data": "CHECK_OFFICIAL_DATA=1 vitest run scripts/check-market-data.test.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

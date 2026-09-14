@@ -40,7 +40,7 @@ export default function AppHeader({ locale, labels, accountMenu }: AppHeaderProp
     // paddingTop covers the iOS notch/Dynamic Island once viewportFit:
     // "cover" (set in layout.tsx) makes that inset resolve to a real value.
     <header
-      className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur"
+      className="glass-nav sticky top-0 z-40"
       style={{ paddingTop: "env(safe-area-inset-top)" }}
     >
       <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6">
@@ -67,9 +67,9 @@ export default function AppHeader({ locale, labels, accountMenu }: AppHeaderProp
               key={item.href}
               href={item.href}
               aria-current={isActive(item.href) ? "page" : undefined}
-              className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+              className={`rounded-full px-4 py-2 text-sm font-medium transition ${
                 isActive(item.href)
-                  ? "bg-slate-100 text-slate-900"
+                  ? "glass-active"
                   : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
               }`}
             >

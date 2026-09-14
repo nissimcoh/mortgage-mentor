@@ -9,6 +9,7 @@ interface CopyLinkButtonProps {
   buttonLabel: string;
   successText: string;
   fallbackText: string;
+  getUrl?: () => string;
 }
 
 /** Copies the current page URL. Generic on purpose — used by both the
@@ -18,6 +19,7 @@ export default function CopyLinkButton({
   buttonLabel,
   successText,
   fallbackText,
+  getUrl,
 }: CopyLinkButtonProps) {
   const [status, setStatus] = useState<CopyLinkStatus>("idle");
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -31,7 +33,7 @@ export default function CopyLinkButton({
   async function handleCopy() {
     const nextStatus = await copyScenarioLink(
       (text) => navigator.clipboard.writeText(text),
-      window.location.href,
+      getUrl ? getUrl() : window.location.href,
     );
     setStatus(nextStatus);
     if (timeoutRef.current) clearTimeout(timeoutRef.current);

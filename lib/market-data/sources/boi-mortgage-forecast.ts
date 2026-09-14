@@ -5,6 +5,7 @@
  */
 
 import "server-only";
+import { dailyServerCache } from "../daily-server-cache";
 
 import type { MortgageForecastData } from "../mortgage-forecast-types";
 import { createFallbackForecastCurve } from "../mortgage-forecast-fallback";
@@ -60,7 +61,7 @@ function extractSheetRows(sheet: Worksheetish, columns: number): RawRow[] {
 
 async function fetchWorkbook(url: string) {
   const response = await fetch(url, {
-    next: { revalidate: 21600 }, // ~6h: data changes only on scheduled dates
+    cache: "no-store", // validated parsed workbooks are cached as a unit
     signal: AbortSignal.timeout(9000),
   });
   if (!response.ok) {
@@ -81,17 +82,7 @@ interface ParsedWorkbooks {
   fetchedAt: string;
 }
 
-// The workbooks change only on scheduled publication dates; keep the
-// parsed rows for ~6h so per-request curve resolution stays cheap even
-// though the calculator page renders dynamically.
-const PARSE_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
-let parseCache: { at: number; data: ParsedWorkbooks } | null = null;
-
-async function loadWorkbookRows(): Promise<ParsedWorkbooks> {
-  if (parseCache && Date.now() - parseCache.at < PARSE_CACHE_TTL_MS) {
-    return parseCache.data;
-  }
-
+async function fetchWorkbookRows(): Promise<ParsedWorkbooks> {
   const fetchedAt = new Date().toISOString();
   const [curveBook, scheduleBook] = await Promise.all([
     fetchWorkbook(FORECAST_WORKBOOK_URL),
@@ -126,10 +117,13 @@ async function loadWorkbookRows(): Promise<ParsedWorkbooks> {
     }
   }
 
-  const data = { nominalRows, realRows, cpiIndexRows, schedule, fetchedAt };
-  parseCache = { at: Date.now(), data };
-  return data;
+  // Validate before replacing the last successful snapshot.
+  const valid = selectEffectiveCurves(nominalRows, realRows, schedule, new Date(), fetchedAt, Number.POSITIVE_INFINITY, cpiIndexRows).filter(isValidCurveSnapshot);
+  if (!valid.length) throw new Error("No valid effective curve rows found in BOI workbook");
+  return { nominalRows, realRows, cpiIndexRows, schedule, fetchedAt };
 }
+
+const readDailyWorkbooks = dailyServerCache("forecast-workbooks", fetchWorkbookRows);
 
 /**
  * Fetch, parse, and resolve the official forecast curves for one request.
@@ -153,7 +147,7 @@ export async function getMortgageForecastData(
       cpiIndexRows,
       schedule,
       fetchedAt: parsedAt,
-    } = await loadWorkbookRows();
+    } = (await readDailyWorkbooks()).value;
 
     const effective = selectEffectiveCurves(
       nominalRows,

@@ -61,7 +61,7 @@ export default async function SavedPage({
   }
 
   return (
-    <main className="bg-slate-50 text-slate-900">
+    <main className="bg-transparent text-slate-900">
       <section className="mx-auto max-w-3xl px-6 pt-10 pb-16 sm:pt-12">
         <Link
           href={`/${locale}`}
@@ -87,7 +87,7 @@ export default async function SavedPage({
         )}
 
         {!error && rows && rows.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center">
+          <div className="glass-panel rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center">
             <p className="text-base font-medium text-slate-700">
               {dict.savedPage.emptyTitle}
             </p>

@@ -1,3 +1,4 @@
+import { dailyServerCache } from "../daily-server-cache";
 /**
  * Bank of Israel adapter.
  *
@@ -9,6 +10,7 @@
  * touches the network and it must be called from server code only.
  */
 
+import { fetchCurrent } from "./fetch-current";
 import type { FetchedBoiRate } from "../derive";
 
 // Daily series; ~60 observations comfortably cover the current value run
@@ -48,7 +50,7 @@ export function parseBoiRateCsv(csv: string): FetchedBoiRate {
     )
     .map((columns) => ({
       date: columns[timeIndex],
-      value: Number(columns[valueIndex]),
+      value: columns[valueIndex]?.trim() ? Number(columns[valueIndex]) : NaN,
     }))
     .filter(
       (observation) =>
@@ -75,14 +77,12 @@ export function parseBoiRateCsv(csv: string): FetchedBoiRate {
   };
 }
 
-/** Server-side fetch of the current BOI rate. Cached for an hour. */
+const readDaily = dailyServerCache("boi-rate", () =>
+  fetchCurrent(BOI_RATE_SERIES_URL, async (response) => parseBoiRateCsv(await response.text())),
+);
+
+/** Serve the daily server snapshot, retaining its actual source check time. */
 export async function fetchBoiRate(): Promise<FetchedBoiRate> {
-  const response = await fetch(BOI_RATE_SERIES_URL, {
-    next: { revalidate: 3600 },
-    signal: AbortSignal.timeout(8000),
-  });
-  if (!response.ok) {
-    throw new Error(`BOI SDMX API responded with status ${response.status}`);
-  }
-  return parseBoiRateCsv(await response.text());
+  const cached = await readDaily();
+  return { ...cached.value, fetchedAt: cached.fetchedAt };
 }

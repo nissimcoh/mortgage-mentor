@@ -320,7 +320,7 @@ describe("expected-CPI-index sheet parsing", () => {
     const wrongBase = [...validCells];
     wrongBase[3] = 90; // maturity-0 not ~100
     expect(parseCpiIndexRow(wrongBase)).toBeNull();
-    const withGap = [...validCells];
+    const withGap: unknown[] = [...validCells];
     withGap[50] = null;
     expect(parseCpiIndexRow(withGap)).toBeNull();
   });

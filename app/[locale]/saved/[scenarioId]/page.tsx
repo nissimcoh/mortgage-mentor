@@ -55,7 +55,7 @@ function StatusMessage({
   body: string;
 }) {
   return (
-    <main className="bg-slate-50 text-slate-900">
+    <main className="bg-transparent text-slate-900">
       <section className="mx-auto max-w-2xl px-6 pt-10 pb-16 sm:pt-12">
         <Link
           href={`/${locale}/saved`}
@@ -355,7 +355,7 @@ export default async function ScenarioDetailPage({
   };
 
   return (
-    <main className="bg-slate-50 text-slate-900">
+    <main className="bg-transparent text-slate-900">
       <section className="mx-auto max-w-3xl px-6 pt-10 pb-16 sm:pt-12">
         <Link
           href={`/${locale}/saved`}
@@ -452,7 +452,7 @@ export default async function ScenarioDetailPage({
           {payload.tracks.map((track, index) => (
             <div
               key={track.id}
-              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+              className="glass-panel rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
             >
               <p className="mb-2 text-sm font-bold text-slate-900">
                 {dict.calculator.trackLabel} {index + 1} —{" "}

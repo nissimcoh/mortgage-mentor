@@ -41,6 +41,7 @@ import {
   MAX_TRACKS,
   MIN_TRACKS,
   parseAllTrackDrafts,
+  pinCalculatedDrafts,
   parseTracksFromQuery,
   resolveForecastCurve,
   resolveMakamSnapshot,
@@ -48,7 +49,6 @@ import {
   validateTrackDraft,
   type MarketContextForParsing,
   type TrackDraft,
-  type TrackFieldErrors,
 } from "@/lib/mortgage/scenario-form";
 import type { MakamAnchorSnapshot } from "@/lib/market-data/mortgage-forecast-types";
 import type { MortgageForecastCurveSnapshot } from "@/lib/market-data/mortgage-forecast-types";
@@ -61,6 +61,7 @@ import StabilityMeter from "./StabilityMeter";
 import MortgageTrackCard, {
   type TrackCardMarketInfo,
 } from "./MortgageTrackCard";
+import PaymentTimeline from "./PaymentTimeline";
 import ScheduleSelector from "./ScheduleSelector";
 
 const COMBINED_SCHEDULE_ID = "combined";
@@ -213,7 +214,7 @@ export default function MortgageCalculator({
     const inputs = parseAllTrackDrafts(drafts, market);
     const summary = inputs ? tryCalculateScenario(inputs) : null;
     return {
-      drafts,
+      drafts: inputs && summary ? pinCalculatedDrafts(drafts, inputs) : drafts,
       submitted: inputs && summary ? { inputs, summary } : null,
     };
   });
@@ -318,7 +319,7 @@ export default function MortgageCalculator({
         : null,
       makamAnchorIsMissing: isPinnedMakamSnapshotMissing(draft, market),
       expectedInflationLabel:
-        draft.trackType === "fixedLinked" &&
+        (draft.trackType === "fixedLinked" || draft.trackType === "variableLinked") &&
         curve !== null &&
         ((curve as MortgageForecastCurveSnapshot).expectedCpiIndex?.length ??
           0) >= 13
@@ -369,7 +370,10 @@ export default function MortgageCalculator({
           }
         }
         if (field === "trackType") {
-          if (value === "variableGovernmentBond") {
+          if (value === "variableLinked") {
+            next.resetPeriodMonths = "60";
+            if (!isGovernmentBondTermValid(60, Number(next.years))) next.years = "";
+          } else if (value === "variableGovernmentBond") {
             next.resetPeriodMonths = "";
             next.years = "";
           } else if (value === "variableMakam" || value === "fixedLinked") {
@@ -381,7 +385,7 @@ export default function MortgageCalculator({
           if (
             value === "variableGovernmentBond" ||
             value === "variableMakam" ||
-            value === "fixedLinked"
+            value === "fixedLinked" || value === "variableLinked"
           ) {
             next.repaymentMethod = "spitzer";
           }
@@ -441,20 +445,7 @@ export default function MortgageCalculator({
 
     // Stamp the curve/anchor each variable-style track actually used, so
     // the URL pins them and a shared link reproduces this calculation.
-    const stamped = drafts.map((draft, index) => {
-      const input = inputs[index];
-      if (input.type === "variableMakam") {
-        return {
-          ...draft,
-          forecastCurveId: input.forecastCurveId ?? "",
-          makamSnapshotId: input.makamSnapshotId ?? "",
-        };
-      }
-      if (input.type === "prime" || input.type === "variableGovernmentBond") {
-        return { ...draft, forecastCurveId: input.forecastCurveId ?? "" };
-      }
-      return draft;
-    });
+    const stamped = pinCalculatedDrafts(drafts, inputs);
 
     justSubmittedRef.current = true;
     setDrafts(stamped);
@@ -466,6 +457,18 @@ export default function MortgageCalculator({
   }
 
   const enteredTotal = sumEnteredTrackAmounts(drafts);
+  const resultsAreStale = submittedDrafts !== null &&
+    JSON.stringify(drafts) !== JSON.stringify(submittedDrafts);
+
+  function submittedUrl() {
+    const url = new URL(window.location.href);
+    // A shared calculation carries only its computed inputs, never edit metadata.
+    const query = new URLSearchParams();
+    applyTracksToQuery(query, submittedDrafts ?? []);
+    url.search = query.toString();
+    return url.toString();
+  }
+
 
   const stabilityLevelLabels: Record<StabilityLevel, string> = {
     veryHigh: labels.stabilityVeryHigh,
@@ -669,6 +672,9 @@ export default function MortgageCalculator({
 
   return (
     <div className="w-full">
+      {(marketData.boiRateStatus === "fallback" || marketData.boiRateIsStale) && (
+        <p role="status" className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">{labels.rateDataWarning}</p>
+      )}
       {editState.context ? (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-accent/30 bg-accent-soft px-4 py-2.5 text-sm text-slate-700">
           <span>
@@ -696,9 +702,9 @@ export default function MortgageCalculator({
       <form
         onSubmit={handleSubmit}
         noValidate
-        className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+        className="glass-form glass-panel rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6"
       >
-        <div className="mb-4 flex flex-wrap items-baseline gap-x-6 gap-y-1 text-sm text-slate-600">
+        <div className="mb-5 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 border-b border-slate-100 pb-4 text-sm text-slate-600">
           <span>
             {labels.tracksCountLabel}:{" "}
             <strong className="text-slate-900">
@@ -735,7 +741,7 @@ export default function MortgageCalculator({
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <button
             type="submit"
-            className="rounded-xl bg-slate-900 px-6 py-2.5 text-white transition hover:bg-slate-700"
+            className="glass-button rounded-xl bg-accent px-7 py-3 font-semibold text-white shadow-sm transition hover:bg-accent/90"
           >
             {labels.calculateButton}
           </button>
@@ -785,14 +791,20 @@ export default function MortgageCalculator({
 
       {submitted && (
         <>
-          <section id="results" ref={resultsRef} className="mt-6 scroll-mt-4">
+          <section id="results" ref={resultsRef} className="mt-6 scroll-mt-24">
             <h2 className="mb-3 text-2xl font-bold tracking-tight">
               {labels.combinedResultsTitle}
             </h2>
 
+            {resultsAreStale && (
+              <p role="status" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                {labels.resultsStaleNotice}
+              </p>
+            )}
+
             {/* Hero: the dominant figure on the whole screen, grouped with
                 the stability meter in one panel — not two separate cards. */}
-            <div className="rounded-2xl bg-accent-soft p-5 sm:p-6">
+            <div className="glass-hero rounded-2xl bg-accent-soft p-5 sm:p-6">
               <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <div className="text-sm font-medium text-slate-600">
@@ -845,6 +857,7 @@ export default function MortgageCalculator({
                 buttonLabel={labels.copyScenarioLinkButton}
                 successText={labels.copyScenarioLinkSuccess}
                 fallbackText={labels.copyScenarioLinkFallback}
+                getUrl={submittedUrl}
               />
             </div>
 
@@ -924,6 +937,13 @@ export default function MortgageCalculator({
             </p>
           </section>
 
+          <PaymentTimeline
+            key={JSON.stringify(submitted.inputs)}
+            schedule={submitted.summary.combinedSchedule}
+            locale={locale}
+            labels={labels}
+          />
+
           {showPerTrackSection && (
             <section className="mt-6">
               <h2 className="mb-3 text-2xl font-bold tracking-tight">
@@ -969,7 +989,7 @@ export default function MortgageCalculator({
                               input.currentCustomerRatePercent / 100,
                             ),
                           },
-                          ...(input.type === "variableGovernmentBond"
+                          ...((input.type === "variableGovernmentBond" || input.type === "variableLinked")
                             ? [
                                 {
                                   label: labels.resetPeriodLabel,
@@ -999,7 +1019,7 @@ export default function MortgageCalculator({
                                 },
                               ]
                             : []),
-                          ...(input.type === "fixedLinked" &&
+                          ...((input.type === "fixedLinked" || input.type === "variableLinked") &&
                           trackSummary.cpiForecast
                             ? [
                                 {
@@ -1104,7 +1124,7 @@ export default function MortgageCalculator({
                   return (
                     <div
                       key={index}
-                      className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                      className="glass-panel rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
                     >
                       <h3 className="mb-2 text-sm font-bold text-slate-900">
                         {labels.trackLabel} {index + 1}
@@ -1117,6 +1137,7 @@ export default function MortgageCalculator({
                                 labels.trackTypeGovernmentBond,
                               variableMakam: labels.trackTypeMakam,
                               fixedLinked: labels.trackTypeFixedLinked,
+                              variableLinked: labels.trackTypeVariableLinked,
                               fixedUnlinked: labels.trackTypeFixedUnlinked,
                             }[input.type]
                           }
@@ -1213,8 +1234,8 @@ export default function MortgageCalculator({
                 value: formatDateOnly(marketData.boiRateEffectiveDate, locale),
               },
               {
-                label: labels.freshnessNextDecision,
-                value: formatDateOnly(marketData.boiNextDecisionAt, locale),
+                label: labels.freshnessObserved,
+                value: formatDateOnly(marketData.boiRateObservationDate ?? null, locale),
               },
               {
                 label: labels.freshnessChecked,
@@ -1222,7 +1243,7 @@ export default function MortgageCalculator({
               },
               {
                 label: labels.freshnessStatusLabel,
-                value: freshnessStatusText(marketData.boiRateStatus, labels),
+                value: marketData.boiRateIsStale ? labels.freshnessStale : freshnessStatusText(marketData.boiRateStatus, labels),
               },
             ]}
           />

@@ -7,16 +7,16 @@
  * mechanics, and contract-specific rules — deliberately out of scope for
  * this first version.
  *
- * Currently implemented: fixedUnlinked (קל"צ) with Spitzer repayment.
- * CPI-linked, prime, variable, eligibility, balloon, grace and
- * equal-principal inputs are already expressible in the types, and calling
- * them throws a clear "not implemented" error rather than a wrong number.
+ * Implemented: fixed-unlinked, prime, government-bond variable, annual
+ * Makam, and fixed CPI-linked tracks. See the product catalog for supported
+ * repayment methods and docs/CALIBRATION_TODO.md for bank calibration status.
  */
 
 import {
   DEFAULT_INTEREST_RATE_INPUT_MODE,
   type AmortizationEntry,
   type FixedCpiLinkedTrackInput,
+  type VariableCpiLinkedTrackInput,
   type FixedUnlinkedTrackInput,
   type MortgageScenarioInput,
   type MortgageTrackInput,
@@ -31,6 +31,7 @@ import { annualPercentToMonthlyRate, MONTHS_PER_YEAR } from "./interest";
 import {
   buildBlockRepricedSpitzerSchedule,
   buildCpiLinkedSpitzerSchedule,
+  buildVariableCpiLinkedSpitzerSchedule,
   buildEqualPrincipalSchedule,
   buildSpitzerSchedule,
   buildVariableRateEqualPrincipalSchedule,
@@ -475,7 +476,7 @@ function calculateMakamTrackSummary(
 }
 
 function calculateFixedCpiLinkedTrackSummary(
-  track: FixedCpiLinkedTrackInput,
+  track: FixedCpiLinkedTrackInput | VariableCpiLinkedTrackInput,
 ): TrackSummary {
   if (!Number.isFinite(track.loanAmount) || track.loanAmount <= 0) {
     throw new Error(`loanAmount must be positive, got ${track.loanAmount}`);
@@ -493,18 +494,44 @@ function calculateFixedCpiLinkedTrackSummary(
   }
   const numberOfPayments = termMonthsFromYears(track.years);
 
+  if (track.repaymentMethod !== "spitzer") throw new Error("CPI-linked tracks support Spitzer only");
+  if (track.type === "variableLinked") {
+    assertValidVariableTrackCore(track);
+    if (track.resetPeriodMonths !== 60 || ![10, 15, 20, 25, 30].includes(track.years)) {
+      throw new Error("Variable CPI-linked supports five-year resets and terms of 10, 15, 20, 25 or 30 years");
+    }
+    if (track.forecastMode !== "constant" && (
+      track.forecastRealZeroYieldsPercent.length < numberOfPayments ||
+      track.forecastRealZeroYieldsPercent.some(rate => !Number.isFinite(rate) || rate <= -100)
+    )) throw new Error("A complete, valid real zero curve is required");
+  }
+
   const monthlyCpiFactors = buildCpiIndexFactors({
     months: numberOfPayments,
     expectedCpiIndexPath: track.expectedCpiIndexPath,
     forecastMode: track.forecastMode,
     inflationStressShiftPercent: track.inflationStressShiftPercent,
   });
-  const schedule = buildCpiLinkedSpitzerSchedule({
-    loanAmount: track.loanAmount,
-    annualRatePercent: track.currentCustomerRatePercent,
-    numberOfPayments,
-    monthlyCpiFactors,
-  });
+  const schedule = track.type === "variableLinked"
+    ? buildVariableCpiLinkedSpitzerSchedule({
+        loanAmount: track.loanAmount, numberOfPayments, monthlyCpiFactors,
+        resetPeriodMonths: track.resetPeriodMonths,
+        annualRatePercentPath: buildBlockForwardRatePathPercent({
+          months: numberOfPayments,
+          currentCustomerRatePercent: track.currentCustomerRatePercent,
+          resetPeriodMonths: track.resetPeriodMonths,
+          marginPercent: track.forecastMode === "constant" ? 0 : variableAnchorMarginPercent(
+            track.currentCustomerRatePercent, track.forecastRealZeroYieldsPercent, track.resetPeriodMonths,
+          ),
+          zeroYieldsPercent: track.forecastRealZeroYieldsPercent,
+          forecastMode: track.forecastMode, stressShiftPercent: track.stressShiftPercent,
+        }),
+      })
+    : buildCpiLinkedSpitzerSchedule({
+        loanAmount: track.loanAmount,
+        annualRatePercent: track.currentCustomerRatePercent,
+        numberOfPayments, monthlyCpiFactors,
+      });
 
   // The visible first payment: the base real payment at today's offered
   // linked rate, BEFORE forecast indexation (identical to the equivalent
@@ -579,6 +606,7 @@ export function calculateTrackSummary(track: MortgageTrackInput): TrackSummary {
       return calculateGovernmentBondTrackSummary(track);
     case "variableMakam":
       return calculateMakamTrackSummary(track);
+    case "variableLinked":
     case "fixedLinked":
       return calculateFixedCpiLinkedTrackSummary(track);
     case "fixedUnlinked": {
@@ -599,7 +627,7 @@ export function calculateTrackSummary(track: MortgageTrackInput): TrackSummary {
     }
     default:
       throw new Error(
-        `Track type "${(track as { type: string }).type}" is not implemented yet; supported: "fixedUnlinked", "prime", "variableGovernmentBond", "variableMakam", "fixedLinked"`,
+        `Track type "${(track as { type: string }).type}" is not implemented yet; supported: "fixedUnlinked", "prime", "variableGovernmentBond", "variableMakam", "fixedLinked", "variableLinked"`,
       );
   }
 }

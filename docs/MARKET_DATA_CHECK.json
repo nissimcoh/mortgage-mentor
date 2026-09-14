@@ -1,0 +1,46 @@
+{
+  "checkedAt": "2026-09-13T17:18:59.183Z",
+  "rate": {
+    "fetchedAt": "2026-09-13T17:18:58.757Z",
+    "ratePercent": 3.25,
+    "effectiveDate": "2026-09-03",
+    "lastObservationDate": "2026-09-13",
+    "isLive": true,
+    "isStale": false,
+    "sourceId": "boi-sdmx-br",
+    "sourceUrl": "https://www.boi.org.il"
+  },
+  "prime": {
+    "ratePercent": 4.75,
+    "isLive": true
+  },
+  "cpi": {
+    "referenceYear": 2026,
+    "referenceMonth": 7,
+    "monthlyChangePercent": 0.3,
+    "indexValue": 105.1,
+    "fetchedAt": "2026-09-13T17:18:59.182Z",
+    "isLive": true,
+    "isStale": false,
+    "sourceId": "cbs-index-api-120010",
+    "sourceUrl": "https://www.cbs.gov.il"
+  },
+  "forecast": {
+    "status": "live",
+    "id": "2026-08-calendar",
+    "published": "2026-09-02",
+    "nominalMonths": 360,
+    "realMonths": 360,
+    "cpiMonths": 361
+  },
+  "makam": {
+    "id": "2026-08",
+    "referenceYear": 2026,
+    "referenceMonth": 8,
+    "anchorPercent": 3.2400288018,
+    "fetchedAt": "2026-09-13T17:18:58.757Z",
+    "status": "live",
+    "sourceId": "boi-secdwh-makam-12m"
+  },
+  "errors": []
+}

@@ -134,11 +134,13 @@ export default function MortgageTrackCard({
   const isPrime = draft.trackType === "prime";
   const isGovernmentBond = draft.trackType === "variableGovernmentBond";
   const isMakam = draft.trackType === "variableMakam";
+  const isVariableLinked = draft.trackType === "variableLinked";
+  const isBondReset = isGovernmentBond || isVariableLinked;
   const isFixedLinked = draft.trackType === "fixedLinked";
   // Tracks whose forecast comes from the official curve workbook.
-  const isVariableStyle = isPrime || isGovernmentBond || isMakam || isFixedLinked;
+  const isVariableStyle = isPrime || isBondReset || isMakam || isFixedLinked;
   // Preset products verified as Spitzer-only: no repayment selector.
-  const isSpitzerPreset = isGovernmentBond || isMakam || isFixedLinked;
+  const isSpitzerPreset = isBondReset || isMakam || isFixedLinked;
 
   const governmentBondReset = Number(draft.resetPeriodMonths);
   const governmentBondTerms = isGovernmentBondResetMonths(governmentBondReset)
@@ -202,6 +204,7 @@ export default function MortgageTrackCard({
           {labels.trackTypeGovernmentBond}
         </option>
         <option value="variableMakam">{labels.trackTypeMakam}</option>
+        <option value="variableLinked">{labels.trackTypeVariableLinked}</option>
         <option value="fixedLinked">{labels.trackTypeFixedLinked}</option>
       </select>
     </label>
@@ -270,12 +273,12 @@ export default function MortgageTrackCard({
 
   // Term options depend on the product: full catalog per gov-bond reset
   // frequency, whole 4-30 years for Makam, whole 1-30 years otherwise.
-  const termOptions = isGovernmentBond
+  const termOptions = isBondReset
     ? (governmentBondTerms ?? [])
     : isMakam
       ? MAKAM_TERM_YEARS
       : DURATION_YEARS;
-  const termDisabled = isGovernmentBond && governmentBondTerms === null;
+  const termDisabled = isBondReset && governmentBondTerms === null;
   const termField = (
     <label className="block">
       <span className={labelClass}>{labels.yearsLabel}</span>
@@ -312,7 +315,7 @@ export default function MortgageTrackCard({
         aria-label={labels.resetPeriodLabel}
         className="flex flex-wrap gap-1.5"
       >
-        {GOVERNMENT_BOND_RESET_MONTHS.map((months) => {
+        {(isVariableLinked ? [60] : GOVERNMENT_BOND_RESET_MONTHS).map((months) => {
           const selected = draft.resetPeriodMonths === String(months);
           return (
             <button
@@ -339,7 +342,7 @@ export default function MortgageTrackCard({
   );
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+    <div className="glass-track p-4 sm:p-5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-bold text-slate-900">
           {labels.trackLabel} {index + 1}
@@ -358,7 +361,7 @@ export default function MortgageTrackCard({
         </div>
       </div>
 
-      {isGovernmentBond ? (
+      {isBondReset ? (
         // Required interaction order: amount → type → rate → frequency → term.
         <div className="flex flex-col gap-3">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -439,9 +442,9 @@ export default function MortgageTrackCard({
                 {" · "}
               </>
             )}
-            {isFixedLinked && (
+            {(isFixedLinked || isVariableLinked) && (
               <>
-                {labels.fixedLinkedHelp}
+                {isVariableLinked ? labels.variableLinkedHelp : labels.fixedLinkedHelp}
                 {market.expectedInflationLabel && (
                   <>
                     {" · "}
@@ -461,6 +464,7 @@ export default function MortgageTrackCard({
             )}
           </p>
 
+          {isVariableLinked && <p className="mt-2 text-xs font-medium text-amber-800">{labels.variableLinkedCalibrationNote}</p>}
           <details className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-2">
             <summary className="cursor-pointer text-xs font-medium text-slate-600">
               {labels.advancedTitle}
@@ -468,7 +472,7 @@ export default function MortgageTrackCard({
             <div className="mt-2 grid gap-3 sm:grid-cols-2">
               <label className="block">
                 <span className={labelClass}>
-                  {isFixedLinked
+                  {isVariableLinked ? labels.linkedForecastModeLabel : isFixedLinked
                     ? labels.inflationModeLabel
                     : labels.forecastModeLabel}
                 </span>
@@ -485,7 +489,7 @@ export default function MortgageTrackCard({
                       : labels.forecastModeOfficial}
                   </option>
                   <option value="constant">
-                    {isFixedLinked
+                    {isVariableLinked ? labels.linkedForecastModeConstant : isFixedLinked
                       ? labels.inflationModeConstant
                       : labels.forecastModeConstant}
                   </option>
@@ -521,6 +525,13 @@ export default function MortgageTrackCard({
                     }
                     className={fieldClass}
                   />
+                </label>
+              )}
+              {isVariableLinked && draft.forecastMode === "stress" && (
+                <label className="block">
+                  <span className={labelClass}>{labels.inflationStressShiftLabel}</span>
+                  <input type="text" inputMode="decimal" placeholder="0" value={draft.inflationStressShift}
+                    onChange={event => onChange("inflationStressShift", event.target.value)} className={fieldClass} />
                 </label>
               )}
             </div>

@@ -18,6 +18,8 @@ export interface CalculatorMarketData {
   /** ISO date the current BOI rate took effect. */
   boiRateEffectiveDate: string;
   boiRateStatus: "live" | "fallback";
+  boiRateObservationDate?: string;
+  boiRateIsStale?: boolean;
   /** ISO datetime of the next scheduled BOI rate decision, or null. */
   boiNextDecisionAt: string | null;
   /** When the BOI-rate/CPI market snapshot was assembled (ISO). */
@@ -38,12 +40,14 @@ export function buildCalculatorMarketData(
   return {
     boiRatePercent: marketSnapshot.boiRate.ratePercent,
     boiRateEffectiveDate: marketSnapshot.boiRate.effectiveDate,
+    boiRateObservationDate: marketSnapshot.boiRate.lastObservationDate,
+    boiRateIsStale: marketSnapshot.boiRate.isStale,
     boiRateStatus: marketSnapshot.boiRate.isLive ? "live" : "fallback",
     boiNextDecisionAt: marketSnapshot.nextDecision.at,
-    marketFetchedAt: marketSnapshot.fetchedAt,
+    marketFetchedAt: marketSnapshot.boiRate.fetchedAt ?? marketSnapshot.fetchedAt,
     curves: forecastData.curves.map((curve) => ({
       ...curve,
-      realZeroYieldsPercent: [],
+      realZeroYieldsPercent: [...curve.realZeroYieldsPercent],
     })),
     curveStatus: forecastData.status,
     makamSnapshots: makamData.snapshots,

@@ -162,7 +162,7 @@ export default function ScenarioActionsMenu({
       {open && (
         <div
           role="menu"
-          className="absolute end-0 top-full z-20 mt-1 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-md"
+          className="absolute end-0 top-full z-20 mt-1 w-56 glass-menu overflow-hidden rounded-xl border border-slate-200 bg-white shadow-md"
         >
           {dropdownView === "menu" ? (
             <>
@@ -241,7 +241,7 @@ export default function ScenarioActionsMenu({
           aria-label={labels.renameDialogTitle}
           className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 px-4 pb-4 sm:items-center sm:pb-0"
         >
-          <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-lg">
+          <div className="glass-form glass-panel w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-lg">
             <h2 className="mb-3 text-lg font-bold text-slate-900">
               {labels.renameDialogTitle}
             </h2>

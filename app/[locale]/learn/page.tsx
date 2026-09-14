@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isValidLocale } from "@/lib/i18n/config";
+import LearningGlossary from "@/components/LearningGlossary";
 import { getDictionary } from "../dictionaries";
 
 export async function generateMetadata({
@@ -31,7 +32,7 @@ export default async function LearnPage({
   const t = dict.learnPage;
 
   return (
-    <main className="bg-slate-50 text-slate-900">
+    <main className="bg-transparent text-slate-900">
       <section className="mx-auto max-w-5xl px-6 pt-10 pb-16 sm:pt-12">
         <Link
           href={`/${locale}`}
@@ -47,21 +48,15 @@ export default async function LearnPage({
           {t.intro}
         </p>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {t.topics.map((topic) => (
-            <div
-              key={topic}
-              className="flex flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-            >
-              <div className="mb-2 flex items-start justify-between gap-2">
-                <h2 className="text-base font-bold leading-6">{topic}</h2>
-                <span className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800">
-                  {dict.home.comingSoonBadge}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
+        <LearningGlossary labels={t} />
+        <aside className="glass-panel mt-8 p-6">
+          <h2 className="font-semibold">{t.sourceTitle}</h2>
+          <ul className="mt-3 space-y-3 text-sm text-accent">
+            <li><a className="underline underline-offset-4" href="https://www.boi.org.il/information/bank-paymnts/financial-education/הרפורמה-להגברת-שקיפות-המידע-והתחרות-במשכנתאות/" target="_blank" rel="noreferrer">{t.sourceGuide}</a></li>
+            <li><a className="underline underline-offset-4" href="https://www.boi.org.il/information/interestrates/" target="_blank" rel="noreferrer">{t.sourceFees}</a></li>
+          </ul>
+          <Link href={`/${locale}/calculator`} className="glass-button mt-6 inline-block rounded-xl px-5 py-3 text-sm font-medium text-white">{dict.home.calcCardCta}</Link>
+        </aside>
       </section>
     </main>
   );

@@ -6,6 +6,7 @@ import {
   duplicateTrackDraft,
   isPinnedCurveMissing,
   parseAllTrackDrafts,
+  pinCalculatedDrafts,
   parseTrackDraft,
   parseTracksFromQuery,
   sumEnteredTrackAmounts,
@@ -71,7 +72,8 @@ describe("track draft parsing", () => {
     ]);
     expect(inputs).toHaveLength(2);
     expect(inputs![1].loanAmount).toBe(400_000);
-    expect(inputs![1].annualInterestRatePercent).toBe(3.9);
+    expect(inputs![1].type).toBe("fixedUnlinked");
+    if (inputs![1].type === "fixedUnlinked") expect(inputs![1].annualInterestRatePercent).toBe(3.9);
   });
 
   it("rejects an empty track", () => {
@@ -766,5 +768,24 @@ describe("field-level validation (validateTrackDraft)", () => {
       }),
     );
     expect(errors.years).toBe("yearsInvalid");
+  });
+});
+
+
+describe("calculated forecast source pinning", () => {
+  it.each(["prime", "fixedLinked", "variableMakam", "variableGovernmentBond"] as const)("pins %s before saving or sharing", (trackType) => {
+    const draft = primeDraft({ trackType, years: "20", resetPeriodMonths: "60" });
+    const inputs = parseAllTrackDrafts([draft], MARKET)!;
+    expect(inputs).not.toBeNull();
+    const pinned = pinCalculatedDrafts([draft], inputs);
+    expect(pinned[0].forecastCurveId).toBe(CURVE.id);
+    expect(draft.forecastCurveId).toBe("");
+    const query = new URLSearchParams();
+    applyTracksToQuery(query, pinned);
+    const restored = parseTracksFromQuery(query)!;
+    const laterMarket = { ...MARKET, curves: [{ ...CURVE, id: "new-publication" }, CURVE] };
+    const restoredInputs = parseAllTrackDrafts(restored, laterMarket)!;
+    expect(restoredInputs).toEqual(inputs);
+    expect(calculateScenarioSummary({ tracks: restoredInputs })).toEqual(calculateScenarioSummary({ tracks: inputs }));
   });
 });

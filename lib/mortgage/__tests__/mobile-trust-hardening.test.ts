@@ -60,7 +60,7 @@ describe("field-level validation message dictionary keys", () => {
 
   it("exist, are non-empty, and are mutually distinct in both locales", () => {
     for (const dict of [heDict, enDict]) {
-      const c = dict.calculator as Record<string, string>;
+      const c = dict.calculator as unknown as Record<string, string>;
       const values = CODES.map((code) => c[code]);
       for (const value of values) {
         expect(typeof value).toBe("string");

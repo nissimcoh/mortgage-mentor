@@ -14,16 +14,15 @@
 /**
  * Interest/linkage track types common in Israeli mortgages.
  *
- * Only "fixedUnlinked" is implemented so far. The remaining members exist so
- * that inputs, storage, and UI can already speak the full domain language;
- * the engine throws a clear error when asked to compute them.
+ * Concrete implemented inputs are defined by MortgageTrackInput below.
+ * Eligibility and the legacy generic variable-unlinked name remain domain labels.
  */
 export type TrackType =
   | "fixedUnlinked" // קל"צ — fixed rate, not CPI-linked (implemented)
-  | "fixedLinked" // קבועה צמודה — fixed rate, CPI-linked (not yet)
-  | "prime" // פריים — floating, follows the prime rate (not yet)
+  | "fixedLinked" // קבועה צמודה — fixed rate, CPI-linked (implemented)
+  | "prime" // פריים — floating, follows the prime rate (implemented)
   | "variableUnlinked" // משתנה לא צמודה (not yet)
-  | "variableLinked" // משתנה צמודה (not yet)
+  | "variableLinked" // משתנה צמודה (implemented, five-year reset)
   | "eligibility"; // זכאות — Ministry of Housing subsidized track (not yet)
 
 /**
@@ -180,13 +179,26 @@ export interface FixedCpiLinkedTrackInput {
   forecastCurvePublicationDate?: string;
 }
 
+/** CPI-linked government-bond product, repriced every five years.
+ * Uses the REAL zero curve for rate forecasts and a separate CPI path.
+ * Initial anchor baseline is the real 60-month spot yield; bank calibration
+ * is pending. The first implementation supports complete five-year blocks.
+ */
+export interface VariableCpiLinkedTrackInput extends Omit<FixedCpiLinkedTrackInput, "type"> {
+  type: "variableLinked";
+  resetPeriodMonths: 60;
+  forecastRealZeroYieldsPercent: readonly number[];
+  stressShiftPercent?: number;
+}
+
 /** Input for a single mortgage track. */
 export type MortgageTrackInput =
   | FixedUnlinkedTrackInput
   | PrimeTrackInput
   | VariableGovernmentBondTrackInput
   | VariableMakamTrackInput
-  | FixedCpiLinkedTrackInput;
+  | FixedCpiLinkedTrackInput
+  | VariableCpiLinkedTrackInput;
 
 /** Minimal parameter set for the Spitzer payment/schedule helpers. */
 export interface SpitzerPaymentParams {

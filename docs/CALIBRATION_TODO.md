@@ -16,6 +16,7 @@ from an official bank calculator/approval before we claim bank-level accuracy.
 | 5 | Variable government-bond, every 7 or 10 years | 84 / 120 | pending |
 | 6 | Annual Makam | 12 | pending |
 | 7 | Fixed CPI-linked (implemented, uncalibrated) | — | pending |
+| 8 | Variable CPI-linked, every 5 years (Spitzer) | 60 | pending |
 
 ## Input template (identical for every case)
 
@@ -52,3 +53,39 @@ Turn each captured case into a frozen-fixture golden test next to
 `lib/mortgage/__tests__/forecast.test.ts` (the Prime golden is the model).
 Discrepancies beyond tolerance mean an anchor-baseline or margin-derivation
 assumption needs revisiting (documented in `lib/mortgage/forecast.ts`).
+
+
+## Variable CPI-linked implementation scope
+
+The first exposed product resets every 60 months, with terms 10/15/20/25/30
+whole years. This is the app's current supported subset, not a claim that banks
+only offer these terms. The forecast uses the real zero curve and separate
+expected CPI index. The initial margin uses offered rate minus the real 60-month
+spot yield. It has not been commercially calibrated. Monthly linkage applies
+between resets; the remaining indexed debt is repriced at each reset.
+
+Primary methodology reference: Bank of Israel Directive 451, pp. 23–24:
+https://www.boi.org.il/media/i5jbijyv/451_21.pdf
+
+Product reference (five-year linked government-bond, Spitzer):
+https://www.leumi.co.il/he/Standard-Contracts
+
+## First public-screen comparison: variable CPI-linked
+
+Captured in the public Leumi expanded calculator during the September 12–13,
+2026 session: https://ufapi.bankleumi.co.il/mortgageCalculator/ExtCalc
+Synthetic input: ILS 500,000; 20 years; Spitzer; variable CPI-linked government
+bond resetting every five years; offered annual rate 3%.
+
+| Metric | Leumi visible result | App result |
+| --- | ---: | ---: |
+| First payment at current rate | 2,772 (whole ILS display) | 2,772.99 |
+| Maximum forecast payment | 4,277 (whole ILS display) | 4,277.60 |
+| Total forecast payments | 834,368 (whole ILS display) | 834,369.22 |
+| Forecast overall rate | 5.29% | 5.29% |
+
+The app used the August 2026 calendar curve. The bank screen did not expose a
+curve identifier or a full monthly schedule. This is a preliminary comparison,
+not a calibrated golden fixture: its total differs by ILS 1.22 from the bank's
+integer display, and the bank's exact decimals are unknown. Keep the full
+calibration pending. The user will handle subsequent manual comparisons.

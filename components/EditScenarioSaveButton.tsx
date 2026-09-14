@@ -187,7 +187,7 @@ export default function EditScenarioSaveButton({
           aria-label={labels.title}
           className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 px-4 pb-4 sm:items-center sm:pb-0"
         >
-          <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-lg">
+          <div className="glass-form glass-panel w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-lg">
             <h2 className="mb-3 text-lg font-bold text-slate-900">
               {labels.title}
             </h2>
@@ -292,7 +292,7 @@ export default function EditScenarioSaveButton({
           aria-live="polite"
           className="fixed inset-x-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-50 md:inset-x-auto md:end-6 md:bottom-6 md:w-96"
         >
-          <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-lg">
+          <div className="glass-panel flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-lg">
             <span aria-hidden="true" className="mt-0.5 text-emerald-600">
               ✓
             </span>

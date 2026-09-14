@@ -147,6 +147,7 @@ describe("prime rate path", () => {
       buildPrimeRatePathPercent({
         ...base,
         zeroYieldsPercent: NOMINAL.slice(0, 100),
+        forecastMode: "official",
       }),
     ).toThrow(/covers 100 months/);
   });

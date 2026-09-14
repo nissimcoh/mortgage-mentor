@@ -1,208 +1,95 @@
-// Server Component: renders a pre-fetched market snapshot. No fetching and
-// no interactivity here — data arrives as props from the page.
-
 import type { Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/app/[locale]/dictionaries";
 import type { MarketSnapshot } from "@/lib/market-data/types";
+import type { MortgageForecastCurveSnapshot } from "@/lib/market-data/mortgage-forecast-types";
+import { BOI_RATE_SERIES_URL } from "@/lib/market-data/sources/bank-of-israel";
+import { CBS_CPI_URL } from "@/lib/market-data/sources/cbs";
+import { FORECAST_WORKBOOK_URL } from "@/lib/market-data/sources/boi-mortgage-forecast";
+import { isStale } from "@/lib/market-data/derive";
 
 type MarketLabels = Dictionary["market"];
 
-interface MarketSnapshotCardsProps {
+function StatusChip({ live, stale, fallback, labels }: {
+  live: boolean; stale: boolean; fallback: string; labels: MarketLabels;
+}) {
+  return <span className={`inline-block rounded-full border px-2.5 py-1 text-xs ${live && !stale ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-900"}`}>
+    {!live ? fallback : stale ? labels.statusStale : labels.statusLive}
+  </span>;
+}
+
+/** Server-rendered source values: never substitutes staff forecasts for the calculator curve. */
+export default function MarketSnapshotCards({ snapshot, curve, labels, locale }: {
   snapshot: MarketSnapshot;
+  curve?: MortgageForecastCurveSnapshot;
   labels: MarketLabels;
   locale: Locale;
-}
-
-interface CardStatus {
-  isLive: boolean;
-  isStale: boolean;
-}
-
-function StatusChip({
-  status,
-  labels,
-  verifiedAtText,
-}: {
-  status: CardStatus;
-  labels: MarketLabels;
-  verifiedAtText: string;
 }) {
-  const text = !status.isLive
-    ? `${labels.statusFallbackPrefix}${verifiedAtText}`
-    : status.isStale
-      ? labels.statusStale
-      : labels.statusLive;
-  const tone = !status.isLive
-    ? "border-amber-200 bg-amber-50 text-amber-800"
-    : status.isStale
-      ? "border-amber-200 bg-amber-50 text-amber-800"
-      : "border-emerald-200 bg-emerald-50 text-emerald-700";
-
-  return (
-    <span
-      className={`inline-block rounded-full border px-2 py-0.5 text-xs ${tone}`}
-    >
-      {text}
-    </span>
-  );
-}
-
-export default function MarketSnapshotCards({
-  snapshot,
-  labels,
-  locale,
-}: MarketSnapshotCardsProps) {
   const intlLocale = locale === "he" ? "he-IL" : "en-US";
-
-  const percentFormat = new Intl.NumberFormat(intlLocale, {
-    style: "percent",
-    maximumFractionDigits: 2,
-  });
-  const signedPercentFormat = new Intl.NumberFormat(intlLocale, {
-    style: "percent",
-    maximumFractionDigits: 1,
-    signDisplay: "exceptZero",
-  });
-  const numberFormat = new Intl.NumberFormat(intlLocale, {
-    maximumFractionDigits: 1,
-  });
-  const dateFormat = new Intl.DateTimeFormat(intlLocale, {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-  const monthFormat = new Intl.DateTimeFormat(intlLocale, {
-    month: "long",
-    year: "numeric",
-  });
-  const dateTimeFormat = new Intl.DateTimeFormat(intlLocale, {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Asia/Jerusalem",
-  });
-
+  const percent = new Intl.NumberFormat(intlLocale, { style: "percent", maximumFractionDigits: 2 });
+  const signedPercent = new Intl.NumberFormat(intlLocale, { style: "percent", maximumFractionDigits: 2, signDisplay: "exceptZero" });
+  const dateFormat = new Intl.DateTimeFormat(intlLocale, { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Jerusalem" });
+  const monthFormat = new Intl.DateTimeFormat(intlLocale, { month: "long", year: "numeric", timeZone: "Asia/Jerusalem" });
   const formatDate = (iso: string) => dateFormat.format(new Date(iso));
-  const verifiedAtText = formatDate(snapshot.fallbackVerifiedAt);
-  const cpiMonthText = monthFormat.format(
-    new Date(Date.UTC(snapshot.cpi.referenceYear, snapshot.cpi.referenceMonth - 1, 1)),
-  );
-  const quarterText = labels.quarterLabel
-    .replace("{q}", String(snapshot.inflationForecast.horizonEndQuarter))
-    .replace("{year}", String(snapshot.inflationForecast.horizonEndYear));
-
+  const checkedFormat = new Intl.DateTimeFormat(intlLocale, { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Jerusalem" });
+  const fallback = `${labels.statusFallbackPrefix}${formatDate(snapshot.fallbackVerifiedAt)}`;
+  const cpiMonth = monthFormat.format(new Date(Date.UTC(snapshot.cpi.referenceYear, snapshot.cpi.referenceMonth - 1, 1)));
+  const rateDetail = snapshot.boiRate.isLive
+    ? labels.effectiveFrom + formatDate(snapshot.boiRate.effectiveDate)
+    : labels.fallbackVerifiedLabel + formatDate(snapshot.fallbackVerifiedAt);
+  const rateObservation = snapshot.boiRate.isLive
+    ? labels.observedAt + formatDate(snapshot.boiRate.lastObservationDate)
+    : null;
   const cards = [
-    {
-      label: labels.boiRateLabel,
-      value: percentFormat.format(snapshot.boiRate.ratePercent / 100),
-      detail: `${labels.effectiveFrom}${formatDate(snapshot.boiRate.effectiveDate)}`,
-      help: labels.boiRateHelp,
-      source: labels.sourceBoi,
-      status: snapshot.boiRate,
-    },
-    {
-      label: labels.primeRateLabel,
-      value: percentFormat.format(snapshot.primeRate.ratePercent / 100),
-      detail: `${labels.effectiveFrom}${formatDate(snapshot.boiRate.effectiveDate)}`,
-      help: labels.primeRateHelp,
-      source: labels.sourceDerived,
-      status: { isLive: snapshot.primeRate.isLive, isStale: snapshot.boiRate.isStale },
-    },
-    {
-      label: labels.nextDecisionLabel,
-      value:
-        snapshot.nextDecision.at === null
-          ? labels.nextDecisionUnknown
-          : dateTimeFormat.format(new Date(snapshot.nextDecision.at)),
-      detail: null,
-      help: labels.nextDecisionHelp,
-      source: labels.sourceBoi,
-      status: { isLive: snapshot.nextDecision.isLive, isStale: false },
-    },
-    {
-      label: labels.cpiLabel,
-      value: signedPercentFormat.format(snapshot.cpi.monthlyChangePercent / 100),
-      detail: `${labels.asOf}${cpiMonthText} · ${labels.cpiIndexValueLabel}: ${numberFormat.format(snapshot.cpi.indexValue)}`,
-      help: labels.cpiHelp,
-      source: labels.sourceCbs,
-      status: snapshot.cpi,
-    },
+    { label: labels.boiRateLabel, value: percent.format(snapshot.boiRate.ratePercent / 100), detail: rateDetail, secondary: rateObservation, help: labels.boiRateHelp, source: labels.sourceBoi, url: BOI_RATE_SERIES_URL, checkedAt: snapshot.boiRate.fetchedAt, live: snapshot.boiRate.isLive, stale: snapshot.boiRate.isStale },
+    { label: labels.primeRateLabel, value: percent.format(snapshot.primeRate.ratePercent / 100), detail: rateDetail, secondary: rateObservation, help: labels.primeRateHelp, source: labels.sourceDerived, url: BOI_RATE_SERIES_URL, checkedAt: snapshot.boiRate.fetchedAt, live: snapshot.primeRate.isLive, stale: snapshot.boiRate.isStale },
+    { label: labels.cpiLabel, value: signedPercent.format(snapshot.cpi.monthlyChangePercent / 100), detail: (snapshot.cpi.isLive ? labels.cpiReferenceMonth : labels.cpiFallbackMonth) + cpiMonth, secondary: `${labels.cpiIndexValueLabel}: ${new Intl.NumberFormat(intlLocale, { maximumFractionDigits: 2 }).format(snapshot.cpi.indexValue)}`, help: labels.cpiHelp, source: labels.sourceCbs, url: CBS_CPI_URL, checkedAt: snapshot.cpi.fetchedAt, live: snapshot.cpi.isLive, stale: snapshot.cpi.isStale },
   ];
+  const cpiStart = curve?.expectedCpiIndex[0];
+  const cpiEnd = curve?.expectedCpiIndex[12];
+  const expectedCpi = cpiStart && cpiEnd && Number.isFinite(cpiEnd / cpiStart) ? cpiEnd / cpiStart - 1 : null;
+  const curveMonth = curve ? monthFormat.format(new Date(Date.UTC(curve.referenceYear, curve.referenceMonth - 1, 1))) : labels.unavailable;
 
   return (
-    <section className="w-full">
-      <h2 className="mb-1 text-lg font-semibold tracking-tight text-slate-700">
-        {labels.title}
-      </h2>
-      <p className="mb-4 text-sm leading-6 text-slate-500">{labels.subtitle}</p>
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div>
+      <h2 className="text-2xl font-bold tracking-tight">{labels.title}</h2>
+      <p className="mb-6 mt-2 max-w-3xl text-sm leading-6 text-slate-600">{labels.subtitle}</p>
+      {(snapshot.status !== "live" || snapshot.boiRate.isStale || snapshot.cpi.isStale) && <p role="status" className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">{labels.dataWarning}</p>}
+      <div className="grid gap-4 sm:grid-cols-3">
         {cards.map((card) => (
-          <div
-            key={card.label}
-            className="flex flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-          >
-            <div className="text-sm text-slate-500">{card.label}</div>
-            <div className="mt-1 text-2xl font-bold text-slate-900">
-              {card.value}
+          <article key={card.label} data-source-live={card.live} className="glass-panel flex flex-col p-5 sm:p-6">
+            <h3 className="text-sm font-medium text-slate-600">{card.label}</h3>
+            <p className="mt-3 text-4xl font-bold tracking-tight text-slate-900"><bdi>{card.value}</bdi></p>
+            <p className="mt-2 text-xs text-slate-500">{card.detail}</p>
+            {card.secondary && <p className="mt-1 text-xs text-slate-500">{card.secondary}</p>}
+            {card.live && card.checkedAt && <p className="mt-1 text-xs text-slate-500">{labels.sourceCheckedAt}<time dateTime={card.checkedAt}>{checkedFormat.format(new Date(card.checkedAt))}</time></p>}
+            <p className="mb-4 mt-4 flex-1 text-sm leading-6 text-slate-600">{card.help}</p>
+            <div className="flex flex-col items-start gap-3">
+              <StatusChip live={card.live} stale={card.stale} fallback={fallback} labels={labels} />
+              <a href={card.url} target="_blank" rel="noreferrer" className="text-xs text-accent underline decoration-accent/30 underline-offset-4">{labels.sourceLabel}: {card.source}</a>
             </div>
-            {card.detail && (
-              <div className="mt-1 text-xs text-slate-500">{card.detail}</div>
-            )}
-            <p className="mt-2 flex-1 text-xs leading-5 text-slate-500">
-              {card.help}
-            </p>
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-              <span className="text-xs text-slate-400">
-                {labels.sourceLabel}: {card.source}
-              </span>
-              <StatusChip
-                status={card.status}
-                labels={labels}
-                verifiedAtText={verifiedAtText}
-              />
-            </div>
-          </div>
+          </article>
         ))}
       </div>
-
-      <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <span className="text-sm font-medium text-slate-700">
-            {labels.forecastTitle}
-          </span>
-          <span className="text-lg font-bold text-slate-900">
-            {percentFormat.format(snapshot.inflationForecast.percent / 100)}
-          </span>
-          <span className="text-sm text-slate-500">
-            {labels.forecastHorizonPrefix}
-            {quarterText}
-          </span>
-        </div>
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs leading-5 text-slate-500">{labels.forecastHelp}</p>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400">
-              {labels.sourceLabel}: {labels.sourceBoi}
-            </span>
-            <StatusChip
-              status={{
-                isLive: snapshot.inflationForecast.isLive,
-                isStale: false,
-              }}
-              labels={labels}
-              verifiedAtText={verifiedAtText}
-            />
+      <article className="glass-panel mt-4 grid gap-6 p-5 sm:p-6 md:grid-cols-[1.4fr_1fr]" data-forecast-status={curve?.status ?? "unavailable"}>
+        <div>
+          <div className="flex flex-wrap items-center gap-3">
+            <h3 className="font-semibold">{labels.curveTitle}</h3>
+            <StatusChip live={curve?.status === "live"} stale={curve ? (isStale(curve.publicationDate, new Date(snapshot.fetchedAt), 62) || isStale(curve.fetchedAt, new Date(snapshot.fetchedAt), 1)) : false} fallback={curve ? labels.curveFallback : labels.unavailable} labels={labels} />
           </div>
+          <p className="mt-3 text-xl font-bold">{curveMonth}</p>
+          {curve && <p className="mt-1 text-xs text-slate-500">{curve.averageType === "calendar" ? labels.curveCalendar : labels.curveIndex} · {labels.publicationPrefix}{formatDate(curve.publicationDate)}</p>}
+          {curve && <p className="mt-1 text-xs text-slate-500">{labels.effectiveFrom}{formatDate(curve.effectiveDate)}</p>}
+          {curve?.status === "live" && <p className="mt-1 text-xs text-slate-500">{labels.sourceCheckedAt}<time dateTime={curve.fetchedAt}>{checkedFormat.format(new Date(curve.fetchedAt))}</time></p>}
+          <p className="mt-3 max-w-xl text-sm leading-6 text-slate-600">{labels.curveHelp}</p>
+          <a href={FORECAST_WORKBOOK_URL} className="mt-3 inline-block text-xs text-accent underline underline-offset-4">{labels.sourceOpen} · {labels.sourceBoi}</a>
         </div>
-      </div>
-
-      <p className="mt-2 text-xs text-slate-400">
-        {labels.lastCheckedPrefix}
-        {dateTimeFormat.format(new Date(snapshot.fetchedAt))}
-      </p>
-    </section>
+        <div className="glass-track p-5">
+          <h4 className="text-sm font-medium text-slate-600">{labels.expectedCpiTitle}</h4>
+          <p className="mt-2 text-3xl font-bold"><bdi>{expectedCpi === null ? labels.unavailable : signedPercent.format(expectedCpi)}</bdi></p>
+          <p className="mt-3 text-xs leading-6 text-slate-600">{labels.expectedCpiHelp}</p>
+        </div>
+      </article>
+      <p className="mt-4 text-xs leading-6 text-slate-500">{labels.refreshNote}</p>
+    </div>
   );
 }

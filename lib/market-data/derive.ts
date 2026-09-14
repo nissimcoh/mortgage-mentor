@@ -56,12 +56,14 @@ export function isStale(
 
 /** What the source adapters deliver after a successful fetch + parse. */
 export interface FetchedBoiRate {
+  fetchedAt?: string;
   ratePercent: number;
   effectiveDate: string;
   lastObservationDate: string;
 }
 
 export interface FetchedCpi {
+  fetchedAt?: string;
   referenceYear: number;
   referenceMonth: number;
   monthlyChangePercent: number;
@@ -97,6 +99,7 @@ export function assembleSnapshot(parts: SnapshotParts, now: Date): MarketSnapsho
 
   const boiRate = boiLive
     ? {
+        fetchedAt: parts.boi!.fetchedAt,
         ratePercent: parts.boi!.ratePercent,
         effectiveDate: parts.boi!.effectiveDate,
         lastObservationDate: parts.boi!.lastObservationDate,
@@ -105,7 +108,7 @@ export function assembleSnapshot(parts: SnapshotParts, now: Date): MarketSnapsho
           parts.boi!.lastObservationDate,
           now,
           BOI_RATE_STALE_AFTER_DAYS,
-        ),
+        ) || (parts.boi!.fetchedAt !== undefined && isStale(parts.boi!.fetchedAt, now, 1)),
         sourceId: SOURCE_IDS.boiSdmx,
         sourceUrl: SOURCE_URLS.boi,
       }
@@ -127,7 +130,7 @@ export function assembleSnapshot(parts: SnapshotParts, now: Date): MarketSnapsho
           `${parts.cpi!.referenceYear}-${String(parts.cpi!.referenceMonth).padStart(2, "0")}-01`,
           now,
           CPI_STALE_AFTER_DAYS,
-        ),
+        ) || (parts.cpi!.fetchedAt !== undefined && isStale(parts.cpi!.fetchedAt, now, 1)),
         sourceId: SOURCE_IDS.cbsIndexApi,
         sourceUrl: SOURCE_URLS.cbs,
       }

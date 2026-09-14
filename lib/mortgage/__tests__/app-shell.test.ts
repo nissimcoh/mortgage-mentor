@@ -115,12 +115,12 @@ describe("home page redesign dictionary keys", () => {
     }
   });
 
-  it("has the exact requested Hebrew hero copy", () => {
+  it("has the refreshed Hebrew home copy and calculator entry", () => {
     expect(heDict.home.heroTitle).toBe(
-      "קבלו תמונה ברורה יותר של המשכנתא שלכם",
+      "מבינים את המספרים.\nמתכננים את המשכנתא.",
     );
     expect(heDict.home.heroPrimaryCta).toBe("התחל חישוב");
-    expect(heDict.home.heroSecondaryCta).toBe("למד מה אפשר לבדוק");
+    expect(heDict.home.heroSecondaryCta).toBe("לנתוני השוק");
     expect(heDict.home.heroTrustNote).toBe(
       "החישוב מיועד ללמידה והשוואה בין תרחישים ואינו ייעוץ משכנתאות.",
     );
@@ -158,7 +158,7 @@ describe("learn page dictionary keys", () => {
     const l = heDict.learnPage;
     expect(l.title).toBe("לומדים משכנתא בשפה פשוטה");
     expect(l.intro).toBe(
-      "מדריכים קצרים שיעזרו להבין מסלולים, ריביות, הצמדה ולוחות סילוקין לפני שמקבלים החלטה.",
+      "מושגים קצרים, דוגמאות במספרים והסברים שיעזרו לכם לקרוא הצעה ולבנות תמהיל. חפשו מושג או בחרו נושא.",
     );
     expect(l.topics).toEqual([
       "מהו מסלול משכנתא?",

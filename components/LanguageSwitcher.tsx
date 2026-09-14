@@ -34,7 +34,8 @@ export default function LanguageSwitcher() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const queryString = searchParams.toString();
-  const [open, setOpen] = useState(false);
+  const [openPath, setOpenPath] = useState<string | null>(null);
+  const open = openPath === pathname;
   const containerRef = useRef<HTMLDivElement>(null);
 
   const currentSegment = pathname.split("/")[1];
@@ -47,11 +48,11 @@ export default function LanguageSwitcher() {
 
     const onPointerDown = (event: PointerEvent) => {
       if (!containerRef.current?.contains(event.target as Node)) {
-        setOpen(false);
+        setOpenPath(null);
       }
     };
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") setOpenPath(null);
     };
 
     document.addEventListener("pointerdown", onPointerDown);
@@ -62,10 +63,6 @@ export default function LanguageSwitcher() {
     };
   }, [open]);
 
-  // Close the menu after navigating to the other locale.
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
 
   return (
     // dir="ltr" keeps the control's internal layout identical regardless of
@@ -75,7 +72,7 @@ export default function LanguageSwitcher() {
     <div ref={containerRef} dir="ltr" className="relative text-sm">
       <button
         type="button"
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => setOpenPath(open ? null : pathname)}
         aria-expanded={open}
         aria-haspopup="menu"
         className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-slate-700 shadow-sm transition hover:bg-slate-50"
@@ -95,7 +92,7 @@ export default function LanguageSwitcher() {
       {open && (
         <div
           role="menu"
-          className="absolute left-1/2 top-full mt-1 min-w-full -translate-x-1/2 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-md"
+          className="absolute left-1/2 top-full mt-1 min-w-full -translate-x-1/2 glass-menu overflow-hidden rounded-xl border border-slate-200 bg-white shadow-md"
         >
           {locales.map((locale) => {
             const isActive = locale === currentLocale;
@@ -106,7 +103,7 @@ export default function LanguageSwitcher() {
                 href={getPathForLocale(pathname, locale, queryString)}
                 lang={locale}
                 aria-current={isActive ? "page" : undefined}
-                onClick={() => setOpen(false)}
+                onClick={() => setOpenPath(null)}
                 className={`block px-4 py-2 text-center transition ${
                   isActive
                     ? "bg-slate-100 font-semibold text-slate-900"

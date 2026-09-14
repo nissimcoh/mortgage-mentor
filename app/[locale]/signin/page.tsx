@@ -44,8 +44,9 @@ export default async function SignInPage({
   const dict = await getDictionary(locale);
 
   return (
-    <main className="bg-slate-50 text-slate-900">
-      <section className="mx-auto max-w-md px-6 pt-10 pb-16 sm:pt-12">
+    <main className="bg-transparent text-slate-900">
+      <section className="mx-auto max-w-lg px-6 py-10 sm:py-16">
+        <div className="glass-panel p-6 sm:p-8">
         <Link
           href={`/${locale}`}
           className="text-sm text-slate-500 transition hover:text-slate-800"
@@ -68,6 +69,7 @@ export default async function SignInPage({
         )}
 
         <GoogleSignInButton locale={locale} next={next} labels={dict.signinPage} />
+        </div>
       </section>
     </main>
   );
