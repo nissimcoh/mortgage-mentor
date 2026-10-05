@@ -79,14 +79,33 @@ describe("schedule row parsing", () => {
 });
 
 describe("Israeli business-day rule", () => {
-  it("moves past the Israeli weekend (Fri-Sat)", () => {
-    expect(nextIsraeliBusinessDay("2026-07-02")).toBe("2026-07-05"); // Thu → Sun
+  it("counts Friday as a banking day and skips Saturday", () => {
+    expect(nextIsraeliBusinessDay("2026-07-02")).toBe("2026-07-03"); // Thu → Fri
     expect(nextIsraeliBusinessDay("2026-07-06")).toBe("2026-07-07"); // Mon → Tue
-    expect(nextIsraeliBusinessDay("2026-07-09")).toBe("2026-07-12"); // Thu → Sun
+    expect(nextIsraeliBusinessDay("2026-07-03")).toBe("2026-07-05"); // Fri → Sun
   });
 });
 
 describe("effective-curve selection", () => {
+  it("switches the October 5 publication at Israel midnight, preserving pinned history", () => {
+    const rows = [
+      parseCurveRow(curveRowCells(2026, "ספטמבר", "מדדי", 3.7))!,
+      parseCurveRow(curveRowCells(2026, "ספטמבר", "קלנדרי", 3.6))!,
+    ];
+    const dates: ParsedScheduleEntry[] = [
+      { publicationDate: "2026-09-17", referenceYear: 2026, referenceMonth: 9, averageType: "index" },
+      { publicationDate: "2026-10-05", referenceYear: 2026, referenceMonth: 9, averageType: "calendar" },
+    ];
+    const before = selectEffectiveCurves(rows, [], dates, new Date("2026-10-05T20:59:59Z"), FETCHED_AT);
+    const after = selectEffectiveCurves(rows, [], dates, new Date("2026-10-05T21:00:00Z"), FETCHED_AT);
+    expect(before[0].id).toBe("2026-09-index");
+    expect(before[0].effectiveDate).toBe("2026-09-18");
+    expect(after[0].id).toBe("2026-09-calendar");
+    expect(after[0].effectiveDate).toBe("2026-10-06");
+    expect(pickCurvesForRequest(after, ["2026-09-index"]).curves.map((curve) => curve.id))
+      .toEqual(["2026-09-calendar", "2026-09-index"]);
+  });
+
   const nominalRows = [
     parseCurveRow(curveRowCells(2026, "מאי", "קלנדרי", 3.9))!,
     parseCurveRow(curveRowCells(2026, "יוני", "מדדי", 3.7))!,
@@ -98,7 +117,7 @@ describe("effective-curve selection", () => {
     { publicationDate: "2026-06-02", referenceYear: 2026, referenceMonth: 5, averageType: "calendar" },
     // June index: published Jun 17 → effective Jun 18
     { publicationDate: "2026-06-17", referenceYear: 2026, referenceMonth: 6, averageType: "index" },
-    // June calendar: published Jul 2 (Thu) → effective Jul 5 (Sun)
+    // June calendar: published Jul 2 (Thu) → effective Jul 3 (Fri)
     { publicationDate: "2026-07-02", referenceYear: 2026, referenceMonth: 6, averageType: "calendar" },
   ];
 
@@ -107,7 +126,7 @@ describe("effective-curve selection", () => {
       nominalRows, realRows, schedule, new Date("2026-07-12T10:00:00Z"), FETCHED_AT,
     );
     expect(onJul12[0].id).toBe("2026-06-calendar");
-    expect(onJul12[0].effectiveDate).toBe("2026-07-05");
+    expect(onJul12[0].effectiveDate).toBe("2026-07-03");
     expect(onJul12.map((curve) => curve.id)).toEqual([
       "2026-06-calendar",
       "2026-06-index",
@@ -116,11 +135,11 @@ describe("effective-curve selection", () => {
   });
 
   it("skips a published-but-not-yet-effective row", () => {
-    // On Jul 3 (Fri) the June-calendar row exists but is effective Jul 5.
-    const onJul3 = selectEffectiveCurves(
-      nominalRows, realRows, schedule, new Date("2026-07-03T10:00:00Z"), FETCHED_AT,
+    // On publication day the new row must not be active yet.
+    const onJul2 = selectEffectiveCurves(
+      nominalRows, realRows, schedule, new Date("2026-07-02T10:00:00Z"), FETCHED_AT,
     );
-    expect(onJul3[0].id).toBe("2026-06-index");
+    expect(onJul2[0].id).toBe("2026-06-index");
   });
 
   it("keeps reference, publication, effective, and fetch dates separate", () => {
@@ -130,7 +149,7 @@ describe("effective-curve selection", () => {
     expect(latest.referenceYear).toBe(2026);
     expect(latest.referenceMonth).toBe(6); // observation period: June
     expect(latest.publicationDate).toBe("2026-07-02");
-    expect(latest.effectiveDate).toBe("2026-07-05");
+    expect(latest.effectiveDate).toBe("2026-07-03");
     expect(latest.fetchedAt).toBe(FETCHED_AT);
     // All four are distinct facts.
     expect(latest.publicationDate).not.toBe(latest.effectiveDate);

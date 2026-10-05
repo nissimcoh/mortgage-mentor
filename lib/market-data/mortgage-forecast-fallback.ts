@@ -5,7 +5,7 @@
  * "Estimation of yields from government bonds.xlsx" (nominal + real model
  * sheets, plus the "התפתחות פער התשואות" expected-CPI-index sheet),
  * row: June 2026, calendar average — published 2026-07-02, effective
- * 2026-07-05. Used only when the live workbook is unreachable and always
+ * 2026-07-03. Used only when the live workbook is unreachable and always
  * labeled with status "fallback", never as live data.
  */
 
@@ -123,7 +123,7 @@ export function createFallbackForecastCurve(
     referenceMonth: 6,
     averageType: "calendar",
     publicationDate: "2026-07-02",
-    effectiveDate: "2026-07-05",
+    effectiveDate: "2026-07-03",
     nominalZeroYieldsPercent: [...NOMINAL_JUNE_2026_CALENDAR],
     realZeroYieldsPercent: [...REAL_JUNE_2026_CALENDAR],
     expectedCpiIndex: [...EXPECTED_CPI_JUNE_2026_CALENDAR],

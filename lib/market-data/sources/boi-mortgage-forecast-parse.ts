@@ -6,7 +6,7 @@
  *   monthly maturities 1–360, one row per (year, Hebrew month, average type).
  * - Publication-schedule workbook (NBT Code 451): the official dates each
  *   row is published; a row becomes operative at the opening of the next
- *   business day (Israeli week: Sunday–Thursday).
+ *   banking day (including Fridays, excluding Saturdays and bank holidays).
  *
  * This module is the PURE half of the adapter: row parsing, schedule
  * joining, effective-date selection, and validation. No fetching, no
@@ -18,6 +18,8 @@ import type {
   ForecastCurveAverageType,
   MortgageForecastCurveSnapshot,
 } from "../mortgage-forecast-types";
+import { israelIsoDate, nextIsraeliBusinessDay } from "../israeli-banking-calendar";
+export { nextIsraeliBusinessDay } from "../israeli-banking-calendar";
 
 export const FORECAST_WORKBOOK_URL =
   "https://www.boi.org.il/boi_files/Statistics/Estimation%20of%20yields%20from%20government%20bonds.xlsx";
@@ -177,18 +179,6 @@ export function parseScheduleRow(cells: RawRow): ParsedScheduleEntry | null {
   };
 }
 
-/**
- * The opening of the next Israeli business day after `isoDate`.
- * Israeli weekend is Friday–Saturday; Sunday is a business day.
- */
-export function nextIsraeliBusinessDay(isoDate: string): string {
-  const date = new Date(`${isoDate}T00:00:00Z`);
-  do {
-    date.setUTCDate(date.getUTCDate() + 1);
-  } while (date.getUTCDay() === 5 || date.getUTCDay() === 6); // Fri, Sat
-  return date.toISOString().slice(0, 10);
-}
-
 function curveKey(year: number, month: number, type: ForecastCurveAverageType) {
   return `${year}-${String(month).padStart(2, "0")}-${type}`;
 }
@@ -237,7 +227,7 @@ export function selectEffectiveCurves(
     ]),
   );
 
-  const nowIso = now.toISOString().slice(0, 10);
+  const nowIso = israelIsoDate(now);
   const snapshots: MortgageForecastCurveSnapshot[] = [];
 
   for (const row of nominalRows) {
