@@ -36,10 +36,9 @@ const ROUTES = [
   { path: "/en/saved/not-a-real-id", expected: 307 },
   { path: "/he/signin", expected: 200 },
   { path: "/en/signin", expected: 200 },
-  // /compare is retired (see "Realign navigation" milestone) and redirects
-  // to /learn rather than exposing the old paste-link comparison UI.
-  { path: "/he/compare", expected: 307 },
-  { path: "/en/compare", expected: 307 },
+  // Saved-scenario comparison requires authentication, like /saved.
+  { path: "/he/compare", expected: 307, location: "/he/signin?next=%2Fhe%2Fcompare" },
+  { path: "/en/compare", expected: 307, location: "/en/signin?next=%2Fen%2Fcompare" },
   // Fixed-unlinked track
   {
     path: "/he/calculator?trackCount=1&track1Amount=800000&track1Type=fixedUnlinked&track1RepaymentMethod=spitzer&track1Years=25&track1AnnualInterestRatePercent=4.8",
@@ -125,17 +124,19 @@ const server = spawn("npx", ["next", "start", "-p", PORT], {
 let failures = 0;
 try {
   await waitForServer();
-  for (const { path, expected, content } of ROUTES) {
+  for (const { path, expected, content, location } of ROUTES) {
     let status;
     let contentOk = true;
+    let locationOk = true;
     try {
       const response = await fetch(`${BASE}${path}`, { redirect: "manual" });
       status = response.status;
+      if (location) locationOk = response.headers.get("location") === location;
       if (content) contentOk = (await response.text()).includes(content);
     } catch (error) {
       status = `error: ${error.message}`;
     }
-    const ok = status === expected && contentOk;
+    const ok = status === expected && contentOk && locationOk;
     if (!ok) failures += 1;
     console.log(`${ok ? "PASS" : "FAIL"}  ${status}  ${path}`);
   }

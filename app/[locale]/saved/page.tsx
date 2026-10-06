@@ -77,6 +77,10 @@ export default async function SavedPage({
           {dict.savedPage.intro}
         </p>
 
+        <Link href={`/${locale}/compare`} className="mb-6 inline-flex min-h-11 items-center rounded-xl bg-accent px-5 py-2.5 text-sm font-medium text-white">
+          {dict.savedComparison.open}
+        </Link>
+
         {error && (
           <p
             role="alert"
