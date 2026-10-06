@@ -1,17 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { Locale } from "@/lib/i18n/config";
 // Type-only import: erased at compile time, keeps the server-only
 // dictionary module out of the client bundle.
 import type { Dictionary } from "@/app/[locale]/dictionaries";
 import type { AmortizationEntry } from "@/lib/mortgage";
 
+import type { ScheduleBasis } from "@/lib/mortgage/schedule-certainty";
+
 type CalculatorLabels = Dictionary["calculator"];
 
 interface AmortizationScheduleProps {
   /** The schedule as returned by the mortgage engine — no math happens here. */
   schedule: AmortizationEntry[];
+  rowBases: ScheduleBasis[];
   labels: CalculatorLabels;
   locale: Locale;
   /** Section heading, e.g. "לוח סילוקין משולב" or "לוח סילוקין — מסלול 2". */
@@ -87,8 +90,9 @@ function PaymentBreakdownCard({
   );
 }
 
-export default function AmortizationSchedule({
+const AmortizationSchedule = memo(function AmortizationSchedule({
   schedule,
+  rowBases,
   labels,
   locale,
   title,
@@ -100,6 +104,7 @@ export default function AmortizationSchedule({
   // hint and edge fade only show up when the table is actually wider than
   // its container — true on most phones, false once the viewport is wide
   // enough to fit every column.
+  const legendId = useId();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isScrollable, setIsScrollable] = useState(false);
 
@@ -115,15 +120,15 @@ export default function AmortizationSchedule({
   }, [schedule]);
 
   const intlLocale = locale === "he" ? "he-IL" : "en-US";
-  const currencyFormat = new Intl.NumberFormat(intlLocale, {
+  const currencyFormat = useMemo(() => new Intl.NumberFormat(intlLocale, {
     style: "currency",
     currency: "ILS",
     maximumFractionDigits: 2,
-  });
-  const percentFormat = new Intl.NumberFormat(intlLocale, {
+  }), [intlLocale]);
+  const percentFormat = useMemo(() => new Intl.NumberFormat(intlLocale, {
     style: "percent",
     maximumFractionDigits: 0,
-  });
+  }), [intlLocale]);
   const formatCurrency = (value: number) => currencyFormat.format(value);
   const formatPercent = (fraction: number) => percentFormat.format(fraction);
 
@@ -131,11 +136,11 @@ export default function AmortizationSchedule({
   const lastEntry = schedule[schedule.length - 1];
   // Variable-rate (prime forecast) schedules carry the active annual rate.
   const showRateColumn = firstEntry?.activeAnnualRatePercent !== undefined;
-  const rateFormat = new Intl.NumberFormat(intlLocale, {
+  const rateFormat = useMemo(() => new Intl.NumberFormat(intlLocale, {
     style: "percent",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  });
+  }), [intlLocale]);
 
   // Sticky header cells need their own background and bottom border because
   // they detach from their row while the body scrolls beneath them.
@@ -143,6 +148,13 @@ export default function AmortizationSchedule({
     "sticky top-0 z-10 border-b border-slate-200 bg-slate-50 px-4 py-3 font-medium text-slate-600";
   const numericHeader = `${stickyHeader} text-end`;
   const numericCell = "px-4 py-2.5 text-end whitespace-nowrap text-slate-700";
+
+  const basisLabels: Record<ScheduleBasis, string> = {
+    contractual: labels.scheduleBasisContractual,
+    rate: labels.scheduleBasisRate,
+    index: labels.scheduleBasisIndex,
+    rateAndIndex: labels.scheduleBasisRateAndIndex,
+  };
 
   return (
     <section className="mt-8">
@@ -194,14 +206,15 @@ export default function AmortizationSchedule({
       >
         <div
           ref={scrollRef}
-          className="max-h-[500px] overflow-auto glass-panel rounded-2xl border border-slate-200 bg-white shadow-sm"
+          className="max-h-[500px] overflow-auto rounded-2xl border border-slate-200 bg-white shadow-sm"
         >
-          <table className="w-full min-w-[560px] text-sm">
+          <table aria-describedby={legendId} className="w-full min-w-[680px] text-sm">
           <thead>
             <tr>
               <th scope="col" className={`${stickyHeader} text-start`}>
                 {labels.monthHeader}
               </th>
+              <th scope="col" className={`${stickyHeader} text-start`}>{labels.scheduleBasisHeader}</th>
               {showRateColumn && (
                 <th scope="col" className={numericHeader}>
                   {rateColumnHeader ?? labels.rateHeader}
@@ -222,13 +235,23 @@ export default function AmortizationSchedule({
             </tr>
           </thead>
           <tbody>
-            {schedule.map((entry) => (
+            {schedule.map((entry, index) => {
+              const basis = rowBases[index];
+              const contractual = basis === "contractual";
+              return (
               <tr
                 key={entry.month}
-                className="border-b border-slate-100 last:border-0"
+                data-calculation-basis={basis}
+                className={`border-b last:border-0 ${contractual ? "border-emerald-100 bg-emerald-50/80" : "border-amber-100 bg-amber-50/80"}`}
               >
                 <td className="px-4 py-2.5 text-start text-slate-500">
                   {entry.month}
+                </td>
+                <td className="px-4 py-2.5 whitespace-nowrap">
+                  <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-medium ${contractual ? "bg-emerald-100 text-emerald-900" : "bg-amber-100 text-amber-900"}`}>
+                    <span aria-hidden="true">{contractual ? "\u25cf" : "\u2248"}</span>
+                    {basisLabels[basis]}
+                  </span>
                 </td>
                 {showRateColumn && (
                   <td className={numericCell}>
@@ -248,7 +271,8 @@ export default function AmortizationSchedule({
                   {formatCurrency(entry.remainingBalance)}
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
         </div>
@@ -269,6 +293,14 @@ export default function AmortizationSchedule({
           </>
         )}
       </div>
+      <div id={legendId} className="mt-4 space-y-2 text-xs leading-6 text-slate-600">
+        <h3 className="font-semibold text-slate-800">{labels.scheduleLegendTitle}</h3>
+        <p className="flex items-start gap-2"><span aria-hidden="true" className="text-emerald-700">&#9679;</span>{labels.scheduleLegendContractual}</p>
+        <p className="flex items-start gap-2"><span aria-hidden="true" className="font-bold text-amber-700">&#8776;</span>{labels.scheduleLegendEstimated}</p>
+        <p>{labels.scheduleLegendCombined}</p>
+      </div>
     </section>
   );
-}
+});
+
+export default AmortizationSchedule;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { Locale } from "@/lib/i18n/config";
@@ -63,6 +63,7 @@ import MortgageTrackCard, {
 } from "./MortgageTrackCard";
 import PaymentTimeline from "./PaymentTimeline";
 import ScheduleSelector from "./ScheduleSelector";
+import { scheduleBasisForMonth } from "@/lib/mortgage/schedule-certainty";
 
 const COMBINED_SCHEDULE_ID = "combined";
 
@@ -251,26 +252,26 @@ export default function MortgageCalculator({
   }
 
   const intlLocale = locale === "he" ? "he-IL" : "en-US";
-  const currencyFormat = new Intl.NumberFormat(intlLocale, {
+  const currencyFormat = useMemo(() => new Intl.NumberFormat(intlLocale, {
     style: "currency",
     currency: "ILS",
     maximumFractionDigits: 2,
-  });
-  const wholeCurrencyFormat = new Intl.NumberFormat(intlLocale, {
+  }), [intlLocale]);
+  const wholeCurrencyFormat = useMemo(() => new Intl.NumberFormat(intlLocale, {
     style: "currency",
     currency: "ILS",
     maximumFractionDigits: 0,
-  });
-  const numberFormat = new Intl.NumberFormat(intlLocale);
-  const percentFormat = new Intl.NumberFormat(intlLocale, {
+  }), [intlLocale]);
+  const numberFormat = useMemo(() => new Intl.NumberFormat(intlLocale), [intlLocale]);
+  const percentFormat = useMemo(() => new Intl.NumberFormat(intlLocale, {
     style: "percent",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  });
-  const monthYearFormat = new Intl.DateTimeFormat(intlLocale, {
+  }), [intlLocale]);
+  const monthYearFormat = useMemo(() => new Intl.DateTimeFormat(intlLocale, {
     month: "long",
     year: "numeric",
-  });
+  }), [intlLocale]);
 
   function curveReferenceLabel(curve: MortgageForecastCurveSnapshot): string {
     const month = monthYearFormat.format(
@@ -590,11 +591,11 @@ export default function MortgageCalculator({
       : null;
 
   const isSingleTrack = submitted !== null && submitted.inputs.length === 1;
-  const displayedSchedule = submitted
+  const displayedSchedule = useMemo(() => submitted
     ? isSingleTrack
       ? submitted.summary.trackSummaries[0].schedule
       : (selectedTrackSummary?.schedule ?? submitted.summary.combinedSchedule)
-    : [];
+    : [], [submitted, isSingleTrack, selectedTrackSummary]);
 
   // A prime/variable track in official/stress mode: its schedule is a
   // forecast and gets the BOI-curve title; constant mode stays ordinary.
@@ -646,7 +647,7 @@ export default function MortgageCalculator({
             ]?.cpiForecast?.currentFirstPayment ??
             displayedSchedule[0].payment)),
     ) >= 0.01;
-  const scheduleNotes = displayedIsCombined
+  const scheduleNotes = useMemo(() => displayedIsCombined
     ? [
         labels.weightedRateNote,
         ...(scenarioHasForecastTrack && displayedFirstDiffers
@@ -655,9 +656,9 @@ export default function MortgageCalculator({
       ]
     : displayedIsForecast && displayedFirstDiffers
       ? [labels.forecastScheduleNote]
-      : [];
+      : [], [displayedIsCombined, scenarioHasForecastTrack, displayedFirstDiffers, displayedIsForecast, labels]);
 
-  const scheduleOptions = submitted
+  const scheduleOptions = useMemo(() => submitted
     ? [
         { id: COMBINED_SCHEDULE_ID, label: labels.combinedLabel },
         ...submitted.inputs.map((_, index) => ({
@@ -665,7 +666,23 @@ export default function MortgageCalculator({
           label: `${labels.trackLabel} ${index + 1}`,
         })),
       ]
-    : [];
+    : [], [submitted, labels]);
+
+  const rowBases = useMemo(() => {
+    if (!submitted) return [];
+    const inputs = displayedTrackInput ? [displayedTrackInput] : submitted.inputs;
+    return displayedSchedule.map((entry) => scheduleBasisForMonth(inputs, entry.month));
+  }, [submitted, displayedTrackInput, displayedSchedule]);
+  const scheduleSelector = useMemo(() => isSingleTrack ? undefined : (
+    <ScheduleSelector
+      options={scheduleOptions}
+      selectedId={selectedTrackSummary !== null && selectedTrackIndex !== null
+        ? String(selectedTrackIndex) : COMBINED_SCHEDULE_ID}
+      onSelect={setSelectedScheduleId}
+    />
+  ), [isSingleTrack, scheduleOptions, selectedTrackSummary, selectedTrackIndex]);
+  // Curve arrays can contain thousands of values: serialize only on a new calculation.
+  const timelineKey = useMemo(() => JSON.stringify(submitted?.inputs), [submitted]);
 
   const showPerTrackSection =
     submitted !== null && (!isSingleTrack || hasVariableStyleTrack);
@@ -938,7 +955,7 @@ export default function MortgageCalculator({
           </section>
 
           <PaymentTimeline
-            key={JSON.stringify(submitted.inputs)}
+            key={timelineKey}
             schedule={submitted.summary.combinedSchedule}
             locale={locale}
             labels={labels}
@@ -1184,6 +1201,7 @@ export default function MortgageCalculator({
             // Remount on a new calculation or view switch so scroll resets.
             key={`${selectedScheduleId}-${submitted.summary.numberOfPayments}-${submitted.summary.monthlyPayment}-${submitted.summary.totalInterest}`}
             schedule={displayedSchedule}
+            rowBases={rowBases}
             labels={labels}
             locale={locale}
             title={scheduleTitle}
@@ -1193,19 +1211,7 @@ export default function MortgageCalculator({
                 : labels.rateHeader
             }
             notes={scheduleNotes}
-            selector={
-              isSingleTrack ? undefined : (
-                <ScheduleSelector
-                  options={scheduleOptions}
-                  selectedId={
-                    selectedTrackSummary !== null && selectedTrackIndex !== null
-                      ? String(selectedTrackIndex)
-                      : COMBINED_SCHEDULE_ID
-                  }
-                  onSelect={setSelectedScheduleId}
-                />
-              )
-            }
+            selector={scheduleSelector}
           />
         </>
       )}

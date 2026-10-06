@@ -1,28 +1,33 @@
 "use client";
 
-import { useId, useState } from "react";
+import { memo, useId, useMemo, useState } from "react";
 import type { Dictionary } from "@/app/[locale]/dictionaries";
 import type { AmortizationEntry } from "@/lib/mortgage/types";
 import type { Locale } from "@/lib/i18n/config";
 
 /** Reads the actual monthly schedule; never resamples or recalculates payments. */
-export default function PaymentTimeline({ schedule, locale, labels }: {
+const PaymentTimeline = memo(function PaymentTimeline({ schedule, locale, labels }: {
   schedule: AmortizationEntry[];
   locale: Locale;
   labels: Dictionary["calculator"];
 }) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const id = useId();
-  if (schedule.length === 0) return null;
   const index = Math.min(selectedIndex, schedule.length - 1);
   const entry = schedule[index];
-  const currency = new Intl.NumberFormat(locale === "he" ? "he-IL" : "en-IL", {
+  const currency = useMemo(() => new Intl.NumberFormat(locale === "he" ? "he-IL" : "en-IL", {
     style: "currency", currency: "ILS", minimumFractionDigits: 2, maximumFractionDigits: 2,
-  });
-  const maximum = Math.max(1, ...schedule.map(row => row.payment));
+  }), [locale]);
+  const { points, maximum } = useMemo(() => {
+    const maximum = Math.max(1, ...schedule.map(row => row.payment));
+    const x = (i: number) => 12 + (i / Math.max(1, schedule.length - 1)) * 776;
+    const y = (payment: number) => 168 - (payment / maximum) * 144;
+    const points = schedule.map((row, i) => `${x(i)},${y(row.payment)}`).join(" ");
+    return { points, maximum };
+  }, [schedule]);
+  if (schedule.length === 0) return null;
   const x = (i: number) => 12 + (i / Math.max(1, schedule.length - 1)) * 776;
   const y = (payment: number) => 168 - (payment / maximum) * 144;
-  const points = schedule.map((row, i) => `${x(i)},${y(row.payment)}`).join(" ");
   return (
     <section aria-labelledby={`${id}-title`} className="mt-6 overflow-hidden glass-panel rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -61,4 +66,6 @@ export default function PaymentTimeline({ schedule, locale, labels }: {
       </div>
     </section>
   );
-}
+});
+
+export default PaymentTimeline;

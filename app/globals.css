@@ -126,6 +126,16 @@ body {
   color: #0b5c57;
 }
 
+/* Keep glass depth without large fixed paint surfaces on phones. */
+@media (max-width: 767px) {
+  body { background-attachment: scroll; }
+  body::before { display: none; }
+  .glass-panel, .glass-hero, .glass-nav {
+    -webkit-backdrop-filter: blur(12px) saturate(130%);
+    backdrop-filter: blur(12px) saturate(130%);
+  }
+}
+
 @media (prefers-reduced-transparency: reduce) {
   .glass-panel, .glass-track, .glass-nav { background: #f7fafb; }
   .glass-hero { background: #e1f1ef; }
