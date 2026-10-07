@@ -63,6 +63,7 @@ import MortgageTrackCard, {
 } from "./MortgageTrackCard";
 import PaymentTimeline from "./PaymentTimeline";
 import ScheduleSelector from "./ScheduleSelector";
+import ExportMortgagePdfButton from "./ExportMortgagePdfButton";
 import { scheduleBasisForMonth } from "@/lib/mortgage/schedule-certainty";
 
 const COMBINED_SCHEDULE_ID = "combined";
@@ -876,7 +877,9 @@ export default function MortgageCalculator({
                 fallbackText={labels.copyScenarioLinkFallback}
                 getUrl={submittedUrl}
               />
+              <ExportMortgagePdfButton inputs={submitted.inputs} summary={submitted.summary} marketData={marketData} locale={locale} labels={labels} disabled={resultsAreStale} />
             </div>
+            <p className="mt-2 text-xs leading-5 text-slate-500">{labels.pdfHelp}</p>
 
             {/* Secondary metrics: a quiet stat row, not four more cards. */}
             <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-slate-200 pt-4 sm:grid-cols-4">
@@ -957,6 +960,7 @@ export default function MortgageCalculator({
           <PaymentTimeline
             key={timelineKey}
             schedule={submitted.summary.combinedSchedule}
+            tracks={submitted.inputs}
             locale={locale}
             labels={labels}
           />

@@ -34,6 +34,10 @@ const ROUTES = [
   // A syntactically malformed id is never sent to a uuid-typed column —
   // still gated by the same auth redirect first.
   { path: "/en/saved/not-a-real-id", expected: 307 },
+  // Admin dashboard also requires auth — same redirect-to-signin behavior
+  // as /saved, before it ever attempts the is_current_user_admin check.
+  { path: "/he/admin", expected: 307 },
+  { path: "/en/admin", expected: 307 },
   { path: "/he/signin", expected: 200 },
   { path: "/en/signin", expected: 200 },
   // Saved-scenario comparison requires authentication, like /saved.

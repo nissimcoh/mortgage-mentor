@@ -2,17 +2,22 @@
 
 import { memo, useId, useMemo, useState } from "react";
 import type { Dictionary } from "@/app/[locale]/dictionaries";
-import type { AmortizationEntry } from "@/lib/mortgage/types";
+import type { AmortizationEntry, MortgageTrackInput } from "@/lib/mortgage/types";
+import { buildMortgageMilestones } from "@/lib/mortgage/milestones";
 import type { Locale } from "@/lib/i18n/config";
 
 /** Reads the actual monthly schedule; never resamples or recalculates payments. */
-const PaymentTimeline = memo(function PaymentTimeline({ schedule, locale, labels }: {
+const PaymentTimeline = memo(function PaymentTimeline({ schedule, tracks, locale, labels }: {
   schedule: AmortizationEntry[];
+  tracks: MortgageTrackInput[];
   locale: Locale;
   labels: Dictionary["calculator"];
 }) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const id = useId();
+  const milestones = useMemo(() => buildMortgageMilestones(tracks), [tracks]);
+  const milestoneText = (event: (typeof milestones)[number]["events"][number]) =>
+    `${labels.trackLabel} ${event.trackIndex + 1}: ${event.kind === "reset" ? labels.milestoneReset : labels.milestoneEnd}`;
   const index = Math.min(selectedIndex, schedule.length - 1);
   const entry = schedule[index];
   const currency = useMemo(() => new Intl.NumberFormat(locale === "he" ? "he-IL" : "en-IL", {
@@ -52,6 +57,11 @@ const PaymentTimeline = memo(function PaymentTimeline({ schedule, locale, labels
           {[24, 96, 168].map(level => <line key={level} x1="12" x2="788" y1={level} y2={level} stroke="#e2e8f0" strokeDasharray="4 5" />)}
           <polygon points={`12,168 ${points} ${x(schedule.length - 1)},168`} fill="#e4f1ef" />
           <polyline points={points} fill="none" stroke="#0f6e68" strokeWidth="2.5" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+          {milestones.map(milestone => (
+            <line key={milestone.month} x1={x(milestone.month - 1)} x2={x(milestone.month - 1)} y1="16" y2="168"
+              stroke={milestone.events.some(event => event.kind === "reset") ? "#b45309" : "#047857"}
+              strokeDasharray="2 4" opacity="0.65" />
+          ))}
           <line x1={x(index)} x2={x(index)} y1="12" y2="172" stroke="#64748b" strokeDasharray="4 4" />
           <circle cx={x(index)} cy={y(entry.payment)} r="4" fill="#0f6e68" stroke="white" strokeWidth="2" />
         </svg>
@@ -63,6 +73,19 @@ const PaymentTimeline = memo(function PaymentTimeline({ schedule, locale, labels
         <div className="flex justify-between text-xs text-slate-500">
           <span>{labels.timelineStart}</span><span>{labels.timelineEnd}</span>
         </div>
+      </div>
+      <p className="mt-4 text-xs leading-6 text-slate-600">{labels.milestoneHelp}</p>
+      <label htmlFor={`${id}-milestone`} className="mt-3 block text-sm font-medium">{labels.milestoneJump}</label>
+      <select id={`${id}-milestone`} className="mt-2 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm"
+        value={milestones.some(milestone => milestone.month === entry.month) ? entry.month : ""}
+        onChange={event => { if (event.target.value) setSelectedIndex(Number(event.target.value) - 1); }}>
+        <option value="">{labels.milestoneChoose}</option>
+        {milestones.map(milestone => <option key={milestone.month} value={milestone.month}>
+          {labels.timelineMonth} {milestone.month} — {milestone.events.map(milestoneText).join("; ")}
+        </option>)}
+      </select>
+      <div aria-live="polite" className="mt-2 text-sm text-slate-700">
+        {milestones.find(milestone => milestone.month === entry.month)?.events.map((event, eventIndex) => <p key={eventIndex}>{milestoneText(event)}</p>)}
       </div>
     </section>
   );

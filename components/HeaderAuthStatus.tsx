@@ -126,7 +126,19 @@ interface AccountMenuProps {
 
 function AccountMenu({ user, locale, labels }: AccountMenuProps) {
   const [open, setOpen] = useState(false);
+  const [adminForUser, setAdminForUser] = useState<{ user: User; allowed: boolean } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Presentation only: the admin page independently authorizes every request.
+    // Resolve on first menu opening, not on every page load or keystroke.
+    if (!open || adminForUser?.user === user) return;
+    let active = true;
+    createClient().rpc("is_current_user_admin").then(({ data, error }) => {
+      if (active && !error) setAdminForUser({ user, allowed: data === true });
+    }, () => { /* Retry next time the menu opens. */ });
+    return () => { active = false; };
+  }, [open, user, adminForUser]);
 
   useEffect(() => {
     if (!open) return;
@@ -207,6 +219,12 @@ function AccountMenu({ user, locale, labels }: AccountMenuProps) {
           >
             {labels.savedScenarios}
           </Link>
+
+          {adminForUser?.user === user && adminForUser.allowed && <Link
+            role="menuitem" href={`/${locale}/admin`} onClick={() => setOpen(false)}
+            className="block px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50">
+            {labels.admin}
+          </Link>}
 
           <form action={signOut.bind(null, locale)}>
             <button

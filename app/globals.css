@@ -1,5 +1,28 @@
 @import "tailwindcss";
 
+/* The report is mounted only when export is requested. Print native text,
+   preserving Hebrew shaping without rasterization or a PDF runtime. */
+.mortgage-print-root { display: none; }
+@media print {
+  @page { size: A4; margin: 14mm; }
+  body.mortgage-printing > :not(.mortgage-print-root) { display: none !important; }
+  body.mortgage-printing { background: white !important; color: #111; }
+  body.mortgage-printing::before { display: none !important; }
+  .mortgage-print-root { display: block; font-size: 10pt; line-height: 1.55; }
+  .mortgage-print-root h1 { font-size: 23pt; font-weight: 700; margin: 4mm 0; }
+  .mortgage-print-root h2 { font-size: 15pt; font-weight: 700; margin: 5mm 0 2mm; }
+  .mortgage-print-root h3 { font-size: 12pt; font-weight: 700; margin-bottom: 2mm; }
+  .mortgage-print-root header { border-bottom: 1px solid #bbb; padding-bottom: 3mm; }
+  .mortgage-print-root dl { display: grid; grid-template-columns: 1fr 1fr; gap: 2mm 6mm; }
+  .mortgage-print-root dt { color: #444; font-size: 9pt; }
+  .mortgage-print-root dd { font-weight: 600; }
+  .mortgage-print-root .mortgage-print-metrics { margin: 5mm 0; grid-template-columns: repeat(3, 1fr); }
+  .mortgage-print-track { break-inside: avoid; border: 1px solid #bbb; padding: 3mm; margin: 3mm 0; }
+  .mortgage-print-track p { margin-top: 2mm; font-size: 9pt; overflow-wrap: anywhere; }
+  .mortgage-print-root footer { border-top: 1px solid #bbb; padding-top: 3mm; margin-top: 5mm; font-size: 9pt; }
+}
+
+
 /*
  * This app is light-only by design — every component uses explicit
  * light-mode Tailwind classes (bg-slate-50, bg-white, ...) with no
