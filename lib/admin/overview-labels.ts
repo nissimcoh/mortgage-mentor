@@ -1,0 +1,26 @@
+export const overviewLabels = {
+  he: {
+    title: "ניהול משתמשים",
+    intro: "תמונת שימוש תפעולית: התחברויות, פעילות מתועדת וכמות שמורים.",
+    users: "משתמשים", recent: "פעילות מתועדת ב־30 ימים", saved: "תמהילים שמורים בסך הכול", review: "חשבונות לבדיקה",
+    search: "חיפוש לפי אימייל", filter: "סינון משתמשים", all: "כל המשתמשים", emptySaved: "ללא תמהילים שמורים",
+    email: "משתמש", joined: "תאריך הצטרפות", signIn: "התחברות אחרונה", activity: "פעילות מתועדת אחרונה", lastSave: "עדכון שמור אחרון", count: "מספר שמורים", status: "מצב פעילות", reviewColumn: "בדיקת חשבון",
+    statuses: { recent: "תועדה פעילות ב־30 ימים", older: "תועדה פעילות לפני 31–90 ימים", quiet: "מעל 90 ימים ללא פעילות מתועדת", unknown: "אין פעילות מתועדת" },
+    you: "החשבון שלך", unknown: "לא תועד", days: "ימים מאז פעילות מתועדת", reviewBadge: "כדאי לבדוק", noResults: "אין משתמשים המתאימים לסינון.",
+    activityHelp: "פעילות מתועדת היא המועד המאוחר מבין התחברות לחשבון ועדכון של תמהיל שעדיין שמור. גלישה בחשבון שכבר מחובר, חישובים ללא שמירה ומחיקות אינם נמדדים כאן. זה אינו חיווי אונליין או הוכחה לחוסר שימוש.",
+    reviewHelp: "לבדיקה: חשבון בן 180 ימים לפחות, ללא שמורים וללא פעילות מתועדת ב־180 הימים האחרונים; החשבון שלך מוחרג. זו רשימת עזר לבדיקה פרטנית בלבד. אין מחיקה אוטומטית, ויש לברר שימוש, לפנות למשתמש ולפעול לפי מדיניות השמירה לפני החלטה.",
+    loaded: "הנתונים נטענו ב־", shown: "משתמשים בתצוגה", table: "נתוני שימוש לפי משתמש", loadError: "לא ניתן לטעון כרגע נתוני שימוש מלאים. נסה לרענן; אין להסיק מכך שאין משתמשים או שמורים.",
+  },
+  en: {
+    title: "User administration",
+    intro: "Operational usage: sign-ins, recorded activity and saved-scenario counts.",
+    users: "Users", recent: "Recorded activity in 30 days", saved: "Total saved scenarios", review: "Accounts to review",
+    search: "Search by email", filter: "Filter users", all: "All users", emptySaved: "No saved scenarios",
+    email: "User", joined: "Joined", signIn: "Last sign-in", activity: "Last recorded activity", lastSave: "Last saved update", count: "Saved count", status: "Activity status", reviewColumn: "Account review",
+    statuses: { recent: "Activity recorded within 30 days", older: "Activity recorded 31–90 days ago", quiet: "No recorded activity for over 90 days", unknown: "No recorded activity" },
+    you: "Your account", unknown: "Not recorded", days: "days since recorded activity", reviewBadge: "Review suggested", noResults: "No users match these filters.",
+    activityHelp: "Recorded activity is the later of account sign-in and an update to a scenario that is still saved. Visits with an existing session, unsaved calculations and deletions are not measured here. This is not online presence or proof of inactivity.",
+    reviewHelp: "Review: accounts at least 180 days old, with no saved scenarios and no recorded activity within 180 days; your account is excluded. This is only a prompt for individual review. There is no automatic deletion. Investigate use, contact the user and follow the retention policy before deciding.",
+    loaded: "Data loaded at ", shown: "users shown", table: "Usage by user", loadError: "Complete usage data could not be loaded. Refresh to retry; this does not mean there are no users or saved scenarios.",
+  },
+} as const;
