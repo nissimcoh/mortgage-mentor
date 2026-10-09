@@ -3,29 +3,30 @@ interface BrandMarkProps {
 }
 
 /**
- * Minimal inline house glyph on a rounded square — no image assets, no icon
- * package, just a hand-authored SVG so the header reads as a real product
- * mark rather than plain text. Purely decorative (aria-hidden); the
- * wordmark next to it carries the accessible name.
+ * House + M monogram. Keep geometry in sync with public/brand/mortgagementor.svg.
+ * Decorative: the adjacent wordmark supplies the accessible name.
+ * Inline paths stay sharp at small sizes and print without another image request.
  */
 export default function BrandMark({ className }: BrandMarkProps) {
   return (
     <svg
-      viewBox="0 0 28 28"
-      width="28"
-      height="28"
+      viewBox="0 0 512 512"
+      width="32"
+      height="32"
       aria-hidden="true"
+      focusable="false"
       className={className}
     >
-      <rect width="28" height="28" rx="8" fill="#0f172a" />
+      <rect width="512" height="512" rx="112" fill="#102f40" />
       <path
-        d="M7 14.5 14 8l7 6.5M9.5 13v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1v-7"
+        d="M96 232 256 100 416 232M136 224v172h240V224"
         fill="none"
-        stroke="#f8fafc"
-        strokeWidth="1.8"
+        stroke="#f5faf8"
+        strokeWidth="28"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+      <path d="M200 344v-96l56 52 56-52v96" fill="none" stroke="#88dfc0" strokeWidth="28" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

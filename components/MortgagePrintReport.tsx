@@ -4,6 +4,7 @@ import { formatDateOnly, formatDateTimeIsrael } from "@/lib/forms/dates";
 import type { MortgageTrackInput, ScenarioSummary } from "@/lib/mortgage/types";
 import type { CalculatorMarketData } from "@/lib/market-data/build-calculator-market-data";
 import { getForecastFinancingCost } from "@/lib/mortgage/result-presentation";
+import BrandMark from "./BrandMark";
 
 export interface MortgagePrintReportProps {
   inputs: MortgageTrackInput[];
@@ -34,7 +35,7 @@ export default function MortgagePrintReport({ inputs, summary, marketData, local
   ];
   return (
     <article className="mortgage-print-root" dir={locale === "he" ? "rtl" : "ltr"} lang={locale}>
-      <header><strong>MortgageMentor</strong><h1>{labels.pdfTitle}</h1>
+      <header><span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><BrandMark /><strong>MortgageMentor</strong></span><h1>{labels.pdfTitle}</h1>
         <p>{labels.pdfCreated}: {formatDateTimeIsrael(generatedAt, locale)}</p>
       </header>
       <dl className="mortgage-print-metrics">{metrics.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
