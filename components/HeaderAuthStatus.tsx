@@ -115,7 +115,7 @@ export default function HeaderAuthStatus({
     );
   }
 
-  return <AccountMenu user={user} locale={locale} labels={labels} />;
+  return <AccountMenu key={user.id} user={user} locale={locale} labels={labels} />;
 }
 
 interface AccountMenuProps {
@@ -126,19 +126,21 @@ interface AccountMenuProps {
 
 function AccountMenu({ user, locale, labels }: AccountMenuProps) {
   const [open, setOpen] = useState(false);
-  const [adminForUser, setAdminForUser] = useState<{ user: User; allowed: boolean } | null>(null);
+  const [adminAccess, setAdminAccess] = useState<"loading" | "allowed" | "denied" | "error">("loading");
+  const [adminRetry, setAdminRetry] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Presentation only: the admin page independently authorizes every request.
-    // Resolve on first menu opening, not on every page load or keystroke.
-    if (!open || adminForUser?.user === user) return;
+    // Prefetch as soon as the signed-in account mounts, before menu opening.
+    // AccountMenu is keyed by user ID: token refreshes keep this result, while
+    // switching accounts immediately discards the previous account's access.
     let active = true;
     createClient().rpc("is_current_user_admin").then(({ data, error }) => {
-      if (active && !error) setAdminForUser({ user, allowed: data === true });
-    }, () => { /* Retry next time the menu opens. */ });
+      if (active) setAdminAccess(error ? "error" : data === true ? "allowed" : "denied");
+    }, () => { if (active) setAdminAccess("error"); });
     return () => { active = false; };
-  }, [open, user, adminForUser]);
+  }, [adminRetry]);
 
   useEffect(() => {
     if (!open) return;
@@ -220,7 +222,16 @@ function AccountMenu({ user, locale, labels }: AccountMenuProps) {
             {labels.savedScenarios}
           </Link>
 
-          {adminForUser?.user === user && adminForUser.allowed && <Link
+          {adminAccess === "loading" && <span role="menuitem" aria-disabled="true"
+            className="block px-4 py-2.5 text-sm text-slate-500">
+            {locale === "he" ? "בודק הרשאות…" : "Checking access…"}
+          </span>}
+          {adminAccess === "error" && <button type="button" role="menuitem"
+            onClick={() => { setAdminAccess("loading"); setAdminRetry(value => value + 1); }}
+            className="block w-full px-4 py-2.5 text-start text-sm text-slate-600 transition hover:bg-slate-50">
+            {locale === "he" ? "בדיקת הרשאות מחדש" : "Retry access check"}
+          </button>}
+          {adminAccess === "allowed" && <Link
             role="menuitem" href={`/${locale}/admin`} onClick={() => setOpen(false)}
             className="block px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50">
             {labels.admin}

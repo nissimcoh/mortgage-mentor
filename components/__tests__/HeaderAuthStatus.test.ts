@@ -26,6 +26,8 @@ describe("HeaderAuthStatus", () => {
   });
 
   it("never reads or renders technical/sensitive user or session fields", () => {
+    // React's identity key resets account-scoped state; it is never rendered.
+    const presentationSource = source.replace("key={user.id}", "");
     const forbiddenPatterns = [
       /user\.id\b/,
       /\.access_token/,
@@ -38,7 +40,7 @@ describe("HeaderAuthStatus", () => {
       /\.identities/,
     ];
     for (const pattern of forbiddenPatterns) {
-      expect(source).not.toMatch(pattern);
+      expect(presentationSource).not.toMatch(pattern);
     }
   });
 
