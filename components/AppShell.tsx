@@ -5,6 +5,7 @@ import type { Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/app/[locale]/dictionaries";
 import AppHeader from "./AppHeader";
 import BottomNav from "./BottomNav";
+import SiteFooter from "./SiteFooter";
 
 interface AppShellProps {
   locale: Locale;
@@ -29,7 +30,7 @@ export default function AppShell({
   return (
     <>
       <AppHeader locale={locale} labels={nav} accountMenu={accountMenu} />
-      <div className="flex-1 pb-20 md:pb-0">{children}</div>
+      <div className="flex-1 pb-20 md:pb-0">{children}<SiteFooter locale={locale} /></div>
       <BottomNav locale={locale} labels={nav} />
     </>
   );

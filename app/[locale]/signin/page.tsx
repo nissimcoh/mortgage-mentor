@@ -5,6 +5,7 @@ import { isValidLocale } from "@/lib/i18n/config";
 import { sanitizeNextPath } from "@/lib/auth/redirect-target";
 import { createClient } from "@/lib/supabase/server";
 import GoogleSignInButton from "@/components/GoogleSignInButton";
+import LegalNotice from "@/components/LegalNotice";
 import { getDictionary } from "../dictionaries";
 
 export async function generateMetadata({
@@ -68,6 +69,7 @@ export default async function SignInPage({
           </p>
         )}
 
+        <LegalNotice locale={locale} kind="signin" />
         <GoogleSignInButton locale={locale} next={next} labels={dict.signinPage} />
         </div>
       </section>

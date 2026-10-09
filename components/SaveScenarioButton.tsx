@@ -8,6 +8,7 @@ import type { Locale } from "@/lib/i18n/config";
 import { createScenario } from "@/lib/scenarios/actions";
 import type { TrackDraft } from "@/lib/mortgage/scenario-form";
 import { createClient } from "@/lib/supabase/client";
+import LegalNotice from "./LegalNotice";
 
 type DialogStatus = "idle" | "open" | "saving" | "error";
 
@@ -128,10 +129,11 @@ export default function SaveScenarioButton({
           aria-label={labels.title}
           className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 px-4 pb-4 sm:items-center sm:pb-0"
         >
-          <div className="glass-form glass-panel w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-lg">
+          <div className="glass-form glass-panel max-h-[85dvh] w-full max-w-sm overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-lg">
             <h2 className="mb-3 text-lg font-bold text-slate-900">
               {labels.title}
             </h2>
+            <LegalNotice locale={locale} kind="save" />
             <label
               htmlFor="save-scenario-name"
               className="mb-1 block text-sm font-medium text-slate-700"

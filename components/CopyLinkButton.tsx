@@ -10,6 +10,7 @@ interface CopyLinkButtonProps {
   successText: string;
   fallbackText: string;
   getUrl?: () => string;
+  privacyNotice?: string;
 }
 
 /** Copies the current page URL. Generic on purpose — used by both the
@@ -20,6 +21,7 @@ export default function CopyLinkButton({
   successText,
   fallbackText,
   getUrl,
+  privacyNotice,
 }: CopyLinkButtonProps) {
   const [status, setStatus] = useState<CopyLinkStatus>("idle");
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -42,6 +44,7 @@ export default function CopyLinkButton({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
+      {privacyNotice && <p className="w-full max-w-xl text-xs leading-5 text-slate-600">{privacyNotice}</p>}
       <button
         type="button"
         onClick={handleCopy}

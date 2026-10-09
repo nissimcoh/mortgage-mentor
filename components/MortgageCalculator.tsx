@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { Locale } from "@/lib/i18n/config";
+import { legalLabels } from "@/lib/legal/labels";
 import { formatDateOnly, formatDateTimeIsrael } from "@/lib/forms/dates";
 import { freshnessStatusText } from "@/lib/forms/freshness";
 import type { CalculatorMarketData } from "@/lib/market-data/build-calculator-market-data";
@@ -872,6 +873,7 @@ export default function MortgageCalculator({
                 />
               )}
               <CopyLinkButton
+                privacyNotice={legalLabels[locale].share}
                 buttonLabel={labels.copyScenarioLinkButton}
                 successText={labels.copyScenarioLinkSuccess}
                 fallbackText={labels.copyScenarioLinkFallback}
