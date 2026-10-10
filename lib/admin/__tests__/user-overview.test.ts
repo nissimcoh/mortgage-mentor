@@ -34,7 +34,7 @@ it("only suggests review for old empty accounts and excludes the current adminis
 });
 
 const usage = (id = "owner", savedCount = 0) => ({
-  ...user(id), saved_count: savedCount, last_save_at: savedCount ? ago(1) : null,
+  ...user(id), role: "user" as const, saved_count: savedCount, last_save_at: savedCount ? ago(1) : null,
 });
 const snapshot = (users = [usage()]) => ({
   users, total_users: users.length, total_saved: users.reduce((sum, row) => sum + row.saved_count, 0),
@@ -69,6 +69,7 @@ it.each([
   snapshot([{ ...usage(), last_save_at: ago(1) }]),
   snapshot([{ ...usage(), saved_count: 1 }]),
   { users: null, total_users: 0, total_saved: 0 },
+  snapshot([{ ...usage(), role: "superadmin" } as unknown as ReturnType<typeof usage>]),
   null,
 ])("rejects inconsistent or invalid snapshots instead of showing misleading totals (%#)", (data) => {
   expect(() => parseUsageSnapshot(data)).toThrow(/^ADMIN_/);

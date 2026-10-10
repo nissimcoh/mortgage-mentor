@@ -1,12 +1,12 @@
 "use server";
 
 /**
- * Admin-only Server Actions. Every action re-verifies admin access itself
- * via requireAdmin() (auth.getUser() first, then the database's own
- * is_current_user_admin() check) — never trusts that a request reaching
+ * Owner-only deletion Server Actions. Every action re-verifies ownership itself
+ * via requireOwner() (auth.getUser() first, then the database's own
+ * admin and owner checks) — never trusts that a request reaching
  * this file came from the admin UI. No service-role key is used anywhere:
- * both mutations below go through admin-only SECURITY DEFINER RPCs
- * (admin_delete_scenario / admin_delete_user) that re-check admin access
+ * both mutations below go through owner-only SECURITY DEFINER RPCs
+ * (admin_delete_scenario / admin_delete_user) that re-check ownership
  * again themselves, at the database layer, as the real enforcement
  * boundary.
  */
@@ -14,7 +14,7 @@
 import type { PostgrestError } from "@supabase/supabase-js";
 import { isUuidLike } from "../scenarios/payload";
 import type { AdminActionFailure } from "./contract";
-import { requireAdmin } from "./guard";
+import { requireOwner } from "./guard";
 
 function logAdminError(context: string, error: PostgrestError): void {
   console.error(`[admin] ${context}:`, {
@@ -27,7 +27,7 @@ export type AdminDeleteScenarioResult = { ok: true } | AdminActionFailure;
 export async function adminDeleteScenario(
   id: unknown,
 ): Promise<AdminDeleteScenarioResult> {
-  const guard = await requireAdmin();
+  const guard = await requireOwner();
   if (!guard.ok) return guard;
 
   if (!isUuidLike(id)) return { ok: false, error: "invalid-id" };
@@ -47,7 +47,7 @@ export type AdminDeleteUserResult = { ok: true } | AdminActionFailure;
 export async function adminDeleteUser(
   id: unknown,
 ): Promise<AdminDeleteUserResult> {
-  const guard = await requireAdmin();
+  const guard = await requireOwner();
   if (!guard.ok) return guard;
 
   if (!isUuidLike(id)) return { ok: false, error: "invalid-id" };

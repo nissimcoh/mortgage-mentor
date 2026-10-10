@@ -67,11 +67,11 @@ function bodyOf(name: "adminDeleteScenario" | "adminDeleteUser"): string {
   return actionsSource.slice(start, end);
 }
 
-describe("lib/admin/actions.ts — both actions re-verify admin access themselves", () => {
+describe("lib/admin/actions.ts — both deletion actions require ownership", () => {
   for (const name of ["adminDeleteScenario", "adminDeleteUser"] as const) {
-    it(`${name} calls requireAdmin() before anything else, and returns its failure directly`, () => {
+    it(`${name} calls requireOwner() before anything else, and returns its failure directly`, () => {
       const body = bodyOf(name);
-      const guardIndex = body.indexOf("requireAdmin()");
+      const guardIndex = body.indexOf("requireOwner()");
       const rpcIndex = body.indexOf(".rpc(");
       expect(guardIndex).toBeGreaterThan(-1);
       expect(rpcIndex).toBeGreaterThan(-1);

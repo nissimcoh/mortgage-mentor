@@ -171,7 +171,11 @@ function AccountMenu({ user, locale, labels }: AccountMenuProps) {
     <div ref={containerRef} className="relative">
       <button
         type="button"
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => {
+          // Refresh presentation permissions when opening after a role change.
+          if (!open) setAdminRetry(value => value + 1);
+          setOpen(value => !value);
+        }}
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label={labels.menuLabel}

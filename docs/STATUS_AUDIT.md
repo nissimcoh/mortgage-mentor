@@ -625,3 +625,46 @@ errors and seven pre-existing warnings. Production build includes TypeScript
 validation. Automated route checks cover all 27 routes. Live database
 permission/snapshot checks passed. No authenticated browser session, manual
 visual audit or on-device performance measurement was performed.
+
+
+## October 10: roles and owner-controlled administrator assignment
+
+Replaced runtime email allowlisting with protected account-ID role assignments.
+Existing confirmed administrator was preserved as the sole Owner using the old
+rule once during handover; the new migration contains no account email or ID.
+Missing assignments default to User, including newly registered accounts.
+Administrator gets the directory/aggregate usage screen; only Owner can grant
+or revoke administrator access. The owner row has no role control and database
+RPCs also reject changes to it. No real user was granted administrator access.
+
+The usage page now displays roles in Hebrew/English. Owner-only controls select
+User or Administrator, explain the access being granted, require confirmation,
+handle errors and refresh on success. The recipient must already be registered.
+Assignments validate the expected previous role to prevent stale overwrites,
+serialize concurrent changes and record actor/target/old/new role in a protected
+audit table. Role/audit tables deny direct authenticated and anonymous access;
+server and RPC checks both independently enforce ownership. Authorization reads
+current database assignments, so revocation needs no JWT role refresh. The
+account menu rechecks its presentation result when opened while retaining the
+prefetched result during that request.
+
+Preserved owner-only legacy scenario listing/deletion and cross-owner scenario
+RLS access. Delegated administrators cannot use those powers or change roles.
+Ordinary scenario ownership policies remain unchanged. No deletion controls were
+added, no existing account/scenario was deleted, and Owner transfer is not
+exposed by this UI. Details: docs/ADMIN_ROLES.md.
+
+Migration 20261010130000_dynamic_user_roles.sql passed a rolled-back live test
+before application; dry-run identified only that pending migration. Supabase
+CLI applied it successfully. Executable permission tests are retained in
+supabase/tests/dynamic_user_roles.sql and use disposable accounts/scenarios with
+rollback. Checks cover grant/revoke, default role, owner protection, invalid and
+stale assignments, denied direct writes, metadata/email spoofing, email changes,
+anonymous/non-owner denial, delegated-admin financial privacy and audit records.
+Only boolean verification results were returned, not account or scenario lists.
+
+Validation: 624 tests passed, one optional network test skipped; lint has zero
+errors and seven pre-existing warnings. Production build/TypeScript and all
+27 automated route checks passed. Server-render tests verify role controls for
+Owner and their absence for Administrator. No authenticated browser session or
+manual on-device interaction test was performed.

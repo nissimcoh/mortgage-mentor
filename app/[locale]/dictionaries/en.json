@@ -1,9 +1,9 @@
 {
   "adminPage": {
     "title": "Admin",
-    "intro": "View users and saved mixes. Site owner access only. Deletion actions are not available here.",
+    "intro": "Authorized administrators can view usage metadata. Only the owner can manage roles. Deletion controls are not available here.",
     "notAuthorizedTitle": "Access denied",
-    "notAuthorizedBody": "This page is only available to the site owner.",
+    "notAuthorizedBody": "This page is for authorized administrators only.",
     "loadErrorMessage": "We couldn't load the admin data right now. Please try again shortly.",
     "usersSectionTitle": "Registered users",
     "usersCountLabel": "Total users",

@@ -12,12 +12,10 @@ export type AdminGuardResult =
 
 /**
  * Verifies the caller is signed in AND holds admin access, via the
- * database's own is_current_user_admin() function (see
- * supabase/migrations/20260916120000_admin_access.sql) — the fixed,
- * version-controlled admin-email allowlist lives there, not duplicated
- * here or in an environment variable. Never uses a service-role key:
+ * database's own is_current_user_admin() function. Roles are stored by
+ * account ID in the protected user_roles table. Never uses a service-role key:
  * this runs the same RLS-bound client every other Server Action uses,
- * and is_current_user_admin() only reads the caller's own JWT.
+ * and authorization is evaluated from current database assignments.
  *
  * Callers get back the already-authenticated Supabase client so a
  * successful guard can be followed directly by an .rpc()/.from() call
@@ -44,4 +42,12 @@ export async function requireAdmin(): Promise<AdminGuardResult> {
   if (isAdmin !== true) return { ok: false, error: "forbidden" };
 
   return { ok: true, supabase, user };
+}
+
+export async function requireOwner(): Promise<AdminGuardResult> {
+  const guard = await requireAdmin();
+  if (!guard.ok) return guard;
+  const { data, error } = await guard.supabase.rpc("is_current_user_owner");
+  if (error || data !== true) return { ok: false, error: "forbidden" };
+  return guard;
 }

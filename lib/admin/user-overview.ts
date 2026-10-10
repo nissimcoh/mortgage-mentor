@@ -1,3 +1,5 @@
+import type { UserRole } from "./roles";
+
 export interface AdminUserMetadata {
   id: string;
   email: string | null;
@@ -11,6 +13,7 @@ export interface ScenarioActivityMetadata {
 }
 
 export interface AdminUsageMetadata extends AdminUserMetadata {
+  role: UserRole;
   saved_count: number;
   last_save_at: string | null;
 }
@@ -18,6 +21,7 @@ export interface AdminUsageMetadata extends AdminUserMetadata {
 export type ActivityStatus = "recent" | "older" | "quiet" | "unknown";
 
 export interface AdminUserOverview {
+  role: UserRole;
   id: string;
   email: string | null;
   joinedAt: string;
@@ -58,6 +62,7 @@ export function buildUserOverview(
   }
   return buildUserOverviewFromAggregates(users.map(user => ({
     ...user,
+    role: "user",
     saved_count: activity.get(user.id)?.count ?? 0,
     last_save_at: activity.get(user.id)?.lastSave ?? null,
   })), now, currentUserId);
@@ -85,6 +90,7 @@ export function buildUserOverviewFromAggregates(
       joined !== null && now - joined >= 180 * DAY &&
       (age === null || age >= 180 * DAY);
     return {
+      role: user.role,
       id: user.id, email: user.email, joinedAt: user.created_at,
       lastSignInAt: signIn === null ? null : user.last_sign_in_at,
       lastSaveAt, lastRecordedActivityAt, savedCount, daysSinceActivity,

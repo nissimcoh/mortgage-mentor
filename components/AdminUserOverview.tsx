@@ -5,11 +5,12 @@ import type { Locale } from "@/lib/i18n/config";
 import type { AdminUserOverview as UserOverview } from "@/lib/admin/user-overview";
 import { overviewLabels } from "@/lib/admin/overview-labels";
 import { formatDateOnly, formatDateTimeIsrael } from "@/lib/forms/dates";
+import AdminUserRoleControl from "./AdminUserRoleControl";
 
 type Filter = "all" | "recent" | "empty" | "review";
 
-export default function AdminUserOverview({ users, locale, loadedAt }: {
-  users: UserOverview[]; locale: Locale; loadedAt: string;
+export default function AdminUserOverview({ users, locale, loadedAt, canManageRoles = false }: {
+  users: UserOverview[]; locale: Locale; loadedAt: string; canManageRoles?: boolean;
 }) {
   const text = overviewLabels[locale];
   const [search, setSearch] = useState("");
@@ -38,6 +39,7 @@ export default function AdminUserOverview({ users, locale, loadedAt }: {
       </dl>
       <div className="space-y-2 rounded-2xl border border-slate-200 bg-white/70 p-4 text-sm leading-6 text-slate-600">
         <p>{text.activityHelp}</p>
+        <p>{text.roleHelp}</p>
         <p>{text.reviewHelp}</p>
         <p>{text.loaded}{date(loadedAt)}</p>
       </div>
@@ -63,11 +65,15 @@ export default function AdminUserOverview({ users, locale, loadedAt }: {
             <table className="w-full text-start text-sm">
               <caption className="sr-only">{text.table}</caption>
               <thead><tr className="border-b border-slate-200 text-slate-600">
-                {[text.email, text.joined, text.signIn, text.lastSave, text.count, text.status, text.reviewColumn].map((header) => <th key={header} scope="col" className="whitespace-nowrap px-3 py-3 text-start font-medium">{header}</th>)}
+                {[text.email, text.role, text.joined, text.signIn, text.lastSave, text.count, text.status, text.reviewColumn].map((header) => <th key={header} scope="col" className="whitespace-nowrap px-3 py-3 text-start font-medium">{header}</th>)}
               </tr></thead>
               <tbody>{visible.map((user) => (
                 <tr key={user.id} className="border-b border-slate-100 align-top">
                   <th scope="row" className="px-3 py-4 text-start font-medium"><span dir="ltr">{user.email ?? "—"}</span>{user.isCurrentUser && <span className="mt-1 block text-xs text-slate-500">{text.you}</span>}</th>
+                  <td className="px-3 py-4">{canManageRoles && user.role !== "owner"
+                    ? <AdminUserRoleControl key={`${user.id}:${user.role}`} id={user.id} email={user.email} role={user.role} locale={locale} />
+                    : <span className="whitespace-nowrap rounded-lg bg-slate-100 px-2 py-1 text-xs">{text.roles[user.role]}</span>}
+                  </td>
                   <td className="whitespace-nowrap px-3 py-4">{formatDateOnly(user.joinedAt, locale)}</td>
                   <td className="whitespace-nowrap px-3 py-4">{date(user.lastSignInAt)}</td>
                   <td className="whitespace-nowrap px-3 py-4">{date(user.lastSaveAt)}</td>

@@ -1,6 +1,7 @@
 import "server-only";
 import type { createClient } from "@/lib/supabase/server";
 import { buildUserOverviewFromAggregates, type AdminUsageMetadata } from "./user-overview";
+import { isUserRole } from "./roles";
 
 type Client = Awaited<ReturnType<typeof createClient>>;
 
@@ -28,7 +29,7 @@ export function parseUsageSnapshot(value: unknown): AdminUsageMetadata[] {
   const users = snapshot.users.map((value: unknown): AdminUsageMetadata => {
     if (!value || typeof value !== "object") throw new AdminOverviewError("ADMIN_ROW");
     const row = value as Record<string, unknown>;
-    if (typeof row.id !== "string" || !row.id || ids.has(row.id) ||
+    if (!isUserRole(row.role) || typeof row.id !== "string" || !row.id || ids.has(row.id) ||
         !(row.email === null || typeof row.email === "string") || !validDate(row.created_at) ||
         !(row.last_sign_in_at === null || validDate(row.last_sign_in_at)) || !validCount(row.saved_count) ||
         !(row.last_save_at === null || validDate(row.last_save_at)) ||
@@ -36,7 +37,7 @@ export function parseUsageSnapshot(value: unknown): AdminUsageMetadata[] {
       throw new AdminOverviewError("ADMIN_ROW");
     }
     ids.add(row.id);
-    return { id: row.id, email: row.email, created_at: row.created_at, last_sign_in_at: row.last_sign_in_at,
+    return { id: row.id, role: row.role, email: row.email, created_at: row.created_at, last_sign_in_at: row.last_sign_in_at,
       saved_count: row.saved_count, last_save_at: row.last_save_at };
   });
   if (users.length !== snapshot.total_users || users.reduce((sum, user) => sum + user.saved_count, 0) !== snapshot.total_saved) {

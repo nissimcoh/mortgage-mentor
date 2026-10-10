@@ -53,7 +53,8 @@ export default async function AdminPage({ params }: { params: Promise<{ locale: 
       <p className="mt-2 mb-6 text-sm leading-6 text-slate-600">{text.intro}</p>
       {users === null ? (
         <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{text.loadError}</p>
-      ) : <AdminUserOverview users={users} locale={locale} loadedAt={loadedAt} />}
+      ) : <AdminUserOverview users={users} locale={locale} loadedAt={loadedAt}
+        canManageRoles={users.some(user => user.id === guard.user.id && user.role === "owner")} />}
     </main>
   );
 }

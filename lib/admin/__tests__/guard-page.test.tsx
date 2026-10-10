@@ -2,14 +2,14 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import he from "../../../app/[locale]/dictionaries/he.json";
 import { overviewLabels } from "../overview-labels";
-import { requireAdmin } from "../guard";
+import { requireAdmin, requireOwner } from "../guard";
 import AdminPage from "../../../app/[locale]/admin/page";
 
 const mocks = vi.hoisted(() => ({ getUser: vi.fn(), rpc: vi.fn() }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => ({ auth: { getUser: mocks.getUser }, rpc: mocks.rpc }) }));
 vi.mock("@/app/[locale]/dictionaries", () => ({ getDictionary: async () => he }));
-vi.mock("next/navigation", () => ({ redirect: (url: string) => { throw new Error(`redirect:${url}`); }, notFound: () => { throw new Error("not-found"); } }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }), redirect: (url: string) => { throw new Error(`redirect:${url}`); }, notFound: () => { throw new Error("not-found"); } }));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -40,7 +40,7 @@ it("shows only aggregate usage, never scenario names, financial data or deletion
   mocks.rpc.mockImplementation((name: string) => {
     if (name === "is_current_user_admin") return Promise.resolve({ data: true, error: null });
     // Extra unexpected fields must never propagate to the rendered overview.
-    return Promise.resolve({ data: { users: [{ id: "synthetic-owner", email: "owner@example.test", created_at: "2026-01-01T00:00:00Z", last_sign_in_at: "2026-10-08T00:00:00Z", saved_count: 1, last_save_at: "2026-10-07T00:00:00Z", name: "PRIVATE_SCENARIO_NAME", input_payload: { private: "SECRET_AMOUNT" } }], total_users: 1, total_saved: 1 }, error: null });
+    return Promise.resolve({ data: { users: [{ id: "synthetic-owner", email: "owner@example.test", created_at: "2026-01-01T00:00:00Z", last_sign_in_at: "2026-10-08T00:00:00Z", role: "admin", saved_count: 1, last_save_at: "2026-10-07T00:00:00Z", name: "PRIVATE_SCENARIO_NAME", input_payload: { private: "SECRET_AMOUNT" } }], total_users: 1, total_saved: 1 }, error: null });
   });
   const html = renderToStaticMarkup(await AdminPage({ params: Promise.resolve({ locale: "he" }) }));
   expect(mocks.rpc.mock.calls).toEqual([["is_current_user_admin"], ["admin_usage_snapshot"]]);
@@ -62,4 +62,28 @@ it("does not describe a database failure as zero users or zero saved scenarios",
     expect(html).not.toContain(overviewLabels.he.noResults);
     expect(html).not.toContain("SYNTHETIC_ERROR");
   } finally { logging.mockRestore(); }
+});
+
+it.each([false, null, "true"])("does not treat an administrator as an owner (%s)", async (data) => {
+  mocks.rpc.mockImplementation((name: string) => Promise.resolve({ data: name === "is_current_user_admin" ? true : data, error: null }));
+  expect(await requireOwner()).toEqual({ ok: false, error: "forbidden" });
+});
+
+it("shows role controls only to the owner and protects the owner's row", async () => {
+  const account = (id: string, role: string) => ({ id, role, email: `${id}@example.test`, created_at: "2026-01-01T00:00:00Z", last_sign_in_at: null, saved_count: 0, last_save_at: null });
+  mocks.rpc.mockImplementation((name: string) => Promise.resolve({ data: name === "is_current_user_admin" ? true : {
+    users: [account("synthetic-owner", "owner"), account("other", "user")], total_users: 2, total_saved: 0,
+  }, error: null }));
+  const ownerHtml = renderToStaticMarkup(await AdminPage({ params: Promise.resolve({ locale: "he" }) }));
+  expect(ownerHtml).toContain(overviewLabels.he.saveRole);
+  expect(ownerHtml.match(/<button/g)).toHaveLength(1);
+  expect(ownerHtml).toContain(overviewLabels.he.roles.owner);
+
+  mocks.getUser.mockResolvedValue({ data: { user: { id: "synthetic-admin" } } });
+  mocks.rpc.mockImplementation((name: string) => Promise.resolve({ data: name === "is_current_user_admin" ? true : {
+    users: [account("synthetic-admin", "admin"), account("other", "user")], total_users: 2, total_saved: 0,
+  }, error: null }));
+  const adminHtml = renderToStaticMarkup(await AdminPage({ params: Promise.resolve({ locale: "he" }) }));
+  expect(adminHtml).not.toContain("<button");
+  expect(adminHtml).toContain(overviewLabels.he.roles.admin);
 });
