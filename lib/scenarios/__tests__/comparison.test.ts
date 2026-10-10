@@ -4,7 +4,7 @@ import { comparisonWarnings, resolveComparisonSelection, toComparisonScenario, t
 
 function row(): ComparisonRow {
   return {
-    id: "11111111-1111-4111-8111-111111111111", name: "Synthetic comparison", calculated_at: "2026-10-06T12:00:00Z",
+    id: "11111111-1111-4111-8111-111111111111", name: "Synthetic comparison", calculated_at: "2026-10-06T12:00:00Z", calculator_version: "1.1.0",
     input_payload: { schemaVersion: 1, tracks: [
       createTrackDraft({ amount: "100000", years: "15", ratePercent: "3" }),
       { ...createTrackDraft({ trackType: "variableLinked", amount: "300000", years: "20", currentRatePercent: "3", resetPeriodMonths: "60", forecastMode: "official" }), id: "linked-track" },

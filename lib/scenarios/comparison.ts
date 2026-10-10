@@ -15,12 +15,15 @@ export interface ComparisonScenario {
   fixedShare: number;
   forecastSignature: string | null;
   customForecast: boolean;
+  /** Verified historical forecast payments, one per month; null if unavailable. */
+  payments: number[] | null;
 }
 
 export interface ComparisonRow {
   id: string;
   name: string;
   calculated_at: string;
+  calculator_version: string;
   input_payload: unknown;
   result_snapshot: unknown;
   market_references: unknown;
@@ -65,6 +68,7 @@ export function toComparisonScenario(row: ComparisonRow): ComparisonScenario | n
     fixedShare: share(["fixedUnlinked"]),
     forecastSignature,
     customForecast: forecastTracks.some(track => track.forecastMode !== "official"),
+    payments: null,
   };
 }
 

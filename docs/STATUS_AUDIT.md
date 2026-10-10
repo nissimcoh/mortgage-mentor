@@ -668,3 +668,39 @@ errors and seven pre-existing warnings. Production build/TypeScript and all
 27 automated route checks passed. Server-render tests verify role controls for
 Owner and their absence for Administrator. No authenticated browser session or
 manual on-device interaction test was performed.
+
+## October 10: monthly and cumulative payment comparison charts
+
+Added two synchronized charts above the saved comparison table: forecast
+monthly payments and cumulative payments. Two or three selected mixes retain
+the same numbered colors in both charts and the table; dash patterns also
+distinguish the lines. A shared keyboard-accessible month slider and pointer
+selection compare all mixes at the same month. Both charts use the longest
+selected term. After a shorter mix ends, its monthly payments are zero and its
+cumulative total stays flat. Cumulative sums use integer agorot.
+
+Saved rows contain summary metrics, not monthly schedules. The server therefore
+reconstructs schedules with the existing engine using the recorded curve IDs,
+Makam anchor IDs and BOI rate. It never substitutes the latest forecast or BOI
+rate for saved context. Only the current calculator methodology is supported;
+all saved payment metrics, maximum-payment month and cumulative final total
+must match to displayed precision before a chart is shown. Missing/revised
+historical data or an old methodology leaves that mix's line unavailable with
+an explanation and a link to recalculate/save. Its saved summary remains in
+the table. Market requests are batched; fixed-only lists need no market fetch.
+Only verified monthly payment arrays are sent to the browser, without raw
+drafts, full schedules or market curves. Authenticated user filtering and RLS
+remain unchanged. No database migration or saved-row update is needed.
+
+Hebrew and English explain that forecast month one may differ from the table's
+first payment at the rates on the saved calculation date. Chart cards stack
+on narrower screens and sit side by side on wide screens.
+
+Validation: 643 tests passed, one optional network test skipped. Tests cover
+all six track types, stress/constant assumptions, unpinned drafts resolved from
+saved references, changed/missing historical data, methodology changes, cent
+precision, shorter-term completion, batched/failing sources, bilingual chart
+markup, accessible shared controls and retained summary tables. Lint has zero
+errors and seven pre-existing warnings. Production build/TypeScript and all
+27 automated route checks passed. No authenticated browser session or manual
+on-device interaction test was performed.

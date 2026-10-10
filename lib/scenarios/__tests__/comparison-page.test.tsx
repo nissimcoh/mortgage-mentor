@@ -8,6 +8,8 @@ import type { ComparisonScenario } from "../comparison";
 const mocks = vi.hoisted(() => ({ getUser: vi.fn(), from: vi.fn(), select: vi.fn(), eq: vi.fn(), order: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => ({ auth: { getUser: mocks.getUser }, from: mocks.from }) }));
 vi.mock("@/app/[locale]/dictionaries", () => ({ getDictionary: async () => he }));
+vi.mock("@/lib/market-data/sources/boi-mortgage-forecast", () => ({ getMortgageForecastData: async () => ({ curves: [] }) }));
+vi.mock("@/lib/market-data/sources/boi-makam", () => ({ getMakamAnchorData: async () => ({ snapshots: [] }) }));
 vi.mock("next/navigation", () => ({ redirect: (url: string) => { throw new Error(`redirect:${url}`); }, notFound: () => { throw new Error("not-found"); } }));
 
 beforeEach(() => {
@@ -44,7 +46,7 @@ it("renders two saved snapshots with differences, exposures and distinct selecti
   const base: ComparisonScenario = {
     id: "11111111-1111-4111-8111-111111111111", name: "Synthetic A", calculatedAt: "2026-10-06T12:00:00Z",
     result: { schemaVersion: 1, totalPrincipal: 180000, firstPayment: 1200, highestPayment: 1600, highestPaymentMonth: 180, forecastTotalPaid: 240000, totalInterestOrFinancingCost: 60000, stabilityScore: 50, trackCount: 1 },
-    years: 15, rateExposure: 1, cpiExposure: 0, fixedShare: 0, forecastSignature: "synthetic", customForecast: false,
+    years: 15, rateExposure: 1, cpiExposure: 0, fixedShare: 0, forecastSignature: "synthetic", customForecast: false, payments: null,
   };
   const second = { ...base, id: "22222222-2222-4222-8222-222222222222", name: "Synthetic B", result: { ...base.result, forecastTotalPaid: 230000 } };
   const html = renderToStaticMarkup(<SavedScenarioComparison scenarios={[base, second]} locale="he" labels={he.savedComparison} />);

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { isValidLocale } from "@/lib/i18n/config";
 import { createClient } from "@/lib/supabase/server";
-import { toComparisonScenario } from "@/lib/scenarios/comparison";
+import { loadComparisonScenarios } from "@/lib/scenarios/load-comparison";
 import SavedScenarioComparison from "@/components/SavedScenarioComparison";
 import { getDictionary } from "../dictionaries";
 
@@ -24,15 +24,13 @@ export default async function ComparePage({ params }: { params: Promise<{ locale
   const dict = await getDictionary(locale);
   const labels = dict.savedComparison;
   // Session-bound client and RLS remain the ownership boundary. No global cache
-  // and no market refetch/recalculation: compare historical saved snapshots.
+  // and no current-market substitution: charts reconstruct the pinned historical
+  // context and must match the saved snapshot before displaying any payments.
   const { data: rows, error } = await supabase.from("mortgage_scenarios")
-    .select("id, name, input_payload, result_snapshot, market_references, calculated_at")
+    .select("id, name, input_payload, result_snapshot, market_references, calculated_at, calculator_version")
     .eq("user_id", user.id)
     .order("updated_at", { ascending: false });
-  const scenarios = error ? [] : (rows ?? []).flatMap(row => {
-    const scenario = toComparisonScenario(row);
-    return scenario ? [scenario] : [];
-  });
+  const scenarios = error ? [] : await loadComparisonScenarios(rows ?? []);
   const hasInvalid = !error && scenarios.length < (rows?.length ?? 0);
 
   return (

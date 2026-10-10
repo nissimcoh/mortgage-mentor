@@ -6,6 +6,8 @@ import type { Dictionary } from "@/app/[locale]/dictionaries";
 import { formatDateTimeIsrael } from "@/lib/forms/dates";
 import type { Locale } from "@/lib/i18n/config";
 import { comparisonWarnings, resolveComparisonSelection, type ComparisonScenario } from "@/lib/scenarios/comparison";
+import { COMPARISON_LINE_STYLES } from "@/lib/scenarios/comparison-chart-data";
+import ComparisonPaymentCharts from "./ComparisonPaymentCharts";
 
 export default function SavedScenarioComparison({ scenarios, locale, labels }: {
   scenarios: ComparisonScenario[];
@@ -64,13 +66,14 @@ export default function SavedScenarioComparison({ scenarios, locale, labels }: {
           <p key={key} className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{labels[key]}</p>
         ))}
       </div>
+      <ComparisonPaymentCharts scenarios={selected} locale={locale} labels={labels} />
       <p id={`${id}-scroll`} className="mt-4 text-xs text-slate-500">{labels.scrollHint}</p>
       <div className="mt-2 overflow-x-auto rounded-2xl border border-slate-200 bg-white" role="region" aria-label={labels.title} tabIndex={0}>
         <table className="w-full min-w-[640px] text-sm" aria-describedby={`${id}-scroll ${id}-exposure`}>
           <caption className="sr-only">{labels.title}</caption>
           <thead className="bg-slate-50 text-start">
             <tr><th scope="col" className="sticky start-0 z-10 min-w-36 bg-slate-50 p-4 text-start">{labels.metric}</th>
-              {selected.map(item => <th scope="col" key={item.id} className="min-w-44 max-w-64 p-4 text-start"><Link className="break-words text-accent underline underline-offset-4" href={`/${locale}/saved/${item.id}`}>{item.name}</Link></th>)}
+              {selected.map((item, index) => <th scope="col" key={item.id} className="min-w-44 max-w-64 p-4 text-start"><Link className="break-words underline underline-offset-4" style={{ color: COMPARISON_LINE_STYLES[index].color }} href={`/${locale}/saved/${item.id}`}>{index + 1}. {item.name}</Link></th>)}
             </tr>
           </thead>
           <tbody>{metrics.map(metric => <tr key={metric.label} className="border-t border-slate-100">
