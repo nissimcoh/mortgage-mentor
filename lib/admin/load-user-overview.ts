@@ -1,58 +1,57 @@
 import "server-only";
 import type { createClient } from "@/lib/supabase/server";
-import { buildUserOverview, type AdminUserMetadata, type ScenarioActivityMetadata } from "./user-overview";
+import { buildUserOverviewFromAggregates, type AdminUsageMetadata } from "./user-overview";
 
 type Client = Awaited<ReturnType<typeof createClient>>;
-const PAGE_SIZE = 500;
 
-function parseRow(value: unknown, isUser: boolean): AdminUserMetadata | ScenarioActivityMetadata {
-  if (!value || typeof value !== "object") throw new Error("admin-metadata-invalid");
-  const row = value as Record<string, unknown>;
-  const validDate = (date: unknown): date is string => typeof date === "string" && Number.isFinite(Date.parse(date));
-  if (isUser && typeof row.id === "string" &&
-      (row.email === null || typeof row.email === "string") && validDate(row.created_at) &&
-      (row.last_sign_in_at === null || validDate(row.last_sign_in_at))) {
-    return { id: row.id, email: row.email, created_at: row.created_at, last_sign_in_at: row.last_sign_in_at };
+export class AdminOverviewError extends Error {
+  constructor(readonly diagnostic: string) {
+    super(diagnostic);
+    this.name = "AdminOverviewError";
   }
-  if (!isUser && typeof row.user_id === "string" && validDate(row.updated_at)) {
-    return { user_id: row.user_id, updated_at: row.updated_at };
-  }
-  throw new Error("admin-metadata-invalid");
 }
 
-/** Existing guarded RPCs, with an explicit column projection. No scenario
- * name, identifier, financial inputs or results leave the database here.
- * Page through every result; never report a truncated first page as totals.
- * Keep raw metadata server-side and pass only per-user aggregates to the UI.
+const validDate = (value: unknown): value is string => typeof value === "string" && Number.isFinite(Date.parse(value));
+const validCount = (value: unknown): value is number => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+
+/** Validate the database snapshot, not transport headers. An empty saved list
+ * never hides accounts. Reject partial/inconsistent data rather than show a
+ * false zero, and discard any unexpected fields before passing data to React.
  */
-async function readMetadata(client: Client, table: "users"): Promise<AdminUserMetadata[]>;
-async function readMetadata(client: Client, table: "scenarios"): Promise<ScenarioActivityMetadata[]>;
-async function readMetadata(client: Client, table: "users" | "scenarios") {
-  const rows: (AdminUserMetadata | ScenarioActivityMetadata)[] = [];
-  const isUsers = table === "users";
-  let expectedCount: number | null = null;
-  for (let offset = 0; ; offset += PAGE_SIZE) {
-    const { data, error, count } = await client
-      .rpc(isUsers ? "admin_list_users" : "admin_list_scenarios", {}, { count: "exact" })
-      .select(isUsers ? "id,email,created_at,last_sign_in_at" : "user_id,updated_at")
-      .order("id", { ascending: true })
-      .range(offset, offset + PAGE_SIZE - 1);
-    if (error || !Array.isArray(data) || typeof count !== "number" || !Number.isSafeInteger(count) || count < 0) {
-      throw new Error("admin-metadata-unavailable");
-    }
-    if (expectedCount !== null && expectedCount !== count) throw new Error("admin-metadata-changed");
-    expectedCount = count;
-    rows.push(...data.map((row: unknown) => parseRow(row, isUsers)));
-    if (rows.length === count) return rows;
-    if (rows.length > count) throw new Error("admin-metadata-incomplete");
-    // A server row cap smaller than requested must not silently undercount.
-    if (data.length !== PAGE_SIZE) throw new Error("admin-metadata-incomplete");
+export function parseUsageSnapshot(value: unknown): AdminUsageMetadata[] {
+  if (!value || typeof value !== "object") throw new AdminOverviewError("ADMIN_SHAPE");
+  const snapshot = value as Record<string, unknown>;
+  if (!Array.isArray(snapshot.users) || !validCount(snapshot.total_users) || !validCount(snapshot.total_saved)) {
+    throw new AdminOverviewError("ADMIN_SHAPE");
   }
+  const ids = new Set<string>();
+  const users = snapshot.users.map((value: unknown): AdminUsageMetadata => {
+    if (!value || typeof value !== "object") throw new AdminOverviewError("ADMIN_ROW");
+    const row = value as Record<string, unknown>;
+    if (typeof row.id !== "string" || !row.id || ids.has(row.id) ||
+        !(row.email === null || typeof row.email === "string") || !validDate(row.created_at) ||
+        !(row.last_sign_in_at === null || validDate(row.last_sign_in_at)) || !validCount(row.saved_count) ||
+        !(row.last_save_at === null || validDate(row.last_save_at)) ||
+        (row.saved_count === 0 && row.last_save_at !== null) || (row.saved_count > 0 && row.last_save_at === null)) {
+      throw new AdminOverviewError("ADMIN_ROW");
+    }
+    ids.add(row.id);
+    return { id: row.id, email: row.email, created_at: row.created_at, last_sign_in_at: row.last_sign_in_at,
+      saved_count: row.saved_count, last_save_at: row.last_save_at };
+  });
+  if (users.length !== snapshot.total_users || users.reduce((sum, user) => sum + user.saved_count, 0) !== snapshot.total_saved) {
+    throw new AdminOverviewError("ADMIN_TOTALS");
+  }
+  return users;
 }
 
 export async function loadUserOverview(client: Client, currentUserId: string, now = Date.now()) {
-  const [users, scenarios] = await Promise.all([
-    readMetadata(client, "users"), readMetadata(client, "scenarios"),
-  ]);
-  return buildUserOverview(users, scenarios, now, currentUserId);
+  const { data, error } = await client.rpc("admin_usage_snapshot");
+  if (error) {
+    const code = /^[A-Z0-9]{5,12}$/.test(error.code ?? "") ? error.code : "REQUEST";
+    throw new AdminOverviewError(`ADMIN_RPC_${code}`);
+  }
+  const users = parseUsageSnapshot(data);
+  if (!users.some(user => user.id === currentUserId)) throw new AdminOverviewError("ADMIN_ACCOUNT_MISSING");
+  return buildUserOverviewFromAggregates(users, now, currentUserId);
 }

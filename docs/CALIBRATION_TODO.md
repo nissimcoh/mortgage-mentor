@@ -12,7 +12,7 @@ from an official bank calculator/approval before we claim bank-level accuracy.
 | 1 | Variable government-bond, every 2 years | 24 | pending |
 | 2 | Variable government-bond, every 2.5 years | 30 | pending |
 | 3 | Variable government-bond, every 3 years | 36 | pending |
-| 4 | Variable government-bond, every 5 years | 60 | pending |
+| 4 | Variable government-bond, every 5 years | 60 | Leumi screenshot matched for 500k / 20y / 4.5%, October 5, 2026; full schedule and cross-bank differences pending |
 | 5 | Variable government-bond, every 7 or 10 years | 84 / 120 | pending |
 | 6 | Annual Makam | 12 | pending |
 | 7 | Fixed CPI-linked (implemented, uncalibrated) | — | pending |

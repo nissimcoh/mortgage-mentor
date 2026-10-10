@@ -32,7 +32,6 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
           <p className="mt-5 max-w-xl text-lg leading-8 text-slate-600">{t.heroSubtitle}</p>
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
             <Link href={`/${locale}/calculator`} className="glass-button rounded-2xl px-7 py-3.5 text-center font-semibold text-white">{t.heroPrimaryCta}</Link>
-            <a href="#market" className="glass-secondary rounded-2xl px-6 py-3.5 text-center font-medium">{t.heroSecondaryCta}</a>
           </div>
           <p className="mt-5 max-w-lg text-xs leading-6 text-slate-500">{t.heroTrustNote}</p>
         </div>

@@ -1,6 +1,6 @@
 import { expect, it, vi } from "vitest";
 import { buildUserOverview, type AdminUserMetadata } from "../user-overview";
-import { loadUserOverview } from "../load-user-overview";
+import { loadUserOverview, parseUsageSnapshot } from "../load-user-overview";
 
 vi.mock("server-only", () => ({}));
 const now = Date.parse("2026-10-08T12:00:00Z");
@@ -33,25 +33,58 @@ it("only suggests review for old empty accounts and excludes the current adminis
   expect(rows.filter(row => row.reviewSuggested).map(row => row.id)).toEqual(["old", "never", "boundary"]);
 });
 
-it("paginates metadata and does not silently truncate counts at the API row limit", async () => {
-  const ranges: number[] = [];
-  const selects: string[] = [];
-  const rpc = vi.fn((name: string) => {
-    const data = name === "admin_list_users" ? [user("a")] : Array.from({ length: 1001 }, () => ({ user_id: "a", updated_at: ago(1) }));
-    const chain = {
-      select: (columns: string) => { selects.push(columns); return chain; },
-      order: () => chain,
-      range: async (start: number, end: number) => { if (name === "admin_list_scenarios") ranges.push(start); return { data: data.slice(start, end + 1), count: data.length, error: null }; },
-    };
-    return chain;
-  });
-  const rows = await loadUserOverview({ rpc } as unknown as Parameters<typeof loadUserOverview>[0], "owner", now);
-  expect(rows[0].savedCount).toBe(1001);
-  expect(ranges).toEqual([0, 500, 1000]);
-  expect(new Set(selects)).toEqual(new Set(["id,email,created_at,last_sign_in_at", "user_id,updated_at"]));
+const usage = (id = "owner", savedCount = 0) => ({
+  ...user(id), saved_count: savedCount, last_save_at: savedCount ? ago(1) : null,
+});
+const snapshot = (users = [usage()]) => ({
+  users, total_users: users.length, total_saved: users.reduce((sum, row) => sum + row.saved_count, 0),
+});
+const client = (rpc: ReturnType<typeof vi.fn>) => ({ rpc }) as unknown as Parameters<typeof loadUserOverview>[0];
+
+it("loads one aggregate snapshot without depending on count headers or API row caps", async () => {
+  const data = snapshot(Array.from({ length: 1001 }, (_, i) => usage(i === 0 ? "owner" : `user-${i}`, i === 0 ? 1001 : 0)));
+  const rpc = vi.fn().mockResolvedValue({ data, error: null, count: null });
+  const rows = await loadUserOverview(client(rpc), "owner", now);
+  expect(rows).toHaveLength(1001);
+  expect(rows[0]).toMatchObject({ savedCount: 1001, lastSaveAt: ago(1), isCurrentUser: true });
+  expect(rpc).toHaveBeenCalledExactlyOnceWith("admin_usage_snapshot");
 });
 
-it("fails closed on partial metadata instead of recommending deletion using a false zero", async () => {
-  const chain = { select: () => chain, order: () => chain, range: async () => ({ data: [], count: 10, error: null }) };
-  await expect(loadUserOverview({ rpc: () => chain } as unknown as Parameters<typeof loadUserOverview>[0], "owner", now)).rejects.toThrow("incomplete");
+it("retains all registered accounts even when no scenarios are saved", async () => {
+  const rpc = vi.fn().mockResolvedValue({ data: snapshot([usage(), usage("other")]), error: null });
+  const rows = await loadUserOverview(client(rpc), "owner", now);
+  expect(rows.map(row => row.savedCount)).toEqual([0, 0]);
+  expect(rows[0].reviewSuggested).toBe(false);
+});
+
+it.each([
+  { ...snapshot(), total_users: 2 },
+  { ...snapshot(), total_saved: 1 },
+  snapshot([usage(), usage()]),
+  snapshot([{ ...usage(), saved_count: -1 }]),
+  snapshot([{ ...usage(), saved_count: 1.5 }]),
+  snapshot([{ ...usage(), saved_count: Number.MAX_SAFE_INTEGER + 1 }]),
+  snapshot([{ ...usage(), created_at: "invalid" }]),
+  snapshot([{ ...usage(), last_sign_in_at: "invalid" }]),
+  snapshot([{ ...usage(), last_save_at: ago(1) }]),
+  snapshot([{ ...usage(), saved_count: 1 }]),
+  { users: null, total_users: 0, total_saved: 0 },
+  null,
+])("rejects inconsistent or invalid snapshots instead of showing misleading totals (%#)", (data) => {
+  expect(() => parseUsageSnapshot(data)).toThrow(/^ADMIN_/);
+});
+
+it("discards unexpected fields before data reaches the interface", () => {
+  const data = { ...snapshot(), users: [{ ...usage(), name: "PRIVATE_NAME", input_payload: { amount: "PRIVATE_AMOUNT" } }], secret: "PRIVATE" };
+  expect(parseUsageSnapshot(data)).toEqual([usage()]);
+});
+
+it("requires the current authorized account to be present", async () => {
+  const rpc = vi.fn().mockResolvedValue({ data: snapshot([usage("other")]), error: null });
+  await expect(loadUserOverview(client(rpc), "owner", now)).rejects.toThrow("ADMIN_ACCOUNT_MISSING");
+});
+
+it.each(["42501", "bad code with private details"])("reports only a bounded diagnostic for RPC failures (%s)", async (code) => {
+  const rpc = vi.fn().mockResolvedValue({ data: null, error: { code, message: "PRIVATE_DATABASE_DETAIL" } });
+  await expect(loadUserOverview(client(rpc), "owner", now)).rejects.toThrow(code === "42501" ? "ADMIN_RPC_42501" : "ADMIN_RPC_REQUEST");
 });

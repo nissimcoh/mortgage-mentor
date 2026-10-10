@@ -170,8 +170,10 @@ export function annualizedBlockForwardPercent(
  * BASELINE DOCUMENTATION: the current implementation uses A_V — the
  * official nominal zero-curve yield at the reset-period maturity — as the
  * anchor baseline: margin = offeredRate − A_V. This mirrors the
- * Directive-451 bond-anchor construction but has NOT yet been calibrated
- * against a commercial-bank benchmark for this track type.
+ * Directive-451 bond-anchor construction. A frozen October 5, 2026 Leumi
+ * screenshot matches the 500,000 ILS / 20-year / 4.5% / five-year-reset
+ * case at displayed precision. Other products and the full monthly
+ * schedule remain uncalibrated; see docs/CALIBRATION_TODO.md.
  */
 export function variableAnchorMarginPercent(
   offeredRatePercent: number,

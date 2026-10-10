@@ -257,3 +257,371 @@ Pre-deploy verification: 485 offline tests passed (one optional network test
 skipped). Latest production build, TypeScript, component lint and all 25 route
 checks passed in the preceding home-page update; no application code changed
 since that build. No manual UI checks.
+
+
+## October 6: bank comparison and forecast activation fix
+
+Compared the user's October 5 screenshots from Leumi, Mizrahi Tefahot and
+Hapoalim. After the user corrected Leumi's unlinked rate to 4.5%, our
+500,000 ILS / 240-month / five-year-reset scenario matches its four headline
+values at the displayed precision. Added an offline regression with the
+original `2026-09-index` yields frozen. Differences versus Mizrahi/Hapoalim
+remain unresolved; details and the minimum follow-up are in
+[the bank comparison](reviews/2026-10-05-bank-comparison.md). This is not
+validation of every mortgage product or the full monthly schedule.
+
+Production still selected the old curve at 01:28 Israel time because it used
+the UTC date. Fixed date selection to use `Asia/Jerusalem`. Also corrected
+the next-business-day calculation: Fridays count; Saturdays, banking holidays
+and maintained election closures do not. Recurring holidays use the Hebrew
+calendar; exceptional closures still require maintenance when announced.
+Verified all dates against BOI's 2026 and 2027 banking calendars.
+
+Fresh source check at 01:32 Israel time on October 6:
+- BOI rate 3.25%, effective September 3, latest observation October 5.
+- Prime 4.75%.
+- CPI August 2026: monthly +0.7%, index 105.8.
+- Active forecast `2026-09-calendar`, published October 5, effective October 6.
+- September Makam anchor 3.1935502937%.
+- All sources live, no reported errors.
+
+Machine-readable evidence: [source check](reviews/2026-10-06-market-check.json).
+Daily upstream caching remains unchanged; choosing which cached curve is active
+is evaluated per request. No Supabase schema changes are needed for this fix.
+Validation: 544 offline tests passed, the opt-in live-source check passed,
+production build/TypeScript passed, lint had no errors (7 existing warnings).
+No manual browser/UI tests were performed.
+
+Deployment: calendar-only commit `6d622ee` was pushed to main; Vercel reported
+success. Automated HTTP verification of the public Hebrew home confirmed live
+September 2026 calendar forecast, publication October 5, activation October 6,
+and 12-month CPI expectation +1.72%. The cached fetch timestamp remained 01:28,
+confirming activation changes without refetching the workbook.
+All 27 automated route checks passed against the local production build.
+Screenshot-derived bank evidence and its regression fixture remain local: the
+automatic approval review rejected publishing those files to the public GitHub
+repository. They were removed from the unpublished commit before the successful
+calendar-only push. Other pre-existing design/admin edits remain uncommitted.
+
+
+## October 6: schedule certainty and rendering performance
+
+Deployed `8772285` successfully through Vercel. Schedule rows now identify
+entered contractual terms (green) versus rate/CPI-dependent estimates (amber),
+with written badges and a legend in Hebrew and English. Fixed unlinked stays
+green; government-bond/Makam changes after the initial reset period; prime and
+CPI-linked start estimated. Combined rows account only for active tracks.
+Constant/stress assumptions never turn forecast-dependent periods contractual.
+
+Performance: memoized schedule/selector/notes/classifications and timeline;
+chart geometry is reused while scrubbing, formatters are reused, and input
+curve serialization runs only after a new calculation. Removed backdrop blur
+from the scrolling table and reduced mobile glass blur to 12px with no fixed
+body paint/noise layer. Daily data caching remains unchanged. A local fix also
+keeps the pre-existing glass-nav style from overriding fixed positioning;
+that competing local style was not part of the published baseline.
+
+Validation: 558 offline tests passed; production build/TypeScript passed;
+modified components/domain code lint clean. Twelve automated local HTTP cases
+verified exact row counts and legends across both languages, including a
+combined scenario whose indexed track ends before its fixed track. Production
+HTTP confirmed the legend and month-61 transition in both languages. No manual
+UI tests or on-device performance measurements; perceived phone responsiveness
+remains for the user to assess. Two proposed product additions (saved-scenario
+comparison and a user-defined monthly-payment ceiling) have not been implemented.
+
+
+## October 6: saved-scenario comparison
+
+Implemented and deployed `c771252`. Saved now links to /[locale]/compare.
+Signed-in users can compare two or three of their own saved scenarios by first
+payment, forecast maximum and its month, total payments, financing cost, loan
+amount, maximum term and principal exposure to rates/CPI. Deltas use the first
+selected mix as the baseline. Results retain their saved calculation date and
+are explicitly historical snapshots, with warnings for different amounts/terms,
+forecast references or custom assumptions. Variable-linked principal counts in
+both exposure dimensions; explanatory copy prevents summing these percentages.
+
+The page uses a session-bound Supabase client plus the owner filter and existing
+RLS. No schema migration, writes, fresh market fetching or recalculation is
+needed for comparison. Only validated compact projections cross to the client.
+Error, invalid-row and fewer-than-two-scenarios states are handled.
+
+Validation: 567 offline tests, TypeScript/build and 27 automated route checks
+passed. New tests execute the authentication/query ownership flow using mocks
+and render the comparison with synthetic records. Lint has no errors and only
+the 7 pre-existing warnings. Vercel reported success; production Hebrew/English
+HTTP requests redirect unauthenticated comparison visitors to sign-in with the
+comparison return path intact. No manual account/browser testing was performed.
+The user should verify selection of two/three real saved records after login.
+
+Fresh source check at 22:13 Israel time: 2026-09-calendar remains active,
+published October 5 and effective October 6; BOI 3.25%, prime 4.75%, observed
+August CPI +0.7% / 105.8, September Makam 3.1935502937%, all sources live.
+Remaining bank checks: Mizrahi and Hapoalim, both five-year government-bond
+unlinked and five-year CPI-linked, each 500000 ILS / 240 months / Spitzer /
+4.5%; Leumi unlinked as a same-day control. Capture inputs plus first/max/total/
+overall forecast rate and, if available, forecast date and months 60-61.
+Compare with a new calculation using the active official curve, not directly
+with the historical October 5 screenshot set.
+
+Only the first requested proposal was implemented. New proposals, not yet
+authorized or implemented: export a dated PDF summary; show rate-reset and
+track-end milestones on the payment timeline.
+
+## October 7: printable summary, milestones and read-only administration
+
+Both subsequently authorized proposals are implemented and deployed in
+`4901715`. The calculator exports a dated Hebrew/English summary through the
+browser print dialog (Save as PDF), including submitted inputs, results and
+forecast assumptions. Export is disabled when inputs differ from the displayed
+calculation. The report loads on demand. The payment graph now marks scheduled
+rate resets and final payments, with an accessible milestone selector. A
+five-year reset first appears at payment 61; no reset is invented for prime.
+
+Existing local admin work was found. Published a read-only users/scenarios
+overview at /[locale]/admin and an account-menu link shown only after a positive
+admin permission response. The server independently checks authentication and
+requires the admin RPC result to be exactly true before requesting records.
+No deletion controls, database migrations or permission changes were deployed.
+The previously unreachable Supabase host is reachable again. Anonymous bounded
+RPC probes returned errors and no user/scenario records. Actual owner-session
+access remains for the user to verify.
+
+Validation: 583 tests passed, one optional network test skipped; production
+build/TypeScript passed; lint has zero errors and seven pre-existing warnings.
+Vercel reported deployment success. Production HTTP checks verified export and
+milestone content in both languages and sign-in protection for admin routes.
+No manual browser, print-layout or phone tests were performed.
+
+The October 6 screenshot comparison is retained locally in
+docs/reviews/2026-10-06-bank-comparison.md. Both Leumi variable-track totals match
+our calculation within one shekel at the displayed precision. Mizrahi and
+Hapoalim differ; aggregate screenshots alone do not establish why and do not
+justify changing the engine. Bank evidence and private fixtures were not
+included in the published commit.
+
+User checks: save a Hebrew calculation as PDF and compare its inputs/totals;
+jump to payment 61 and a final-payment milestone; sign in with the admin account
+and open the account-menu administration link. To investigate the remaining
+bank differences, capture payments 60–61 (payment, rate and balance), forecast
+date, and the full Hapoalim unlinked product label when available.
+
+## October 8: privacy, terms and collection notices (local draft)
+
+Added Hebrew/English privacy, terms and accessibility information pages, a
+shared footer, notices before Google sign-in and saving, and a calculator-link
+disclosure. Added no-referrer headers to reduce exposure of calculation URLs
+through Referer, plus nosniff. Save dialogs now scroll within the viewport.
+Details and outstanding operational/legal review are in docs/LEGAL_READINESS.md.
+
+These changes are NOT deployed: the operator's public name and contact email
+are still awaiting the user's reply. The legal config remains empty rather than
+inventing an identity; pages display a draft notice and noindex metadata.
+Google consent branding remains unchanged pending access to its console.
+
+Validation: build/TypeScript passed, 583 tests passed (one optional network test
+skipped), lint has zero errors and seven pre-existing warnings. Six automated
+local HTTP checks confirmed Hebrew/English legal pages, footer links, draft
+metadata and no-referrer headers. No manual browser/accessibility audit was
+performed; the accessibility copy explicitly states that limitation.
+
+## October 8: administrator usage overview
+
+User requested operational account statistics instead of browsing scenarios.
+Commit `a770a8d` replaces the scenario list with a user dashboard: joined date,
+last sign-in, last update to a currently saved scenario, per-user saved count,
+recorded-activity age/status, totals, email search and filters. An optional
+review flag identifies accounts at least 180 days old, with no saves and no
+recorded activity in 180 days, excluding the current administrator. No deletion
+action or automatic cleanup was added.
+
+The page continues to require server-side admin authorization. Existing RPCs
+are called with explicit projections: users expose only id/email/joined/sign-in;
+scenario metadata exposes only user_id/updated_at. Names, financial inputs and
+results are not requested or rendered. Metadata is paginated with exact counts
+and aggregated on the server; incomplete, invalid or changing totals produce
+an error rather than misleading zero counts. No new tracking or database
+migration was introduced, and existing database permissions were not changed.
+
+The UI explains that this is not last-visit tracking: existing sessions,
+unsaved calculations and deletions are not measured, and deleted scenarios no
+longer contribute activity timestamps. Review flags are not proof of inactivity
+or authorization to delete an account. Account-level activity can still be
+incomplete despite complete pagination of retained metadata.
+
+Validation: 588 tests passed (one optional network test skipped), build and
+TypeScript passed, changed admin files lint clean. Tests cover access denial,
+metadata-only rendering, threshold cases, 1,001 saved records and fail-closed
+partial reads. Production account UI remains for the user to check manually.
+The privacy draft was updated locally to describe aggregate-only admin UI and
+remains unpublished pending operator/contact details.
+
+Vercel confirmed successful deployment of `a770a8d`; production HTTP checks
+confirmed both Hebrew and English admin pages require sign-in.
+
+## October 8: privacy publication and Google branding follow-up
+
+Operator confirmed public name ניסים כהן and that all services are completely
+free. Updated the local legal config and bilingual terms accordingly. The
+contact mailbox remains pending, so policy pages are still unpublished. The
+user chose to make Google console changes personally; setup instructions are
+in docs/GOOGLE_BRANDING_SETUP.md. No browser access or branding mutation was
+performed.
+
+Published `2de9316` (next.config.ts only): no-referrer and nosniff response
+headers. Vercel deployment succeeded and production HTTP verified both headers
+on Hebrew/English sign-in pages. Automated OAuth redirect inspection confirmed
+Google as provider, the default Supabase callback domain, and email/profile
+scopes. This does not verify a complete signed-in session or Google's public
+brand verification status. Legal-page lint passed after the text updates.
+
+## October 9: approved public support contact and policy release
+
+Operator chose the existing Google support email for free website support and
+privacy requests. Config now contains the approved public operator/contact,
+dated October 9; bilingual terms confirm the service is entirely free. Added
+a mailto support link to the shared footer. Commit `7bb702f` publishes privacy,
+terms and accessibility pages plus sign-in/save/share collection notices.
+
+The first push was rejected because website publication consent did not
+explicitly cover the public GitHub repository. The user then explicitly
+authorized publication of both the name and email in that repository; the
+authorized retry succeeded. No domain or paid email service was purchased.
+
+Validation: build/TypeScript and 588 tests passed, one optional network test
+skipped; lint has zero errors and seven pre-existing warnings. Eight automated
+local HTTP checks validated the six legal pages' name/contact/current date and
+absence of draft notices, plus Hebrew/English sign-in notices and footer links.
+No email was sent, and no manual browser/accessibility audit was performed.
+Legal/accessibility professional review remains outstanding; publication is
+not a certification of compliance. Google branding remains user-managed.
+
+Vercel confirmed successful deployment of `7bb702f`. Nine production HTTP
+checks passed: six legal pages, two sign-in pages and the Hebrew homepage,
+including approved public contact links, current policy date, absence of draft
+notices and the expected collection/footer links.
+
+## October 9: Google Search Console verification tag
+
+Added the owner-supplied public Google verification token to the locale layout's
+Next.js metadata, commit `7e5776b`. Markdown escape characters from the pasted
+HTML were not included in the token. Build/TypeScript and targeted lint passed;
+automated HTTP checks using Google's site-verification user-agent confirmed
+the exact meta tag in the head of / (after redirect), /he and /en locally.
+Only the three metadata lines were committed; existing unrelated layout color
+work was preserved locally. The owner must still click Verify in Search Console
+and, following the displayed Google instructions, wait 24 hours before retrying
+branding verification. No Google account settings were changed by the agent.
+
+Vercel confirmed deployment of `7e5776b`. Production HTTP checks passed for
+/, /he and /en: the exact verification token is present inside head and is
+accessible without authentication using the Google site-verification agent.
+
+## October 9: Launch branding preparation
+
+Commit `6b48492` adds an original house/M vector mark to the shared header and
+printed report, replaces the default favicon, and adds an SVG browser icon and
+180 px Apple touch icon. Downloadable PNGs are available in public/brand at
+120, 512 and 1024 px, with the SVG master and a regeneration script. The Google
+upload file is 120×120 and 2,850 bytes. No client dependency was added.
+
+Build/TypeScript, 588 tests and targeted lint passed; the optional live-source
+test was then explicitly run and passed. Sources fetched at 20:32 UTC on
+October 9 returned BOI 3.25%, prime 4.75%, August CPI 105.8/+0.7%, September
+Makam 3.1935502937%, and the 2026-09-calendar forecast published October 5.
+There were no source errors/fallbacks. This upstream diagnostic does not audit
+external cron configuration. Six production legal-page HTTP checks passed for
+Hebrew/English privacy, terms and accessibility with the approved email and
+no-referrer headers. No manual browser testing or Google console change occurred.
+
+docs/LAUNCH_CHECKLIST.md contains owner upload/verification/publication steps,
+phone smoke checks and remaining calibration/legal limitations. The 24-hour
+wait is from successful Search Console ownership verification, and does not
+guarantee approval of Google branding. The new logo should be uploaded before
+retrying verification; only approved, published branding changes public consent
+identity. The technical Supabase callback domain is unchanged.
+
+Vercel successfully deployed `6b48492`. Nine production HTTP checks passed:
+all seven brand/icon files matched the local binary/vector exports exactly,
+and both locale homepages contained the new inline mark, icon metadata,
+unchanged Google verification tag, policy links and approved support mailto.
+
+## October 9: Repair administrator data loading and delayed menu link
+
+The owner reported a delayed admin menu link and an error in the usage page.
+The live database reproduced SQLSTATE 42804 in admin_list_users: auth.users.email
+is varchar(255), but the PL/pgSQL RETURNS TABLE declaration requires text.
+admin_list_scenarios had the same mismatch for owner_email. This was a database
+function failure after successful authorization, not an empty user directory.
+
+Migration 20261009210000 adds explicit email::text casts in both existing RPCs.
+It requires the original functions to exist and preserves signatures, grants,
+membership, RLS and deletion behavior. Tested first within a rolled-back
+transaction, then applied using Supabase CLI after dry-run showed this was the
+only pending migration. No users or scenario records were changed.
+
+Live read-only post-migration SQL checks, under authenticated owner JWT claims,
+confirmed both RPCs and the exact UI projections/order succeed and the owner is
+present. Ordinary authenticated and anonymous callers were tested and denied.
+Only counts/boolean results were returned to the tool, no user lists or scenario
+contents. Anonymous execute grants existed already; internal authorization
+denies the calls. The migration preserves this arrangement.
+
+The account menu now starts its presentation-only permission request on signed-in
+mount, before opening. React keys the component by account ID, so token-refresh
+object changes no longer trigger repeat checks and switching accounts resets
+permission state. Pending requests have a visible loading row; failures offer a
+retry instead of silently hiding the link. The admin page still independently
+authorizes every request. Commit 11052a0 contains these changes.
+
+Validation: build/TypeScript and the complete test suite passed; the final
+targeted admin/header suite passed 17 tests and changed files lint clean.
+The live Supabase checks passed after applying the migration. No browser/UI test
+or authenticated OAuth session was performed; the owner should refresh the live
+site and confirm the account table and menu behavior.
+
+Vercel confirmed successful deployment of 11052a0. Production HTTP checks for
+/he/admin and /en/admin still redirect unauthenticated visitors to sign-in.
+
+
+## October 10: finish and publish retained local improvements
+
+The administrator page now loads one guarded scalar JSON snapshot, avoiding
+PostgREST row/count-header limitations and collecting account/save aggregates
+in one statement. Runtime validation rejects duplicate accounts, invalid dates,
+unsafe counts, inconsistent totals and a missing current administrator; extra
+fields never reach the interface. Accounts with no saves remain visible.
+Migration 20261010001500_admin_usage_snapshot.sql creates only the read-only
+RPC and its execute grants. The existing membership, RLS and deletion behavior
+remain unchanged. Verified first within a rolled-back transaction, then applied
+using Supabase CLI after dry-run identified this as the only pending migration.
+Live post-application SQL checks confirmed owner access, correct complete
+counts and denial for ordinary authenticated and anonymous callers. Only
+boolean check results were exposed; no user lists were exported.
+
+Retained the warmer glass design and primary-action styling while removing the
+fixed texture/paint surface, retaining the existing desktop blur and 12px phone
+blur, and preserving fixed/sticky navigation. Removed the secondary homepage
+jump link. Clarified that displayed CPI expectations cover the first 12 forecast
+months, rather than a calendar year; the curve averaging/source month is not
+misrepresented as the forecast starting month.
+
+Added the retained historical migration and dormant admin action/button files
+to version control. The administration page remains read-only and no deletion
+control is mounted. Action diagnostics now log only bounded codes, and the
+unused control handles transport failures. No account/scenario deletion was
+performed. The migration catalog confirms the historical admin-access migration
+was already applied; it was not reapplied.
+
+Published documentation for previously completed policy/branding work. Raw
+screenshot evidence and historical diagnostic captures stay local under
+ignored docs/reviews/. The public single-case regression uses synthetic
+500,000 ILS / 20-year / 4.5% test inputs and a frozen official curve, without
+attachment identifiers or local paths. It is not full bank calibration.
+
+Validation: 603 tests passed, one optional network test skipped; lint has zero
+errors and seven pre-existing warnings. Production build includes TypeScript
+validation. Automated route checks cover all 27 routes. Live database
+permission/snapshot checks passed. No authenticated browser session, manual
+visual audit or on-device performance measurement was performed.

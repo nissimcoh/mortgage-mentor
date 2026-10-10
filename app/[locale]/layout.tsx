@@ -20,7 +20,7 @@ export async function generateStaticParams() {
 // makes env(safe-area-inset-*) resolve to real values instead of 0 — both
 // the header's top padding and BottomNav's bottom padding depend on it.
 export const viewport: Viewport = {
-  themeColor: "#f8fafc",
+  themeColor: "#f6f4ee",
   colorScheme: "light",
   viewportFit: "cover",
 };

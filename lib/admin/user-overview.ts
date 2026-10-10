@@ -10,6 +10,11 @@ export interface ScenarioActivityMetadata {
   updated_at: string;
 }
 
+export interface AdminUsageMetadata extends AdminUserMetadata {
+  saved_count: number;
+  last_save_at: string | null;
+}
+
 export type ActivityStatus = "recent" | "older" | "quiet" | "unknown";
 
 export interface AdminUserOverview {
@@ -51,9 +56,18 @@ export function buildUserOverview(
     }
     activity.set(scenario.user_id, previous);
   }
+  return buildUserOverviewFromAggregates(users.map(user => ({
+    ...user,
+    saved_count: activity.get(user.id)?.count ?? 0,
+    last_save_at: activity.get(user.id)?.lastSave ?? null,
+  })), now, currentUserId);
+}
+
+export function buildUserOverviewFromAggregates(
+  users: AdminUsageMetadata[], now: number, currentUserId: string,
+): AdminUserOverview[] {
   return users.map((user) => {
-    const saved = activity.get(user.id);
-    const lastSaveAt = saved?.lastSave ?? null;
+    const lastSaveAt = user.last_save_at;
     const signIn = timestamp(user.last_sign_in_at);
     const save = timestamp(lastSaveAt);
     const latest = Math.max(signIn ?? -Infinity, save ?? -Infinity);
@@ -63,7 +77,7 @@ export function buildUserOverview(
     const daysSinceActivity = age === null ? null : Math.floor(age / DAY);
     const status: ActivityStatus = age === null ? "unknown"
       : age <= 30 * DAY ? "recent" : age <= 90 * DAY ? "older" : "quiet";
-    const savedCount = saved?.count ?? 0;
+    const savedCount = user.saved_count;
     const joined = timestamp(user.created_at);
     // A new account never qualifies merely because no sign-in is recorded.
     // Review is a prompt to investigate, not permission or proof for deletion.

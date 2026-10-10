@@ -95,7 +95,6 @@ describe("home page redesign dictionary keys", () => {
         h.heroTitle,
         h.heroSubtitle,
         h.heroPrimaryCta,
-        h.heroSecondaryCta,
         h.heroTrustNote,
         h.calcCardTitle,
         h.calcCardBody,
@@ -120,7 +119,6 @@ describe("home page redesign dictionary keys", () => {
       "מבינים את המספרים.\nמתכננים את המשכנתא.",
     );
     expect(heDict.home.heroPrimaryCta).toBe("התחל חישוב");
-    expect(heDict.home.heroSecondaryCta).toBe("לנתוני השוק");
     expect(heDict.home.heroTrustNote).toBe(
       "החישוב מיועד ללמידה והשוואה בין תרחישים ואינו ייעוץ משכנתאות.",
     );
@@ -135,6 +133,14 @@ describe("home page redesign dictionary keys", () => {
       ).toBeUndefined();
       expect(
         (dict.home as Record<string, unknown>).compareCardBody,
+      ).toBeUndefined();
+    }
+  });
+
+  it("no longer carries the retired 'jump to market data' secondary hero CTA", () => {
+    for (const dict of [heDict, enDict]) {
+      expect(
+        (dict.home as Record<string, unknown>).heroSecondaryCta,
       ).toBeUndefined();
     }
   });
@@ -533,5 +539,63 @@ describe("sign-in page dictionary keys (Google OAuth)", () => {
       expect(section.checkEmailMessage).toBeUndefined();
       expect(section.sendErrorMessage).toBeUndefined();
     }
+  });
+});
+
+describe("market page: 12-month CPI expectation is explicit about the window", () => {
+  it("does not present the source curve month as the forecast start", () => {
+    for (const dict of [heDict, enDict]) {
+      expect(dict.market.expectedCpiHelp).not.toContain("{month}");
+    }
+    expect(heDict.market.expectedCpiHelp).toContain("חודש המקור");
+    expect(enDict.market.expectedCpiHelp).toContain("source month");
+  });
+
+  it("has the exact requested clarified title and help copy", () => {
+    expect(heDict.market.expectedCpiTitle).toBe(
+      "ציפיית השוק לאינפלציה ב־12 החודשים הקרובים",
+    );
+    expect(enDict.market.expectedCpiTitle).toBe(
+      "Market's expected inflation over the next 12 months",
+    );
+  });
+});
+
+describe("admin page dictionary keys", () => {
+  it("has non-empty copy for every admin-page state in both locales", () => {
+    for (const dict of [heDict, enDict]) {
+      const a = dict.adminPage;
+      expect(a.title.length).toBeGreaterThan(0);
+      expect(a.intro.length).toBeGreaterThan(0);
+      expect(a.notAuthorizedTitle.length).toBeGreaterThan(0);
+      expect(a.notAuthorizedBody.length).toBeGreaterThan(0);
+      expect(a.loadErrorMessage.length).toBeGreaterThan(0);
+      expect(a.usersSectionTitle.length).toBeGreaterThan(0);
+      expect(a.usersCountLabel.length).toBeGreaterThan(0);
+      expect(a.userEmailHeader.length).toBeGreaterThan(0);
+      expect(a.userCreatedHeader.length).toBeGreaterThan(0);
+      expect(a.userLastSignInHeader.length).toBeGreaterThan(0);
+      expect(a.userNeverSignedIn.length).toBeGreaterThan(0);
+      expect(a.youLabel.length).toBeGreaterThan(0);
+      expect(a.emptyUsersMessage.length).toBeGreaterThan(0);
+      expect(a.deleteUserButton.length).toBeGreaterThan(0);
+      expect(a.deleteUserConfirm.length).toBeGreaterThan(0);
+      expect(a.scenariosSectionTitle.length).toBeGreaterThan(0);
+      expect(a.scenariosCountLabel.length).toBeGreaterThan(0);
+      expect(a.scenarioOwnerHeader.length).toBeGreaterThan(0);
+      expect(a.scenarioNameHeader.length).toBeGreaterThan(0);
+      expect(a.scenarioUpdatedHeader.length).toBeGreaterThan(0);
+      expect(a.emptyScenariosMessage.length).toBeGreaterThan(0);
+      expect(a.deleteScenarioButton.length).toBeGreaterThan(0);
+      expect(a.deleteScenarioConfirm.length).toBeGreaterThan(0);
+      expect(a.deletingButton.length).toBeGreaterThan(0);
+      expect(a.cannotDeleteSelfMessage.length).toBeGreaterThan(0);
+      expect(a.genericErrorMessage.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("has the exact requested not-authorized copy, generic enough to never confirm the page's existence has anything user-specific behind it", () => {
+    expect(heDict.adminPage.notAuthorizedTitle).toBe("אין הרשאת גישה");
+    expect(enDict.adminPage.notAuthorizedTitle).toBe("Access denied");
   });
 });
