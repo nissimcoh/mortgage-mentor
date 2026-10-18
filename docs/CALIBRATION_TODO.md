@@ -1,22 +1,49 @@
 # Commercial-Bank Calibration Backlog
 
-The Prime track is calibrated against a Leumi golden benchmark. The
-following implemented tracks are **methodology-faithful (Directive 451) but
-not yet commercially calibrated**. Each needs one golden benchmark captured
-from an official bank calculator/approval before we claim bank-level accuracy.
+Updated October 18, 2026. Full monthly references are now captured from Leumi's
+public calculator for all supported forecast products. See
+[CALCULATOR_REVIEW.md](CALCULATOR_REVIEW.md) for exact differences and scope.
+This is calibration of representative synthetic cases against one bank, not
+exhaustive validation of all offers, payment dates, fees or other banks.
 
-## Pending calibration cases
+## Captured calibration cases
 
-| # | Product | resetPeriodMonths | Status |
-|---|---------|-------------------|--------|
-| 1 | Variable government-bond, every 2 years | 24 | pending |
-| 2 | Variable government-bond, every 2.5 years | 30 | pending |
-| 3 | Variable government-bond, every 3 years | 36 | pending |
-| 4 | Variable government-bond, every 5 years | 60 | Leumi screenshot matched for 500k / 20y / 4.5%, October 5, 2026; full schedule and cross-bank differences pending |
-| 5 | Variable government-bond, every 7 or 10 years | 84 / 120 | pending |
-| 6 | Annual Makam | 12 | pending |
-| 7 | Fixed CPI-linked (implemented, uncalibrated) | — | pending |
-| 8 | Variable CPI-linked, every 5 years (Spitzer) | 60 | pending |
+All cases use ILS 500,000, Spitzer and a 4.5% offered annual rate. The app-side
+BOI snapshot is `2026-09-calendar`, published October 5, 2026. Leumi does not
+identify its curve snapshot. References include monthly payments and their
+principal/interest components, not just whole-ILS screen outputs.
+
+| Product | Reset months | Term | Result |
+| --- | ---: | ---: | --- |
+| Government-bond unlinked | 24 | 20y | Monthly payments and total match exactly |
+| Government-bond unlinked | 30 | 20y | Monthly payments and total match exactly |
+| Government-bond unlinked | 36 | 21y | Monthly payments and total match exactly |
+| Government-bond unlinked | 60 | 25y | Monthly payments and total match exactly |
+| Government-bond unlinked | 84 | 21y | Monthly payments and total match exactly |
+| Government-bond unlinked | 120 | 20y | Monthly payments and total match exactly |
+| Annual Makam | 12 | 20y | Baseline corrected; maximum monthly difference ILS 0.01, total +0.12 |
+| Fixed CPI-linked | — | 20y | Precision corrected; maximum monthly difference ILS 0.01, total +0.01 |
+| Variable CPI-linked | 60 | 20y | Precision corrected; maximum monthly difference ILS 0.01, total +0.04 |
+| Prime | Monthly | 20y | Maximum monthly difference ILS 0.01; total −0.10; interest/principal split differs by up to ILS 0.02 |
+| Fixed unlinked control | — | 20y | Regular payments match; final payoff differs by ILS 1.21 due to cash rounding convention; not accepted as an exact bank schedule |
+
+Tests: `lib/mortgage/__tests__/leumi-monthly-calibration.test.ts`.
+Frozen inputs, official source snapshot, bank requests and full responses:
+`lib/mortgage/__tests__/fixtures/leumi-calibration-2026-10-18.json`.
+Every month is compared, including the months immediately before and after
+all rate resets. Maximum forecast payment and displayed IRR match; total
+forecast payment differences for the ten forecast references are below ILS 1.
+
+## Remaining coverage
+
+- Other banks, loan amounts, offered rates, terms and fractional catalog terms.
+- Mixed-product bank references and contract-specific payment/day-count rules.
+- Fixed cash-schedule payoff convention versus a bank's mathematical forecast.
+- Fees, insurance, interim interest and actual CPI publication/payment dates.
+- Additional zero/negative-rate and stress bank references (synthetic engine
+  tests already cover these; they are not independent bank calibration).
+
+The following template remains useful when adding further captures.
 
 ## Input template (identical for every case)
 
@@ -61,7 +88,7 @@ The first exposed product resets every 60 months, with terms 10/15/20/25/30
 whole years. This is the app's current supported subset, not a claim that banks
 only offer these terms. The forecast uses the real zero curve and separate
 expected CPI index. The initial margin uses offered rate minus the real 60-month
-spot yield. It has not been commercially calibrated. Monthly linkage applies
+spot yield. The representative October 18 case is now captured and tested month by month. Monthly linkage applies
 between resets; the remaining indexed debt is repriced at each reset.
 
 Primary methodology reference: Bank of Israel Directive 451, pp. 23–24:
@@ -87,5 +114,5 @@ bond resetting every five years; offered annual rate 3%.
 The app used the August 2026 calendar curve. The bank screen did not expose a
 curve identifier or a full monthly schedule. This is a preliminary comparison,
 not a calibrated golden fixture: its total differs by ILS 1.22 from the bank's
-integer display, and the bank's exact decimals are unknown. Keep the full
-calibration pending. The user will handle subsequent manual comparisons.
+integer display, and the bank's exact decimals are unknown. This historical preliminary comparison has been superseded by the full
+October 18 API capture above; the 3% case itself still needs a monthly reference.

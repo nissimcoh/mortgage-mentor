@@ -192,20 +192,19 @@ export function buildCurveId(
 }
 
 /**
- * Join curve rows with schedule entries, keep rows whose effective date
- * (opening of the business day after publication) is not in the future,
- * and return them newest-effective-first. A curve row without a schedule
+ * Join and sort the complete published workbook history, including rows
+ * whose effective date is still in the future. This date-independent work
+ * can be cached; activation must still be evaluated for each request.
+ * A curve row without a schedule
  * entry (schedule unavailable or older years) is assumed effective —
  * the workbook only ever contains published rows — but curve rows are
- * still ordered by reference month and capped to the requested count.
+ * still ordered by reference month.
  */
-export function selectEffectiveCurves(
+export function buildForecastCurveHistory(
   nominalRows: ParsedCurveRow[],
   realRows: ParsedCurveRow[],
   schedule: ParsedScheduleEntry[],
-  now: Date,
   fetchedAt: string,
-  count: number = Number.POSITIVE_INFINITY,
   cpiIndexRows: ParsedCpiIndexRow[] = [],
 ): MortgageForecastCurveSnapshot[] {
   const realByKey = new Map(
@@ -227,7 +226,6 @@ export function selectEffectiveCurves(
     ]),
   );
 
-  const nowIso = israelIsoDate(now);
   const snapshots: MortgageForecastCurveSnapshot[] = [];
 
   for (const row of nominalRows) {
@@ -237,9 +235,6 @@ export function selectEffectiveCurves(
     const effectiveDate = scheduled
       ? nextIsraeliBusinessDay(scheduled.publicationDate)
       : "";
-    // Skip rows that are published but not yet operative.
-    if (effectiveDate !== "" && effectiveDate > nowIso) continue;
-
     snapshots.push({
       id: key,
       referenceYear: row.referenceYear,
@@ -263,7 +258,35 @@ export function selectEffectiveCurves(
     return (b.effectiveDate || "").localeCompare(a.effectiveDate || "");
   });
 
-  return Number.isFinite(count) ? snapshots.slice(0, count) : snapshots;
+  return snapshots;
+}
+
+/** Activate cached history at Israeli midnight, even within a cache day. */
+export function effectiveCurvesAt(
+  history: MortgageForecastCurveSnapshot[],
+  now: Date,
+  count: number = Number.POSITIVE_INFINITY,
+): MortgageForecastCurveSnapshot[] {
+  const nowIso = israelIsoDate(now);
+  const effective = history.filter(curve => curve.effectiveDate === "" || curve.effectiveDate <= nowIso);
+  return Number.isFinite(count) ? effective.slice(0, count) : effective;
+}
+
+/** Join raw rows and select operative curves for callers without a cache. */
+export function selectEffectiveCurves(
+  nominalRows: ParsedCurveRow[],
+  realRows: ParsedCurveRow[],
+  schedule: ParsedScheduleEntry[],
+  now: Date,
+  fetchedAt: string,
+  count: number = Number.POSITIVE_INFINITY,
+  cpiIndexRows: ParsedCpiIndexRow[] = [],
+): MortgageForecastCurveSnapshot[] {
+  return effectiveCurvesAt(
+    buildForecastCurveHistory(nominalRows, realRows, schedule, fetchedAt, cpiIndexRows),
+    now,
+    count,
+  );
 }
 
 export interface CurveRequestResolution {

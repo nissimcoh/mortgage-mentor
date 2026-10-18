@@ -1,22 +1,30 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { connection } from "next/server";
 import { notFound } from "next/navigation";
-import { isValidLocale } from "@/lib/i18n/config";
+import { isValidLocale, type Locale } from "@/lib/i18n/config";
 import { getMarketSnapshot } from "@/lib/market-data/get-market-snapshot";
 import { getMortgageForecastData } from "@/lib/market-data/sources/boi-mortgage-forecast";
 import MarketSnapshotCards from "@/components/MarketSnapshotCards";
-import { getDictionary } from "./dictionaries";
+import MarketSnapshotSkeleton from "@/components/MarketSnapshotSkeleton";
+import { getDictionary, type Dictionary } from "./dictionaries";
+
+async function HomeMarketData({ locale, labels }: { locale: Locale; labels: Dictionary["market"] }) {
+  // Only this section depends on request-time data. Keep the hero and
+  // calculator link available while a cold cache fetches official sources.
+  // Still evaluate freshness per request rather than caching fallback HTML.
+  await connection();
+  const [snapshot, forecast] = await Promise.all([
+    getMarketSnapshot(), getMortgageForecastData(),
+  ]);
+  return <MarketSnapshotCards snapshot={snapshot} curve={forecast.curves[0]} labels={labels} locale={locale} />;
+}
 
 export default async function Home({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   if (!isValidLocale(locale)) notFound();
-  // Render stored data without caching a fallback HTML page.
-  await connection();
   const dict = await getDictionary(locale);
   const t = dict.home;
-  const [snapshot, forecast] = await Promise.all([
-    getMarketSnapshot(), getMortgageForecastData(),
-  ]);
   const tools = [
     { href: "calculator", title: t.calcCardTitle, body: t.calcCardBody, cta: t.calcCardCta, icon: "01" },
     { href: "learn", title: t.learnCardTitle, body: t.learnCardBody, cta: t.learnCardCta, icon: "02" },
@@ -49,7 +57,9 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
       </section>
 
       <section id="market" className="scroll-mt-24 pb-12">
-        <MarketSnapshotCards snapshot={snapshot} curve={forecast.curves[0]} labels={dict.market} locale={locale} />
+        <Suspense fallback={<MarketSnapshotSkeleton labels={dict.market} />}>
+          <HomeMarketData locale={locale} labels={dict.market} />
+        </Suspense>
         <form action={`/${locale}`} method="get"><button type="submit" className="glass-secondary mt-4 inline-block rounded-xl px-4 py-2.5 text-sm font-medium">{dict.market.refreshNow}</button></form>
       </section>
 

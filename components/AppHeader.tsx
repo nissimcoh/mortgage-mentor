@@ -9,7 +9,7 @@ import type { Locale } from "@/lib/i18n/config";
 import type { Dictionary } from "@/app/[locale]/dictionaries";
 import BrandMark from "./BrandMark";
 import HeaderAuthStatus from "./HeaderAuthStatus";
-import LanguageSwitcher from "./LanguageSwitcher";
+import LanguageSwitcher, { LanguageSwitcherWithQuery } from "./LanguageSwitcher";
 
 type NavLabels = Dictionary["nav"];
 
@@ -43,15 +43,20 @@ export default function AppHeader({ locale, labels, accountMenu }: AppHeaderProp
       className="glass-nav sticky top-0 z-40"
       style={{ paddingTop: "env(safe-area-inset-top)" }}
     >
-      <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6">
-        <Link href={`/${locale}`} className="flex items-center gap-2">
-          <BrandMark />
-          <span className="flex flex-col leading-tight">
-            <span className="text-lg font-bold tracking-tight text-slate-900">
+      {/* Below ~375px the brand, language switcher and account control
+          don't all fit: tighter gaps plus a shrinkable (truncating) brand
+          keep the header inside the viewport instead of pushing the
+          controls off-screen and making every page scroll sideways. */}
+      <div className="mx-auto flex max-w-6xl items-center gap-2 px-3 py-3 sm:gap-4 sm:px-6">
+        <Link href={`/${locale}`} className="flex min-w-0 items-center gap-2">
+          <BrandMark className="shrink-0" />
+          <span className="flex min-w-0 flex-col leading-tight">
+            {/* Latin wordmark: LTR so any truncation clips its end. */}
+            <span dir="ltr" className="truncate text-start text-base font-bold tracking-tight text-slate-900 sm:text-lg">
               {labels.appName}
             </span>
             {labels.appNameLocalized && (
-              <span className="text-xs text-slate-500">
+              <span className="truncate text-xs text-slate-500">
                 {labels.appNameLocalized}
               </span>
             )}
@@ -78,12 +83,14 @@ export default function AppHeader({ locale, labels, accountMenu }: AppHeaderProp
           ))}
         </nav>
 
-        <div className="ms-auto flex items-center gap-2">
+        <div className="ms-auto flex shrink-0 items-center gap-2">
           {/* useSearchParams (inside LanguageSwitcher) needs a Suspense
               boundary on statically prerendered routes; scoped tightly here
-              so it never gates the rest of the page/shell. */}
-          <Suspense fallback={null}>
-            <LanguageSwitcher />
+              so it never gates the rest of the page/shell. The fallback is
+              the same control without query-string carry-over, so the
+              header doesn't shift when the real switcher hydrates. */}
+          <Suspense fallback={<LanguageSwitcher queryString="" />}>
+            <LanguageSwitcherWithQuery />
           </Suspense>
           <HeaderAuthStatus
             locale={locale}

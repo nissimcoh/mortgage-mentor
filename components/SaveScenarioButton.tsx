@@ -9,6 +9,7 @@ import { createScenario } from "@/lib/scenarios/actions";
 import type { TrackDraft } from "@/lib/mortgage/scenario-form";
 import { createClient } from "@/lib/supabase/client";
 import LegalNotice from "./LegalNotice";
+import ModalDialog from "./ModalDialog";
 
 type DialogStatus = "idle" | "open" | "saving" | "error";
 
@@ -48,15 +49,8 @@ export default function SaveScenarioButton({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [toastOpen, setToastOpen] = useState(false);
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (status !== "open") return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setStatus("idle");
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [status]);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const savingRef = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -73,15 +67,22 @@ export default function SaveScenarioButton({
     );
   }
 
+  function redirectToSignIn() {
+    const next = `${pathname}?${searchParams.toString()}`;
+    router.push(`/${locale}/signin?next=${encodeURIComponent(next)}`);
+  }
+
   async function handleOpen() {
-    const supabase = createClient();
+    // A local cookie read is enough to choose between the dialog and the
+    // sign-in redirect; the save action itself re-verifies the user with
+    // the auth server, so the dialog opens without a network round trip.
     const {
-      data: { user },
-    } = await supabase.auth.getUser();
+      data: { session },
+    } = await createClient().auth.getSession();
+    const user = session?.user ?? null;
 
     if (!user) {
-      const next = `${pathname}?${searchParams.toString()}`;
-      router.push(`/${locale}/signin?next=${encodeURIComponent(next)}`);
+      redirectToSignIn();
       return;
     }
 
@@ -93,43 +94,51 @@ export default function SaveScenarioButton({
   }
 
   async function handleSave() {
+    if (savingRef.current) return;
+    savingRef.current = true;
     setStatus("saving");
     setErrorMessage(null);
+    try {
+      const result = await createScenario({ name, locale, tracks: drafts });
 
-    const result = await createScenario({ name, locale, tracks: drafts });
+      if (result.ok) {
+        setStatus("idle");
+        showToast();
+        return;
+      }
+      if (result.error === "unauthenticated") {
+        // The local session looked valid but the server rejected it.
+        setStatus("idle");
+        redirectToSignIn();
+        return;
+      }
 
-    if (result.ok) {
-      setStatus("idle");
-      showToast();
-      return;
-    }
-
-    setErrorMessage(
-      result.error === "invalid-name"
-        ? labels.nameInvalidMessage
-        : labels.genericErrorMessage,
-    );
-    setStatus("open");
+      setErrorMessage(
+        result.error === "invalid-name"
+          ? labels.nameInvalidMessage
+          : labels.genericErrorMessage,
+      );
+      setStatus("open");
+    } catch {
+      setErrorMessage(labels.genericErrorMessage);
+      setStatus("open");
+    } finally { savingRef.current = false; }
   }
 
   return (
     <>
       <button
+        ref={triggerRef}
         type="button"
         onClick={handleOpen}
-        className="rounded-lg bg-accent px-3 py-2 text-sm font-medium text-accent-foreground transition hover:opacity-90 sm:py-1.5"
+        className="min-h-11 rounded-xl bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition hover:opacity-90"
       >
         {buttonLabel}
       </button>
 
       {(status === "open" || status === "saving") && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={labels.title}
-          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 px-4 pb-4 sm:items-center sm:pb-0"
-        >
-          <div className="glass-form glass-panel max-h-[85dvh] w-full max-w-sm overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-lg">
+        <ModalDialog label={labels.title} busy={status === "saving"} onClose={() => setStatus("idle")} returnFocusRef={triggerRef}>
+          <form onSubmit={event => { event.preventDefault(); void handleSave(); }} className="glass-form glass-panel max-h-[85dvh] w-full max-w-sm overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-lg">
             <h2 className="mb-3 text-lg font-bold text-slate-900">
               {labels.title}
             </h2>
@@ -166,22 +175,21 @@ export default function SaveScenarioButton({
                 {labels.cancelButton}
               </button>
               <button
-                type="button"
-                onClick={handleSave}
+                type="submit"
                 disabled={status === "saving"}
                 className="rounded-lg bg-accent px-4 py-1.5 text-sm font-medium text-accent-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {status === "saving" ? labels.savingButton : labels.saveButton}
               </button>
             </div>
-          </div>
-        </div>
+          </form>
+        </ModalDialog>
       )}
 
       {toastOpen && (
         // Non-blocking: no scrim, calculator stays fully interactive.
         // Positioned above the fixed mobile BottomNav (5rem clearance,
-        // matching AppShell's own pb-20 content spacing) plus the safe
+        // matching AppShell's own bottom content spacing) plus the safe
         // area; docks to a plain corner once BottomNav is hidden (md:+).
         <div
           role="status"

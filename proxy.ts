@@ -8,8 +8,10 @@ export async function proxy(request: NextRequest) {
   // getSession(), which trusts a possibly-stale cookie) revalidates
   // against the auth server and triggers the setAll callback in
   // updateSession when the token needs refreshing.
-  const { response, supabase } = updateSession(request);
+  const { getResponse, supabase } = updateSession(request);
   await supabase.auth.getUser();
+  // Read only after getUser(): a refresh swaps in a new response object.
+  const response = getResponse();
 
   const { pathname } = request.nextUrl;
 
@@ -24,6 +26,10 @@ export async function proxy(request: NextRequest) {
   // Carry over any refreshed session cookie so the refresh above isn't
   // silently discarded on every locale-fixing redirect.
   response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+  for (const name of ["cache-control", "expires", "pragma"]) {
+    const value = response.headers.get(name);
+    if (value !== null) redirect.headers.set(name, value);
+  }
   return redirect;
 }
 

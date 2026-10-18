@@ -129,10 +129,10 @@ export interface VariableGovernmentBondTrackInput {
 
 /**
  * Annual-Makam variable-unlinked product (משתנה לא צמודה כל שנה על בסיס
- * מק"מ): rate resets every 12 months. The contractual margin is derived
- * from the official Makam anchor (monthly-average 12-month Makam yield);
- * future resets are forecast from the nominal zero curve per the
- * Directive-451 reference table. Principal not CPI-linked. Spitzer preset.
+ * מק"מ): rate resets every 12 months. Forecast spread uses the nominal
+ * 12-month zero yield, calibrated against the public bank calculator.
+ * The observed Makam yield and reference spread remain reference data.
+ * Principal not CPI-linked. Spitzer preset.
  */
 export interface VariableMakamTrackInput {
   id?: string;
@@ -144,7 +144,7 @@ export interface VariableMakamTrackInput {
   currentCustomerRatePercent: number;
   /** Fixed by the product — no arbitrary reset periods. */
   resetPeriodMonths: 12;
-  /** The official Makam anchor in percent (server-provided snapshot). */
+  /** Observed official Makam yield for reference (not the forecast baseline). */
   currentMakamAnchorPercent: number;
   forecastZeroYieldsPercent: readonly number[];
   forecastMode: "official" | "constant" | "stress";
@@ -299,16 +299,17 @@ export interface VariableForecastSummary {
   resetPeriodMonths: number;
   /**
    * offeredRate minus the anchor baseline, percent: A_V (zero-curve yield
-   * at the reset maturity) for the government-bond product, the official
-   * Makam anchor for the Makam product.
+   * at the reset maturity) for government-bond and Makam forecasts. This
+   * model spread is distinct from a contract's spread over observed Makam.
    */
   customerAnchorMarginPercent: number;
   forecastMode: "official" | "constant" | "stress";
   stressShiftPercent: number;
   forecastCurveId: string | null;
   forecastCurvePublicationDate: string | null;
-  /** Makam product only: the anchor used and its snapshot month. */
+  /** Makam reference observation and offered-minus-observed spread, not model baseline. */
   makamAnchorPercent?: number;
+  makamObservedSpreadPercent?: number;
   makamSnapshotId?: string | null;
 }
 

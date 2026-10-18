@@ -56,6 +56,8 @@ describe("five-year variable CPI-linked mortgage", () => {
     expect(summary.schedule.every(row => row.indexationAmount === 0)).toBe(true);
     expect(summary.schedule.every(row => row.activeAnnualRatePercent === 3)).toBe(true);
     expect(summary.finalBalance).toBe(0);
+    const cash = calculateTrackSummary({type: "fixedUnlinked", repaymentMethod: "spitzer", loanAmount: track.loanAmount, years: track.years, annualInterestRatePercent: 3});
+    expect(summary.schedule.map(row => [row.payment, row.remainingBalance])).toEqual(cash.schedule.map(row => [row.payment, row.remainingBalance]));
   });
 
   it("balances the schedule, financing cost and a mixed mortgage with unequal durations", () => {

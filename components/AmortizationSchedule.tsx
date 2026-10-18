@@ -8,6 +8,7 @@ import type { Dictionary } from "@/app/[locale]/dictionaries";
 import type { AmortizationEntry } from "@/lib/mortgage";
 
 import type { ScheduleBasis } from "@/lib/mortgage/schedule-certainty";
+import ExportScheduleCsvButton from "./ExportScheduleCsvButton";
 
 type CalculatorLabels = Dictionary["calculator"];
 
@@ -25,6 +26,7 @@ interface AmortizationScheduleProps {
   rateColumnHeader?: string;
   /** Short explanations rendered directly above the table. */
   notes?: string[];
+  exportDisabled?: boolean;
 }
 
 interface PaymentBreakdownCardProps {
@@ -43,8 +45,10 @@ function PaymentBreakdownCard({
   formatCurrency,
   formatPercent,
 }: PaymentBreakdownCardProps) {
-  const principalShare = entry.principalPayment / entry.payment;
-  const interestShare = entry.interestPayment / entry.payment;
+  // A zero payment (never expected, but cheap to guard) would otherwise
+  // render NaN widths and "NaN%" labels.
+  const principalShare = entry.payment > 0 ? entry.principalPayment / entry.payment : 0;
+  const interestShare = entry.payment > 0 ? entry.interestPayment / entry.payment : 0;
 
   return (
     <div className="glass-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -99,6 +103,7 @@ const AmortizationSchedule = memo(function AmortizationSchedule({
   selector,
   rateColumnHeader,
   notes,
+  exportDisabled,
 }: AmortizationScheduleProps) {
   // Detects real overflow (not a breakpoint guess) so the sideways-scroll
   // hint and edge fade only show up when the table is actually wider than
@@ -183,6 +188,7 @@ const AmortizationSchedule = memo(function AmortizationSchedule({
       </div>
 
       {selector && <div className="mt-6">{selector}</div>}
+      <ExportScheduleCsvButton schedule={schedule} rowBases={rowBases} labels={labels} title={title} rateHeader={rateColumnHeader} disabled={exportDisabled} />
 
       {notes && notes.length > 0 && (
         <div className={selector ? "mb-3" : "mt-6 mb-3"}>

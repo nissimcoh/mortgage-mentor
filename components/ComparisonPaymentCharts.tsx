@@ -33,6 +33,22 @@ export default function ComparisonPaymentCharts({ scenarios, locale, labels }: {
     };
   }, [locale]);
   const x = (value: number) => LEFT + value / maxMonth * (RIGHT - LEFT);
+  // Static per chart: axis maximum and full polylines depend on the selected
+  // mixes only, so moving the month slider re-renders just the markers.
+  const plots = useMemo(() => {
+    const plotX = (value: number) => LEFT + value / maxMonth * (RIGHT - LEFT);
+    const withData = series.filter(item => item.scenario.payments && item.cumulative);
+    return Object.fromEntries((["monthly", "cumulative"] as const).map(kind => {
+      const maximum = Math.max(1, ...withData.flatMap(item => kind === "monthly" ? item.scenario.payments! : [item.cumulative!.at(-1)!]));
+      const y = (value: number) => BOTTOM - value / maximum * (BOTTOM - TOP);
+      const start = kind === "monthly" ? 1 : 0;
+      const lines = withData.map(item => Array.from({ length: maxMonth - start + 1 }, (_, i) => {
+        const values = comparisonMonthValues(item.scenario.payments!, item.cumulative!, i + start);
+        return `${plotX(i + start)},${y(kind === "monthly" ? values.payment : values.cumulative)}`;
+      }).join(" "));
+      return [kind, { maximum, y, lines }];
+    })) as Record<"monthly" | "cumulative", { maximum: number; y: (value: number) => number; lines: string[] }>;
+  }, [series, maxMonth]);
   const choosePoint = (event: PointerEvent<SVGSVGElement>) => {
     const bounds = event.currentTarget.getBoundingClientRect();
     if (!bounds.width) return;
@@ -72,8 +88,7 @@ export default function ComparisonPaymentCharts({ scenarios, locale, labels }: {
       <div className="mt-4 grid gap-4 xl:grid-cols-2">
         {(["monthly", "cumulative"] as const).map(kind => {
           const title = kind === "monthly" ? labels.monthlyChartTitle : labels.cumulativeChartTitle;
-          const maximum = Math.max(1, ...available.flatMap(item => kind === "monthly" ? item.scenario.payments! : [item.cumulative!.at(-1)!]));
-          const y = (value: number) => BOTTOM - value / maximum * (BOTTOM - TOP);
+          const { maximum, y, lines } = plots[kind];
           return <section key={kind} aria-labelledby={`${id}-${kind}`} className="glass-panel min-w-0 p-4 sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 id={`${id}-${kind}`} className="text-base font-semibold">{title}</h3>
@@ -81,8 +96,10 @@ export default function ComparisonPaymentCharts({ scenarios, locale, labels }: {
             </div>
             <p className="mt-1 text-xs leading-6 text-slate-500">{kind === "monthly" ? labels.monthlyChartHelp : labels.cumulativeChartHelp}</p>
             {available.length > 0 && <div dir="ltr" className="mt-3">
-              <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} preserveAspectRatio="none" aria-hidden="true"
-                className="h-48 w-full touch-pan-y sm:h-56" onPointerDown={choosePoint} onPointerMove={event => {
+              {/* Keeps the viewBox aspect ratio: a stretched ("none") SVG
+                  distorts the axis labels on wide screens. */}
+              <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} aria-hidden="true"
+                className="h-auto w-full touch-pan-y" onPointerDown={choosePoint} onPointerMove={event => {
                   if (event.pointerType === "mouse" || event.buttons === 1) choosePoint(event);
                 }}>
                 {[0, .5, 1].map(fraction => <g key={fraction}>
@@ -90,12 +107,8 @@ export default function ComparisonPaymentCharts({ scenarios, locale, labels }: {
                   <text x={LEFT - 8} y={y(maximum * fraction) + 4} textAnchor="end" fill="#475569" fontSize="16">{formats.compact.format(maximum * fraction)}</text>
                 </g>)}
                 {[0, .25, .5, .75, 1].map(fraction => <text key={fraction} x={x(maxMonth * fraction)} y="245" textAnchor={fraction === 0 ? "start" : fraction === 1 ? "end" : "middle"} fill="#475569" fontSize="16">{formats.years.format(maxMonth * fraction / 12)}</text>)}
-                {available.map(item => {
-                  const start = kind === "monthly" ? 1 : 0;
-                  const points = Array.from({ length: maxMonth - start + 1 }, (_, i) => {
-                    const values = comparisonMonthValues(item.scenario.payments!, item.cumulative!, i + start);
-                    return `${x(i + start)},${y(kind === "monthly" ? values.payment : values.cumulative)}`;
-                  }).join(" ");
+                {available.map((item, line) => {
+                  const points = lines[line];
                   const values = comparisonMonthValues(item.scenario.payments!, item.cumulative!, month);
                   return <g key={item.scenario.id}>
                     <polyline points={points} fill="none" stroke={item.style.color} strokeDasharray={item.style.dash} strokeWidth="2.5" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />

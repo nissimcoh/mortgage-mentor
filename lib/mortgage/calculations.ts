@@ -463,14 +463,18 @@ function calculateMakamTrackSummary(
       `currentMakamAnchorPercent must be a finite number, got ${track.currentMakamAnchorPercent}`,
     );
   }
-  // Contractual margin over the official Makam anchor; future resets are
-  // forecast from the nominal zero curve per the Directive-451 table.
+  // Forecast calibration uses the same nominal-curve baseline as Leumi's
+  // public calculator (October 18, 2026 monthly capture). Do not mix a
+  // monthly observed Makam yield with the model's forward curve: that adds
+  // a spurious spread to every future reset. The offered-minus-observed
+  // spread remains separate reference information, not the forecast spread.
   const margin =
     track.forecastMode === "constant"
       ? 0
-      : track.currentCustomerRatePercent - track.currentMakamAnchorPercent;
+      : variableAnchorMarginPercent(track.currentCustomerRatePercent, track.forecastZeroYieldsPercent, 12);
   const { summary } = summarizeBlockResetTrack(track, margin);
   summary.variableForecast!.makamAnchorPercent = track.currentMakamAnchorPercent;
+  summary.variableForecast!.makamObservedSpreadPercent = track.currentCustomerRatePercent - track.currentMakamAnchorPercent;
   summary.variableForecast!.makamSnapshotId = track.makamSnapshotId ?? null;
   return summary;
 }
@@ -515,6 +519,7 @@ function calculateFixedCpiLinkedTrackSummary(
   const schedule = track.type === "variableLinked"
     ? buildVariableCpiLinkedSpitzerSchedule({
         loanAmount: track.loanAmount, numberOfPayments, monthlyCpiFactors,
+        roundBasePayment: track.forecastMode === "constant",
         resetPeriodMonths: track.resetPeriodMonths,
         annualRatePercentPath: buildBlockForwardRatePathPercent({
           months: numberOfPayments,
@@ -529,6 +534,7 @@ function calculateFixedCpiLinkedTrackSummary(
       })
     : buildCpiLinkedSpitzerSchedule({
         loanAmount: track.loanAmount,
+        roundBasePayment: track.forecastMode === "constant",
         annualRatePercent: track.currentCustomerRatePercent,
         numberOfPayments, monthlyCpiFactors,
       });

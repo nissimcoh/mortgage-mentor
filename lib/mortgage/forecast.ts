@@ -170,10 +170,10 @@ export function annualizedBlockForwardPercent(
  * BASELINE DOCUMENTATION: the current implementation uses A_V — the
  * official nominal zero-curve yield at the reset-period maturity — as the
  * anchor baseline: margin = offeredRate − A_V. This mirrors the
- * Directive-451 bond-anchor construction. A frozen October 5, 2026 Leumi
- * screenshot matches the 500,000 ILS / 20-year / 4.5% / five-year-reset
- * case at displayed precision. Other products and the full monthly
- * schedule remain uncalibrated; see docs/CALIBRATION_TODO.md.
+ * Directive-451 bond-anchor construction. Frozen October 18, 2026 Leumi
+ * references match full monthly schedules for all six supported reset
+ * frequencies at 500,000 ILS / 4.5%. Coverage and remaining limitations
+ * are documented in docs/CALIBRATION_TODO.md.
  */
 export function variableAnchorMarginPercent(
   offeredRatePercent: number,
@@ -194,8 +194,8 @@ export interface BlockForwardRatePathParams {
   resetPeriodMonths: number;
   /**
    * The customer's contractual margin over the anchor, percent. The caller
-   * derives it from the product's anchor baseline (A_V for government-bond
-   * tracks, the official Makam anchor for Makam tracks).
+   * derives it from the product's forecast anchor baseline (A_V for both
+   * government-bond and calibrated Makam forecasts).
    */
   marginPercent: number;
   /** Official zero spot yields, months 1..360, annual percent. */

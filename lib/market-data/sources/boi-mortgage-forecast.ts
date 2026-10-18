@@ -7,18 +7,17 @@
 import "server-only";
 import { dailyServerCache } from "../daily-server-cache";
 
-import type { MortgageForecastData } from "../mortgage-forecast-types";
+import type { MortgageForecastCurveSnapshot, MortgageForecastData } from "../mortgage-forecast-types";
 import { createFallbackForecastCurve } from "../mortgage-forecast-fallback";
 import {
   FORECAST_SOURCE_ID,
+  buildForecastCurveHistory,
+  effectiveCurvesAt,
   isValidCurveSnapshot,
   parseCpiIndexRow,
   parseCurveRow,
   parseScheduleRow,
   pickCurvesForRequest,
-  selectEffectiveCurves,
-  type ParsedCpiIndexRow,
-  type ParsedCurveRow,
   type ParsedScheduleEntry,
   type RawRow,
 } from "./boi-mortgage-forecast-parse";
@@ -74,15 +73,7 @@ async function fetchWorkbook(url: string) {
   return workbook;
 }
 
-interface ParsedWorkbooks {
-  nominalRows: ParsedCurveRow[];
-  realRows: ParsedCurveRow[];
-  cpiIndexRows: ParsedCpiIndexRow[];
-  schedule: ParsedScheduleEntry[];
-  fetchedAt: string;
-}
-
-async function fetchWorkbookRows(): Promise<ParsedWorkbooks> {
+async function fetchWorkbookHistory(): Promise<MortgageForecastCurveSnapshot[]> {
   const fetchedAt = new Date().toISOString();
   const [curveBook, scheduleBook] = await Promise.all([
     fetchWorkbook(FORECAST_WORKBOOK_URL),
@@ -101,13 +92,13 @@ async function fetchWorkbookRows(): Promise<ParsedWorkbooks> {
 
   const nominalRows = extractSheetRows(nominalSheet, 363)
     .map(parseCurveRow)
-    .filter((row): row is ParsedCurveRow => row !== null);
+    .filter((row) => row !== null);
   const realRows = extractSheetRows(realSheet, 363)
     .map(parseCurveRow)
-    .filter((row): row is ParsedCurveRow => row !== null);
+    .filter((row) => row !== null);
   const cpiIndexRows = extractSheetRows(cpiSheet, 364)
     .map(parseCpiIndexRow)
-    .filter((row): row is ParsedCpiIndexRow => row !== null);
+    .filter((row) => row !== null);
 
   const schedule: ParsedScheduleEntry[] = [];
   for (const sheet of scheduleBook.worksheets) {
@@ -118,12 +109,13 @@ async function fetchWorkbookRows(): Promise<ParsedWorkbooks> {
   }
 
   // Validate before replacing the last successful snapshot.
-  const valid = selectEffectiveCurves(nominalRows, realRows, schedule, new Date(), fetchedAt, Number.POSITIVE_INFINITY, cpiIndexRows).filter(isValidCurveSnapshot);
-  if (!valid.length) throw new Error("No valid effective curve rows found in BOI workbook");
-  return { nominalRows, realRows, cpiIndexRows, schedule, fetchedAt };
+  const history = buildForecastCurveHistory(nominalRows, realRows, schedule, fetchedAt, cpiIndexRows).filter(isValidCurveSnapshot);
+  if (!effectiveCurvesAt(history, new Date()).length) throw new Error("No valid effective curve rows found in BOI workbook");
+  return history;
 }
 
-const readDailyWorkbooks = dailyServerCache("forecast-workbooks", fetchWorkbookRows);
+// New key: older cache entries contain raw rows rather than joined snapshots.
+const readDailyHistory = dailyServerCache("forecast-curve-history-v2", fetchWorkbookHistory);
 
 /**
  * Fetch, parse, and resolve the official forecast curves for one request.
@@ -141,23 +133,8 @@ export async function getMortgageForecastData(
 ): Promise<MortgageForecastData> {
   const fetchedAt = new Date().toISOString();
   try {
-    const {
-      nominalRows,
-      realRows,
-      cpiIndexRows,
-      schedule,
-      fetchedAt: parsedAt,
-    } = (await readDailyWorkbooks()).value;
-
-    const effective = selectEffectiveCurves(
-      nominalRows,
-      realRows,
-      schedule,
-      new Date(),
-      parsedAt,
-      Number.POSITIVE_INFINITY,
-      cpiIndexRows,
-    ).filter(isValidCurveSnapshot);
+    const history = (await readDailyHistory()).value;
+    const effective = effectiveCurvesAt(history, new Date());
 
     if (effective.length === 0) {
       throw new Error("No valid effective curve rows found in BOI workbook");

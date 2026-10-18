@@ -20,19 +20,18 @@ const PaymentTimeline = memo(function PaymentTimeline({ schedule, tracks, locale
     `${labels.trackLabel} ${event.trackIndex + 1}: ${event.kind === "reset" ? labels.milestoneReset : labels.milestoneEnd}`;
   const index = Math.min(selectedIndex, schedule.length - 1);
   const entry = schedule[index];
-  const currency = useMemo(() => new Intl.NumberFormat(locale === "he" ? "he-IL" : "en-IL", {
+  const currency = useMemo(() => new Intl.NumberFormat(locale === "he" ? "he-IL" : "en-US", {
     style: "currency", currency: "ILS", minimumFractionDigits: 2, maximumFractionDigits: 2,
   }), [locale]);
-  const { points, maximum } = useMemo(() => {
+  // Plot geometry depends only on the schedule; the slider just moves a marker.
+  const { points, x, y } = useMemo(() => {
     const maximum = Math.max(1, ...schedule.map(row => row.payment));
     const x = (i: number) => 12 + (i / Math.max(1, schedule.length - 1)) * 776;
     const y = (payment: number) => 168 - (payment / maximum) * 144;
     const points = schedule.map((row, i) => `${x(i)},${y(row.payment)}`).join(" ");
-    return { points, maximum };
+    return { points, x, y };
   }, [schedule]);
   if (schedule.length === 0) return null;
-  const x = (i: number) => 12 + (i / Math.max(1, schedule.length - 1)) * 776;
-  const y = (payment: number) => 168 - (payment / maximum) * 144;
   return (
     <section aria-labelledby={`${id}-title`} className="mt-6 overflow-hidden glass-panel rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">

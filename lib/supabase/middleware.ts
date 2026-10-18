@@ -7,8 +7,12 @@ import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./env";
  * for this request, for use from proxy.ts. Callers must call
  * `supabase.auth.getUser()` (never `getSession()`, which trusts a
  * possibly-stale cookie without revalidating) to actually trigger the
- * refresh, and must return the returned `response` (not a fresh
+ * refresh, and must then return `getResponse()` (not a fresh
  * `NextResponse.next()`) so the refreshed cookie isn't discarded.
+ *
+ * `getResponse` is a getter, not a value: setAll replaces the response
+ * when a refresh happens, so a response captured before getUser() would
+ * be the stale one without the new Set-Cookie headers.
  */
 export function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -18,7 +22,7 @@ export function updateSession(request: NextRequest) {
       getAll() {
         return request.cookies.getAll();
       },
-      setAll(cookiesToSet) {
+      setAll(cookiesToSet, headers = {}) {
         cookiesToSet.forEach(({ name, value }) =>
           request.cookies.set(name, value),
         );
@@ -26,9 +30,10 @@ export function updateSession(request: NextRequest) {
         cookiesToSet.forEach(({ name, value, options }) =>
           response.cookies.set(name, value, options),
         );
+        Object.entries(headers).forEach(([name, value]) => response.headers.set(name, value));
       },
     },
   });
 
-  return { response, supabase };
+  return { getResponse: () => response, supabase };
 }

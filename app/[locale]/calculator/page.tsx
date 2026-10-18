@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isValidLocale } from "@/lib/i18n/config";
-import { getMarketSnapshot } from "@/lib/market-data/get-market-snapshot";
+import { getCalculatorRateSnapshot } from "@/lib/market-data/get-market-snapshot";
 import { getMortgageForecastData } from "@/lib/market-data/sources/boi-mortgage-forecast";
 import { getMakamAnchorData } from "@/lib/market-data/sources/boi-makam";
 import { buildCalculatorMarketData } from "@/lib/market-data/build-calculator-market-data";
@@ -112,7 +112,7 @@ export default async function CalculatorPage({
   // variable CPI-linked tracks.
   const [marketSnapshot, forecastData, makamData, editContext] =
     await Promise.all([
-      getMarketSnapshot(),
+      getCalculatorRateSnapshot(),
       getMortgageForecastData(requestedCurveIds),
       getMakamAnchorData(requestedMakamIds),
       resolveEditContext(query),

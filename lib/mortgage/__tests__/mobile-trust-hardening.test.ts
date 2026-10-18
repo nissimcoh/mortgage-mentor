@@ -72,7 +72,7 @@ describe("field-level validation message dictionary keys", () => {
 
   it("has the exact requested Hebrew/English copy for the given examples", () => {
     expect(heDict.calculator.fieldErrorAmountInvalid).toBe(
-      "הזן סכום הלוואה תקין",
+      "הזן סכום חיובי בשקלים שלמים, ללא אגורות או סימן מינוס",
     );
     expect(heDict.calculator.fieldErrorYearsInvalid).toBe("בחר תקופה תקינה");
     expect(heDict.calculator.fieldErrorRateInvalid).toBe(
@@ -83,7 +83,7 @@ describe("field-level validation message dictionary keys", () => {
     );
 
     expect(enDict.calculator.fieldErrorAmountInvalid).toBe(
-      "Enter a valid loan amount",
+      "Enter a positive whole-shekel amount, without decimals or a minus sign",
     );
     expect(enDict.calculator.fieldErrorYearsInvalid).toBe(
       "Select a valid term",

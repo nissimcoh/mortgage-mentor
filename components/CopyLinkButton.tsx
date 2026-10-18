@@ -10,18 +10,15 @@ interface CopyLinkButtonProps {
   successText: string;
   fallbackText: string;
   getUrl?: () => string;
-  privacyNotice?: string;
 }
 
-/** Copies the current page URL. Generic on purpose — used by both the
- * calculator's "copy scenario link" and compare's "copy comparison link",
- * which differ only in copy, never in behavior. */
+/** Copies the current page URL (or `getUrl()`), with a transient
+ * success/fallback status beside the button. */
 export default function CopyLinkButton({
   buttonLabel,
   successText,
   fallbackText,
   getUrl,
-  privacyNotice,
 }: CopyLinkButtonProps) {
   const [status, setStatus] = useState<CopyLinkStatus>("idle");
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -44,11 +41,10 @@ export default function CopyLinkButton({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {privacyNotice && <p className="w-full max-w-xl text-xs leading-5 text-slate-600">{privacyNotice}</p>}
       <button
         type="button"
         onClick={handleCopy}
-        className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 sm:py-1.5"
+        className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
       >
         {buttonLabel}
       </button>

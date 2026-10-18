@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { draftSource, draftValues, forgetCalculatorDraft, parseCalculatorDraft, readDraftSnapshot, rememberCalculatorDraft, subscribeDraft } from "@/lib/forms/calculator-draft";
 import type { ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { Locale } from "@/lib/i18n/config";
@@ -66,6 +67,7 @@ import PaymentTimeline from "./PaymentTimeline";
 import ScheduleSelector from "./ScheduleSelector";
 import ExportMortgagePdfButton from "./ExportMortgagePdfButton";
 import { scheduleBasisForMonth } from "@/lib/mortgage/schedule-certainty";
+import { israelIsoDate } from "@/lib/market-data/israeli-banking-calendar";
 
 const COMBINED_SCHEDULE_ID = "combined";
 
@@ -167,6 +169,34 @@ function FreshnessCard({
   );
 }
 
+// Accessible, low-saturation tones + a non-color glyph per state, so the
+// meaning never relies on color alone. Green ≠ cheaper; red ≠ "never".
+const STABILITY_TONE: Record<
+  StabilityColorState,
+  { badge: string; icon: string }
+> = {
+  stable: {
+    badge: "border-emerald-200 bg-emerald-50 text-emerald-800",
+    icon: "●",
+  },
+  moderate: {
+    badge: "border-amber-200 bg-amber-50 text-amber-800",
+    icon: "◐",
+  },
+  unstable: { badge: "border-red-200 bg-red-50 text-red-800", icon: "○" },
+};
+
+function StabilityBadge({ score, text }: { score: number; text: string }) {
+  const tone = STABILITY_TONE[stabilityColorState(score)];
+  return (
+    <span
+      className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${tone.badge}`}
+    >
+      <span aria-hidden>{tone.icon}</span> {text}
+    </span>
+  );
+}
+
 export default function MortgageCalculator({
   locale,
   labels,
@@ -179,12 +209,18 @@ export default function MortgageCalculator({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const marketDay = useRef<string | null>(null);
+  const marketRefreshPending = useRef(false);
+  useEffect(() => {
+    marketDay.current = israelIsoDate(new Date());
+    marketRefreshPending.current = false;
+  }, [marketData]);
 
   // Captured ONCE on mount, not re-read from props on every render. The
-  // Server Component parent re-resolves editContext on every navigation
-  // (including the recalculation-triggered router.replace below), which
-  // would otherwise silently refresh the optimistic-concurrency token on
-  // every keystroke's recalculation — defeating the whole point of
+  // Server Component parent re-resolves editContext on server navigations
+  // and refreshes. Local calculations only update browser history. Replacing
+  // this captured context from props would silently refresh the concurrency token
+  // during a server refresh — defeating the whole point of
   // capturing "the version I started editing" once, up front. This
   // relies on the same component-identity persistence across
   // searchParams-only navigations that the drafts/submitted state below
@@ -223,6 +259,22 @@ export default function MortgageCalculator({
   });
 
   const [drafts, setDrafts] = useState<TrackDraft[]>(initial.drafts);
+  const draftScope = editState.context ? `edit:${editState.context.id}` : "normal";
+  const storedDraft = useSyncExternalStore(subscribeDraft, readDraftSnapshot, () => null);
+  const recovery = useMemo(() => parseCalculatorDraft(storedDraft), [storedDraft]);
+  const source = draftSource(searchParams);
+  const canRestore = recovery !== null && recovery.scope === draftScope &&
+    (recovery.source === source || (source === "" && draftScope === "normal")) &&
+    JSON.stringify(draftValues(recovery.tracks)) !== JSON.stringify(draftValues(drafts));
+  const [draftStorageFailed, setDraftStorageFailed] = useState(false);
+
+  function rememberDraft(next: TrackDraft[], nextSource = source) {
+    setDraftStorageFailed(!rememberCalculatorDraft(draftScope, nextSource, next));
+  }
+  function changeDrafts(next: TrackDraft[]) {
+    setDrafts(next);
+    rememberDraft(next);
+  }
   const [submitted, setSubmitted] = useState<SubmittedScenario | null>(
     initial.submitted,
   );
@@ -233,6 +285,16 @@ export default function MortgageCalculator({
     initial.submitted ? initial.drafts : null,
   );
   const [hasError, setHasError] = useState(false);
+  const [invalidSubmitCount, setInvalidSubmitCount] = useState(0);
+  const formRef = useRef<HTMLFormElement>(null);
+  const errorSummaryRef = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    if (invalidSubmitCount === 0) return;
+    const firstInvalid = formRef.current?.querySelector<HTMLElement>(
+      '[aria-invalid="true"]:not(:disabled)',
+    );
+    (firstInvalid ?? errorSummaryRef.current)?.focus();
+  }, [invalidSubmitCount]);
   // Which schedule the amortization table shows; purely local view state.
   const [selectedScheduleId, setSelectedScheduleId] =
     useState(COMBINED_SCHEDULE_ID);
@@ -270,9 +332,13 @@ export default function MortgageCalculator({
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }), [intlLocale]);
+  // Reference months are built as Date.UTC(year, month, 1); formatting them
+  // in UTC keeps the month correct for viewers west of UTC (and identical
+  // between the server render and hydration).
   const monthYearFormat = useMemo(() => new Intl.DateTimeFormat(intlLocale, {
     month: "long",
     year: "numeric",
+    timeZone: "UTC",
   }), [intlLocale]);
 
   function curveReferenceLabel(curve: MortgageForecastCurveSnapshot): string {
@@ -344,11 +410,22 @@ export default function MortgageCalculator({
       .replace("{my}", numberFormat.format(parts.monthOfYear));
   }
 
-  /** Write the current drafts into the URL (removes stale/legacy params). */
-  function syncQuery(nextDrafts: TrackDraft[]) {
+  /** Local calculations need no server navigation. Recovery may need to load
+   * historical market references, so that path still uses the server router. */
+  function syncQuery(nextDrafts: TrackDraft[], { remember = true, loadMarketReferences = false } = {}) {
     const query = new URLSearchParams(searchParams.toString());
     applyTracksToQuery(query, nextDrafts);
-    router.replace(`${pathname}?${query.toString()}`, { scroll: false });
+    if (remember) rememberDraft(nextDrafts, draftSource(query));
+    const url = `${pathname}?${query.toString()}`;
+    const today = israelIsoDate(new Date());
+    // A long-lived tab must re-evaluate banking-day activation server-side.
+    // Keep edits in the router while a refresh is pending, so its older URL
+    // cannot overwrite a newer local history update when the response arrives.
+    if (loadMarketReferences || marketRefreshPending.current || today !== marketDay.current) {
+      marketRefreshPending.current = true;
+      router.replace(url, { scroll: false });
+    }
+    else window.history.replaceState(null, "", url);
   }
 
   function updateTrack(
@@ -356,8 +433,8 @@ export default function MortgageCalculator({
     field: keyof Omit<TrackDraft, "id">,
     value: string,
   ) {
-    setDrafts((current) =>
-      current.map((draft) => {
+    changeDrafts(
+      drafts.map((draft) => {
         if (draft.id !== id) return draft;
         const next = { ...draft, [field]: value };
         // A term stays selected only if it is an exact option of the new
@@ -399,8 +476,8 @@ export default function MortgageCalculator({
   }
 
   function handleAmountBlur(id: string) {
-    setDrafts((current) =>
-      current.map((draft) =>
+    changeDrafts(
+      drafts.map((draft) =>
         draft.id === id
           ? { ...draft, amount: formatAmountForDisplay(draft.amount) }
           : draft,
@@ -443,6 +520,7 @@ export default function MortgageCalculator({
     if (!inputs || !summary) {
       setSubmitted(null);
       setHasError(true);
+      setInvalidSubmitCount(count => count + 1);
       return;
     }
 
@@ -463,6 +541,28 @@ export default function MortgageCalculator({
   const resultsAreStale = submittedDrafts !== null &&
     JSON.stringify(drafts) !== JSON.stringify(submittedDrafts);
 
+  function restoreDraft() {
+    if (!canRestore || !recovery) return;
+    setDrafts(recovery.tracks);
+    setSubmitted(null);
+    setSubmittedDrafts(null);
+    setHasError(false);
+    setSelectedScheduleId(COMBINED_SCHEDULE_ID);
+    syncQuery(recovery.tracks, { loadMarketReferences: true });
+  }
+
+  function clearDraft() {
+    const blank = [createTrackDraft()];
+    setDrafts(blank);
+    setSubmitted(null);
+    setSubmittedDrafts(null);
+    setHasError(false);
+    setSelectedScheduleId(COMBINED_SCHEDULE_ID);
+    syncQuery(blank, { remember: false });
+    forgetCalculatorDraft();
+    setDraftStorageFailed(false);
+  }
+
   function submittedUrl() {
     const url = new URL(window.location.href);
     // A shared calculation carries only its computed inputs, never edit metadata.
@@ -482,32 +582,6 @@ export default function MortgageCalculator({
   };
   const formatStability = (score: number) =>
     `${numberFormat.format(Math.round(score))}/100 · ${stabilityLevelLabels[stabilityLevel(score)]}`;
-  // Accessible, low-saturation tones + a non-color glyph per state, so the
-  // meaning never relies on color alone. Green ≠ cheaper; red ≠ "never".
-  const stabilityTone: Record<
-    StabilityColorState,
-    { badge: string; icon: string }
-  > = {
-    stable: {
-      badge: "border-emerald-200 bg-emerald-50 text-emerald-800",
-      icon: "●",
-    },
-    moderate: {
-      badge: "border-amber-200 bg-amber-50 text-amber-800",
-      icon: "◐",
-    },
-    unstable: { badge: "border-red-200 bg-red-50 text-red-800", icon: "○" },
-  };
-  const StabilityBadge = ({ score }: { score: number }) => {
-    const tone = stabilityTone[stabilityColorState(score)];
-    return (
-      <span
-        className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${tone.badge}`}
-      >
-        <span aria-hidden>{tone.icon}</span> {formatStability(score)}
-      </span>
-    );
-  };
 
   const scenarioStability = submitted
     ? combinedStabilityScore(
@@ -691,6 +765,13 @@ export default function MortgageCalculator({
 
   return (
     <div className="w-full">
+      {canRestore && <div role="status" className="mb-4 rounded-xl border border-accent/30 bg-accent-soft p-4 text-sm">
+        <p>{labels.draftFound}</p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <button type="button" onClick={restoreDraft} className="min-h-11 rounded-xl bg-accent px-4 py-2 font-medium text-white">{labels.draftRestore}</button>
+          <button type="button" onClick={forgetCalculatorDraft} className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 py-2">{labels.draftDiscard}</button>
+        </div>
+      </div>}
       {(marketData.boiRateStatus === "fallback" || marketData.boiRateIsStale) && (
         <p role="status" className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">{labels.rateDataWarning}</p>
       )}
@@ -719,6 +800,7 @@ export default function MortgageCalculator({
       )}
 
       <form
+        ref={formRef}
         onSubmit={handleSubmit}
         noValidate
         className="glass-form glass-panel rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6"
@@ -764,6 +846,7 @@ export default function MortgageCalculator({
           >
             {labels.calculateButton}
           </button>
+          <button type="button" onClick={clearDraft} className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700">{labels.draftClear}</button>
           {drafts.length < MAX_TRACKS && (
             <button
               type="button"
@@ -783,6 +866,7 @@ export default function MortgageCalculator({
             </button>
           )}
         </div>
+        <p className="mt-3 text-xs leading-5 text-slate-500">{draftStorageFailed ? labels.draftStorageUnavailable : labels.draftPrivacy}</p>
 
         <details className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
           <summary className="cursor-pointer text-sm font-medium text-slate-700">
@@ -801,6 +885,8 @@ export default function MortgageCalculator({
 
       {hasError && (
         <p
+          ref={errorSummaryRef}
+          tabIndex={-1}
           role="alert"
           className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
         >
@@ -849,7 +935,7 @@ export default function MortgageCalculator({
             {/* Actions: Save is primary, Share/Copy is secondary. No
                 Compare stub here — it would compete with real actions for
                 no reason until saved scenarios exist to compare against. */}
-            <div className="mt-3 flex flex-wrap items-center gap-2">
+            <div className="mt-3 flex flex-wrap items-start gap-2">
               {submittedDrafts && editState.context && (
                 <EditScenarioSaveButton
                   locale={locale}
@@ -859,6 +945,12 @@ export default function MortgageCalculator({
                     id: editState.context.id,
                     name: editState.context.name,
                     expectedUpdatedAt: editState.context.updatedAt,
+                  }}
+                  onUpdated={(saved) => {
+                    const savedId = editState.context?.id;
+                    setEditState(current => current.context?.id === savedId && current.context
+                      ? { ...current, context: { ...current.context, ...saved } }
+                      : current);
                   }}
                   labels={editScenarioLabels}
                   saveScenarioLabels={saveScenarioLabels}
@@ -873,7 +965,6 @@ export default function MortgageCalculator({
                 />
               )}
               <CopyLinkButton
-                privacyNotice={legalLabels[locale].share}
                 buttonLabel={labels.copyScenarioLinkButton}
                 successText={labels.copyScenarioLinkSuccess}
                 fallbackText={labels.copyScenarioLinkFallback}
@@ -881,7 +972,8 @@ export default function MortgageCalculator({
               />
               <ExportMortgagePdfButton inputs={submitted.inputs} summary={submitted.summary} marketData={marketData} locale={locale} labels={labels} disabled={resultsAreStale} />
             </div>
-            <p className="mt-2 text-xs leading-5 text-slate-500">{labels.pdfHelp}</p>
+            <p className="mt-2 max-w-3xl text-xs leading-5 text-slate-500">{legalLabels[locale].share}</p>
+            <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-500">{labels.pdfHelp}</p>
 
             {/* Secondary metrics: a quiet stat row, not four more cards. */}
             <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-slate-200 pt-4 sm:grid-cols-4">
@@ -892,9 +984,9 @@ export default function MortgageCalculator({
                 <dd className="mt-0.5 text-lg font-semibold text-slate-900 tabular-nums">
                   {currencyFormat.format(submitted.summary.maximumPayment)}
                 </dd>
-                <p className="mt-0.5 text-xs text-slate-500">
+                <dd className="mt-0.5 text-xs text-slate-500">
                   {formatMaxMonth(submitted.summary.monthOfMaximumPayment)}
-                </p>
+                </dd>
               </div>
               <div>
                 <dt className="text-xs text-slate-500">
@@ -1188,6 +1280,11 @@ export default function MortgageCalculator({
                             score={trackStabilityScore(
                               stabilityKeyForTrackType(input.type),
                             )}
+                            text={formatStability(
+                              trackStabilityScore(
+                                stabilityKeyForTrackType(input.type),
+                              ),
+                            )}
                           />
                         </div>
                         <p className="mt-0.5 text-xs leading-5 text-slate-500">
@@ -1218,6 +1315,7 @@ export default function MortgageCalculator({
             }
             notes={scheduleNotes}
             selector={scheduleSelector}
+            exportDisabled={resultsAreStale}
           />
         </>
       )}

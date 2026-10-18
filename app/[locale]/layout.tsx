@@ -61,7 +61,7 @@ export default async function LocaleLayout({
       dir={getDirection(locale)}
       className={`${heebo.variable} min-h-dvh antialiased`}
     >
-      <body className="flex min-h-dvh flex-col bg-slate-50">
+      <body className="flex min-h-dvh flex-col">
         <AppShell locale={locale} nav={dict.nav} accountMenu={dict.accountMenu}>
           {children}
         </AppShell>

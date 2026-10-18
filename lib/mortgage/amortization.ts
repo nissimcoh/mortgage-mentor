@@ -254,6 +254,8 @@ export interface CpiLinkedSpitzerParams {
   numberOfPayments: number;
   /** Monthly CPI indexation factors, index 0 = month 1. */
   monthlyCpiFactors: readonly number[];
+  /** Constant/no-forecast mode follows the ordinary fixed cash schedule. */
+  roundBasePayment?: boolean;
 }
 
 /**
@@ -271,8 +273,8 @@ export interface CpiLinkedSpitzerParams {
  *   6. principal        = payment − interest
  *   7. remaining        = indexedBalance − principal
  *
- * The base payment is fixed at the ROUNDED (agorot) amount like every
- * other builder; balances are carried at full precision and the final
+ * The base payment and balance retain full internal precision, as in the
+ * block-reset forecast builders. Only reported rows are rounded. The final
  * month repays the remaining balance exactly, so the schedule always ends
  * at exactly 0. Deflationary factors (< 1) flow through unchanged.
  */
@@ -281,11 +283,11 @@ export function buildCpiLinkedSpitzerSchedule({
   annualRatePercent,
   numberOfPayments,
   monthlyCpiFactors,
+  roundBasePayment = false,
 }: CpiLinkedSpitzerParams): AmortizationEntry[] {
   const monthlyRate = annualRatePercent / 100 / 12;
-  const basePayment = roundMoney(
-    spitzerMonthlyPaymentRaw({ loanAmount, monthlyRate, numberOfPayments }),
-  );
+  const rawPayment = spitzerMonthlyPaymentRaw({ loanAmount, monthlyRate, numberOfPayments });
+  const basePayment = roundBasePayment ? roundMoney(rawPayment) : rawPayment;
 
   const schedule: AmortizationEntry[] = [];
   let balance = loanAmount;
@@ -374,16 +376,17 @@ export function buildEqualPrincipalSchedule({
 
 /** Indexed balance each month; payment repriced only at contractual resets.
  * Between resets the last base payment grows by each monthly CPI factor.
- * Month one follows the fixed-linked rounding convention; at later resets
+ * Payment and balance retain full internal precision; at later resets
  * the remaining indexed principal is amortized over the remaining term.
  */
 export function buildVariableCpiLinkedSpitzerSchedule({
-  loanAmount, annualRatePercentPath, numberOfPayments, monthlyCpiFactors, resetPeriodMonths,
-}: VariableRateScheduleParams & { monthlyCpiFactors: readonly number[]; resetPeriodMonths: number }): AmortizationEntry[] {
+  loanAmount, annualRatePercentPath, numberOfPayments, monthlyCpiFactors, resetPeriodMonths, roundBasePayment = false,
+}: VariableRateScheduleParams & { monthlyCpiFactors: readonly number[]; resetPeriodMonths: number; roundBasePayment?: boolean }): AmortizationEntry[] {
   let balance = loanAmount;
-  let payment = roundMoney(spitzerMonthlyPaymentRaw({
+  let payment = spitzerMonthlyPaymentRaw({
     loanAmount, monthlyRate: annualRatePercentPath[0] / 1200, numberOfPayments,
-  }));
+  });
+  if (roundBasePayment) payment = roundMoney(payment);
   const schedule: AmortizationEntry[] = [];
   for (let index = 0; index < numberOfPayments; index++) {
     const openingBalance = balance;
@@ -391,10 +394,10 @@ export function buildVariableCpiLinkedSpitzerSchedule({
     const indexedBalance = balance * factor;
     const monthlyRate = annualRatePercentPath[index] / 1200;
     payment *= factor;
-    if (index > 0 && index % resetPeriodMonths === 0) {
-      payment = roundMoney(spitzerMonthlyPaymentRaw({
+    if (!roundBasePayment && index > 0 && index % resetPeriodMonths === 0) {
+      payment = spitzerMonthlyPaymentRaw({
         loanAmount: indexedBalance, monthlyRate, numberOfPayments: numberOfPayments - index,
-      }));
+      });
     }
     const interest = indexedBalance * monthlyRate;
     const principal = index === numberOfPayments - 1

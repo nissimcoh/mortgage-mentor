@@ -11,6 +11,24 @@ import type { MarketSnapshot, MarketSourceError } from "./types";
 import { fetchBoiRate } from "./sources/bank-of-israel";
 import { fetchLatestCpi } from "./sources/cbs";
 
+export type CalculatorRateSnapshot = Pick<MarketSnapshot, "boiRate" | "nextDecision" | "fetchedAt">;
+
+/** The calculator uses forecast CPI curves, not the latest CBS observation.
+ * Reuse the same rate/freshness derivation without waiting for an unused feed. */
+export async function getCalculatorRateSnapshot(): Promise<CalculatorRateSnapshot> {
+  let boi = null;
+  const errors: MarketSourceError[] = [];
+  try {
+    boi = await fetchBoiRate();
+  } catch (reason) {
+    errors.push(toSourceError(SOURCE_IDS.boiSdmx, reason));
+  }
+  const { boiRate, nextDecision, fetchedAt } = assembleSnapshot(
+    { boi, cpi: null, errors }, new Date(),
+  );
+  return { boiRate, nextDecision, fetchedAt };
+}
+
 function toSourceError(sourceId: string, reason: unknown): MarketSourceError {
   // Keep messages human-readable and stack-free.
   const message =

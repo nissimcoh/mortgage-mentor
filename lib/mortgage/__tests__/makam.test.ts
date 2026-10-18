@@ -16,7 +16,7 @@ const SYNTHETIC = Array.from({ length: 360 }, (_, i) => 3 + (i + 1) / 120);
 
 const MAKAM_ANCHOR = 3.25;
 const OFFERED = 4.1;
-const MARGIN = OFFERED - MAKAM_ANCHOR; // 0.85 — contractual margin
+const MARGIN = OFFERED - SYNTHETIC[11]; // forecast spread over the same zero curve
 
 const baseTrack: VariableMakamTrackInput = {
   type: "variableMakam",
@@ -67,6 +67,7 @@ describe("Makam annual forecast path", () => {
   it("exposes the Makam anchor, margin, and snapshot provenance", () => {
     expect(summary.variableForecast!.makamAnchorPercent).toBe(MAKAM_ANCHOR);
     expect(summary.variableForecast!.makamSnapshotId).toBe("2026-06");
+    expect(summary.variableForecast!.makamObservedSpreadPercent).toBeCloseTo(OFFERED - MAKAM_ANCHOR, 10);
     expect(summary.variableForecast!.customerAnchorMarginPercent).toBeCloseTo(
       MARGIN,
       10,

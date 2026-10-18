@@ -11,6 +11,7 @@ import { buildNewVersionName } from "@/lib/scenarios/payload";
 import type { TrackDraft } from "@/lib/mortgage/scenario-form";
 import { createClient } from "@/lib/supabase/client";
 import LegalNotice from "./LegalNotice";
+import ModalDialog from "./ModalDialog";
 
 type DialogView = "choose" | "confirmSaveAsNew";
 type Pending = "none" | "updating" | "savingNew";
@@ -31,6 +32,7 @@ interface EditScenarioSaveButtonProps {
   buttonLabel: string;
   drafts: TrackDraft[];
   editContext: EditContext;
+  onUpdated: (saved: { name: string; updatedAt: string }) => void;
   labels: Dictionary["editScenarioDialog"];
   saveScenarioLabels: Pick<
     Dictionary["saveScenarioDialog"],
@@ -60,6 +62,7 @@ export default function EditScenarioSaveButton({
   buttonLabel,
   drafts,
   editContext,
+  onUpdated,
   labels,
   saveScenarioLabels,
 }: EditScenarioSaveButtonProps) {
@@ -74,15 +77,8 @@ export default function EditScenarioSaveButton({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [toastKind, setToastKind] = useState<ToastKind>("none");
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (!dialogOpen) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setDialogOpen(false);
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [dialogOpen]);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const savingRef = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -99,15 +95,22 @@ export default function EditScenarioSaveButton({
     );
   }
 
+  function redirectToSignIn() {
+    const next = `${pathname}?${searchParams.toString()}`;
+    router.push(`/${locale}/signin?next=${encodeURIComponent(next)}`);
+  }
+
   async function handleOpen() {
-    const supabase = createClient();
+    // A local cookie read is enough to choose between the dialog and the
+    // sign-in redirect; the save action itself re-verifies the user with
+    // the auth server, so the dialog opens without a network round trip.
     const {
-      data: { user },
-    } = await supabase.auth.getUser();
+      data: { session },
+    } = await createClient().auth.getSession();
+    const user = session?.user ?? null;
 
     if (!user) {
-      const next = `${pathname}?${searchParams.toString()}`;
-      router.push(`/${locale}/signin?next=${encodeURIComponent(next)}`);
+      redirectToSignIn();
       return;
     }
 
@@ -120,24 +123,34 @@ export default function EditScenarioSaveButton({
   }
 
   async function handleUpdateOriginal() {
+    if (savingRef.current) return;
+    savingRef.current = true;
     setPending("updating");
     setErrorMessage(null);
+    try {
+      const result = await updateScenario({
+        id: editContext.id,
+        name,
+        locale,
+        tracks: drafts,
+        expectedUpdatedAt: editContext.expectedUpdatedAt,
+      });
 
-    const result = await updateScenario({
-      id: editContext.id,
-      name,
-      locale,
-      tracks: drafts,
-      expectedUpdatedAt: editContext.expectedUpdatedAt,
-    });
-
-    setPending("none");
-    if (result.ok) {
-      setDialogOpen(false);
-      showToast("updated");
-      return;
-    }
-    setErrorMessage(messageForError(result.error, labels));
+      setPending("none");
+      if (result.ok) {
+        onUpdated({ name: result.name, updatedAt: result.updatedAt });
+        setDialogOpen(false);
+        showToast("updated");
+        return;
+      }
+      if (result.error === "unauthenticated") {
+        setDialogOpen(false);
+        redirectToSignIn();
+        return;
+      }
+      setErrorMessage(messageForError(result.error, labels));
+    } catch { setErrorMessage(labels.genericErrorMessage); }
+    finally { savingRef.current = false; setPending("none"); }
   }
 
   function handleSaveAsNewClick() {
@@ -151,22 +164,31 @@ export default function EditScenarioSaveButton({
   }
 
   async function handleConfirmSaveAsNew() {
+    if (savingRef.current) return;
+    savingRef.current = true;
     setPending("savingNew");
     setErrorMessage(null);
+    try {
+      const result = await createScenario({ name, locale, tracks: drafts });
 
-    const result = await createScenario({ name, locale, tracks: drafts });
-
-    setPending("none");
-    if (result.ok) {
-      setDialogOpen(false);
-      showToast("savedNew");
-      return;
-    }
-    setErrorMessage(
-      result.error === "invalid-name"
-        ? labels.nameInvalidMessage
-        : labels.genericErrorMessage,
-    );
+      setPending("none");
+      if (result.ok) {
+        setDialogOpen(false);
+        showToast("savedNew");
+        return;
+      }
+      if (result.error === "unauthenticated") {
+        setDialogOpen(false);
+        redirectToSignIn();
+        return;
+      }
+      setErrorMessage(
+        result.error === "invalid-name"
+          ? labels.nameInvalidMessage
+          : labels.genericErrorMessage,
+      );
+    } catch { setErrorMessage(labels.genericErrorMessage); }
+    finally { savingRef.current = false; setPending("none"); }
   }
 
   const busy = pending !== "none";
@@ -174,21 +196,21 @@ export default function EditScenarioSaveButton({
   return (
     <>
       <button
+        ref={triggerRef}
         type="button"
         onClick={handleOpen}
-        className="rounded-lg bg-accent px-3 py-2 text-sm font-medium text-accent-foreground transition hover:opacity-90 sm:py-1.5"
+        className="min-h-11 rounded-xl bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition hover:opacity-90"
       >
         {buttonLabel}
       </button>
 
       {dialogOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={labels.title}
-          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 px-4 pb-4 sm:items-center sm:pb-0"
-        >
-          <div className="glass-form glass-panel max-h-[85dvh] w-full max-w-sm overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-lg">
+        <ModalDialog label={labels.title} busy={busy} onClose={() => setDialogOpen(false)} returnFocusRef={triggerRef}>
+          <form onSubmit={event => {
+            event.preventDefault();
+            // Updating the original vs saving a copy must be an explicit choice.
+            if (view === "confirmSaveAsNew") void handleConfirmSaveAsNew();
+          }} className="glass-form glass-panel max-h-[85dvh] w-full max-w-sm overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-lg">
             <h2 className="mb-3 text-lg font-bold text-slate-900">
               {labels.title}
             </h2>
@@ -272,8 +294,7 @@ export default function EditScenarioSaveButton({
                     {labels.backButton}
                   </button>
                   <button
-                    type="button"
-                    onClick={handleConfirmSaveAsNew}
+                    type="submit"
                     disabled={busy}
                     className="rounded-lg bg-accent px-4 py-1.5 text-sm font-medium text-accent-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                   >
@@ -284,8 +305,8 @@ export default function EditScenarioSaveButton({
                 </div>
               </>
             )}
-          </div>
-        </div>
+          </form>
+        </ModalDialog>
       )}
 
       {toastKind !== "none" && (

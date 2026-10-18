@@ -14,7 +14,7 @@
 
 import { isValidLocale, defaultLocale, type Locale } from "../i18n/config";
 import { buildCalculatorMarketData } from "../market-data/build-calculator-market-data";
-import { getMarketSnapshot } from "../market-data/get-market-snapshot";
+import { getCalculatorRateSnapshot } from "../market-data/get-market-snapshot";
 import { getMakamAnchorData } from "../market-data/sources/boi-makam";
 import { getMortgageForecastData } from "../market-data/sources/boi-mortgage-forecast";
 import { calculateScenarioSummary } from "../mortgage/calculations";
@@ -80,7 +80,7 @@ export async function prepareScenarioSave(
   // IDs the tracks pinned — the same three calls calculator/page.tsx
   // makes, so a reopened/recalculated scenario is reproducible.
   const [marketSnapshot, forecastData, makamData] = await Promise.all([
-    getMarketSnapshot(),
+    getCalculatorRateSnapshot(),
     getMortgageForecastData(extractPinnedCurveIds(payload)),
     getMakamAnchorData(extractPinnedMakamSnapshotIds(payload)),
   ]);

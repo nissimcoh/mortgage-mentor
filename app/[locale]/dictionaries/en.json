@@ -447,6 +447,7 @@
     "callbackErrorMessage": "Sign-in failed or expired. You can try again."
   },
   "market": {
+    "loading": "Loading market data… You can already open the calculator.",
     "title": "The data behind your mortgage",
     "subtitle": "Rates and forecasts from the Bank of Israel; CPI from CBS. Each figure includes its source and reference date.",
     "boiRateLabel": "Bank of Israel rate",
@@ -537,7 +538,7 @@
     "resetEvery10Years": "Every 10 years",
     "selectFrequencyFirst": "Choose a reset frequency first",
     "governmentBondHelp": "The rate remains fixed until the reset date and then updates according to a government-bond anchor. The principal is not CPI-linked.",
-    "makamHelp": "The rate updates annually according to the Makam anchor plus the contractual margin. The principal is not CPI-linked.",
+    "makamHelp": "The rate updates annually according to the Makam anchor plus the contractual margin. The principal is not CPI-linked. The offered rate is held for the first year; subsequent payments are forecast from the one-year nominal zero curve. The displayed Makam observation is reference data, not the forecast spread baseline.",
     "makamAnchorLabel": "Makam anchor",
     "makamAnchorUnavailableNote": "The Makam anchor saved in this link is currently unavailable, so the calculation was not performed. You can update to the latest anchor.",
     "useLatestMakamButton": "Update to the latest anchor",
@@ -577,7 +578,7 @@
     "tracksCountLabel": "Number of tracks",
     "totalAmountLabel": "Total mortgage (sum of all tracks)",
     "invalidInput": "Invalid input. Make sure every track has a valid amount, rate, and duration.",
-    "fieldErrorAmountInvalid": "Enter a valid loan amount",
+    "fieldErrorAmountInvalid": "Enter a positive whole-shekel amount, without decimals or a minus sign",
     "fieldErrorYearsInvalid": "Select a valid term",
     "fieldErrorYearsInvalidForReset": "This term is not available for the selected reset frequency",
     "fieldErrorResetPeriodInvalid": "Choose a rate reset frequency",
@@ -689,6 +690,16 @@
     "linkedForecastModeConstant": "Constant rate and no inflation",
     "freshnessObserved": "Latest source observation",
     "freshnessStale": "Old observation — check source",
-    "rateDataWarning": "The BOI rate could not be verified as current. Prime calculations use the value shown under Data sources & freshness; check it before comparing results."
+    "rateDataWarning": "The BOI rate could not be verified as current. Prime calculations use the value shown under Data sources & freshness; check it before comparing results.",
+    "draftFound": "An unfinished draft is available in this tab. Restore it and calculate again to update the results.",
+    "draftRestore": "Restore draft",
+    "draftDiscard": "Discard saved draft",
+    "draftClear": "Clear calculator and draft",
+    "draftPrivacy": "Inputs are saved automatically in this tab only. They are not saved to your account. You can clear them at any time.",
+    "draftStorageUnavailable": "This browser could not save the draft. You can continue calculating; copy a calculated scenario link to keep it.",
+    "csvButton": "Download displayed schedule (CSV)",
+    "csvHelp": "Exports the selected schedule for Excel. Amounts are in ILS; annual rates are in percent. Each row retains its entered-terms or estimated label.",
+    "csvError": "Could not download the schedule. Please try again.",
+    "csvEstimated": "Estimated"
   }
 }

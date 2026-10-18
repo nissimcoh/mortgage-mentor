@@ -46,7 +46,7 @@ export default function ExportMortgagePdfButton(props: Omit<MortgagePrintReportP
   }
 
   return <div>
-    <button type="button" onClick={print} disabled={props.disabled || preparing} className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium disabled:opacity-50">
+    <button type="button" onClick={print} disabled={props.disabled || preparing} className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:opacity-50">
       {preparing ? props.labels.pdfPrinting : props.labels.pdfButton}
     </button>
     {failed && <p role="alert" className="mt-1 text-xs text-red-700">{props.labels.pdfError}</p>}

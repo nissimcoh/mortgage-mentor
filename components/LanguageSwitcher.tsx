@@ -30,10 +30,16 @@ function getPathForLocale(
   return queryString ? `${path}?${queryString}` : path;
 }
 
-export default function LanguageSwitcher() {
-  const pathname = usePathname();
+/** Carries the current query string (e.g. calculator inputs) across a
+ * language switch. Reading search params is what requires the Suspense
+ * boundary in AppHeader, so it lives in this thin wrapper only. */
+export function LanguageSwitcherWithQuery() {
   const searchParams = useSearchParams();
-  const queryString = searchParams.toString();
+  return <LanguageSwitcher queryString={searchParams.toString()} />;
+}
+
+export default function LanguageSwitcher({ queryString }: { queryString: string }) {
+  const pathname = usePathname();
   const [openPath, setOpenPath] = useState<string | null>(null);
   const open = openPath === pathname;
   const containerRef = useRef<HTMLDivElement>(null);
@@ -63,7 +69,6 @@ export default function LanguageSwitcher() {
     };
   }, [open]);
 
-
   return (
     // dir="ltr" keeps the control's internal layout identical regardless of
     // the page's own direction. Positioned inline in the header now (not
@@ -75,13 +80,13 @@ export default function LanguageSwitcher() {
         onClick={() => setOpenPath(open ? null : pathname)}
         aria-expanded={open}
         aria-haspopup="menu"
-        className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-slate-700 shadow-sm transition hover:bg-slate-50"
+        className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-slate-700 shadow-sm transition hover:bg-slate-50 sm:px-3"
       >
-        <span aria-hidden>🌐</span>
+        <span aria-hidden className="hidden sm:inline">🌐</span>
         <span lang={currentLocale}>{localeLabels[currentLocale]}</span>
         <span
           aria-hidden
-          className={`text-xs text-slate-400 transition-transform ${
+          className={`hidden text-xs text-slate-400 transition-transform sm:inline ${
             open ? "rotate-180" : ""
           }`}
         >

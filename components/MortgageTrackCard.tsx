@@ -2,6 +2,7 @@
 
 // Type-only import: erased at compile time, keeps the server-only
 // dictionary module out of the client bundle.
+import { useId } from "react";
 import type { Dictionary } from "@/app/[locale]/dictionaries";
 import {
   MAX_YEARS,
@@ -16,7 +17,7 @@ import {
   isGovernmentBondResetMonths,
   MAKAM_TERM_YEARS,
 } from "@/lib/mortgage/product-catalog";
-import { formatAmountWhileTyping, parseDecimalRate } from "@/lib/forms/numeric";
+import { formatAmountEdit, parseDecimalRate } from "@/lib/forms/numeric";
 
 type CalculatorLabels = Dictionary["calculator"];
 
@@ -78,10 +79,10 @@ function fieldErrorMessage(
   }
 }
 
-function FieldError({ message }: { message: string | null }) {
+function FieldError({ id, message }: { id: string; message: string | null }) {
   if (!message) return null;
   return (
-    <p role="alert" className="mt-1 text-xs text-red-600">
+    <p id={id} role="alert" className="mt-1 text-xs text-red-600">
       {message}
     </p>
   );
@@ -131,6 +132,12 @@ export default function MortgageTrackCard({
   onRemove,
   onDuplicate,
 }: MortgageTrackCardProps) {
+  const fieldId = useId();
+  const errorProps = (field: keyof TrackFieldErrors) => ({
+    "aria-labelledby": `${fieldId}-${field}-label`,
+    "aria-invalid": fieldErrors[field] ? true as const : undefined,
+    "aria-describedby": fieldErrors[field] ? `${fieldId}-${field}-error` : undefined,
+  });
   const isPrime = draft.trackType === "prime";
   const isGovernmentBond = draft.trackType === "variableGovernmentBond";
   const isMakam = draft.trackType === "variableMakam";
@@ -159,25 +166,23 @@ export default function MortgageTrackCard({
 
   const amountField = (
     <label className="block">
-      <span className={labelClass}>{labels.trackAmountLabel}</span>
+      <span id={`${fieldId}-amount-label`} className={labelClass}>{labels.trackAmountLabel}</span>
       <span className="relative block">
         <input
           type="text"
           inputMode="numeric"
           autoComplete="off"
           placeholder="0"
+          {...errorProps("amount")}
           value={draft.amount}
           onChange={(event) => {
-            // Format on every keystroke (and on paste), not just on blur.
-            // The cursor is intentionally moved to the end after each edit
-            // — simple and always usable, if not ideal for mid-string
-            // edits — since reformatting can shift comma positions in a
-            // way a raw caret offset wouldn't survive meaningfully anyway.
-            const input = event.target;
-            const formatted = formatAmountWhileTyping(input.value);
-            input.value = formatted;
-            input.setSelectionRange(formatted.length, formatted.length);
-            onChange("amount", formatted);
+            const input = event.currentTarget;
+            const native = event.nativeEvent as InputEvent;
+            const edit = formatAmountEdit(input.value, input.selectionStart ?? 0,
+              input.selectionEnd ?? 0, draft.amount, native.inputType, native.data);
+            input.value = edit.value;
+            input.setSelectionRange(edit.start, edit.end);
+            onChange("amount", edit.value);
           }}
           onBlur={onAmountBlur}
           className={`${fieldClass} pe-9`}
@@ -186,7 +191,7 @@ export default function MortgageTrackCard({
           ₪
         </span>
       </span>
-      <FieldError message={fieldErrorMessage(fieldErrors.amount, labels)} />
+      <FieldError id={`${fieldId}-amount-error`} message={fieldErrorMessage(fieldErrors.amount, labels)} />
     </label>
   );
 
@@ -212,7 +217,7 @@ export default function MortgageTrackCard({
 
   const rateField = (
     <label className="block">
-      <span className={labelClass}>
+      <span id={`${fieldId}-rate-label`} className={labelClass}>
         {isVariableStyle
           ? labels.primeOfferedRateLabel
           : labels.interestRateLabel}
@@ -223,6 +228,7 @@ export default function MortgageTrackCard({
           inputMode="decimal"
           autoComplete="off"
           placeholder="0"
+          {...errorProps("rate")}
           value={isVariableStyle ? draft.currentRatePercent : draft.ratePercent}
           onChange={(event) =>
             onChange(
@@ -236,7 +242,7 @@ export default function MortgageTrackCard({
           %
         </span>
       </span>
-      <FieldError message={fieldErrorMessage(fieldErrors.rate, labels)} />
+      <FieldError id={`${fieldId}-rate-error`} message={fieldErrorMessage(fieldErrors.rate, labels)} />
     </label>
   );
 
@@ -281,8 +287,9 @@ export default function MortgageTrackCard({
   const termDisabled = isBondReset && governmentBondTerms === null;
   const termField = (
     <label className="block">
-      <span className={labelClass}>{labels.yearsLabel}</span>
+      <span id={`${fieldId}-years-label`} className={labelClass}>{labels.yearsLabel}</span>
       <select
+        {...errorProps("years")}
         value={draft.years}
         disabled={termDisabled}
         onChange={(event) => onChange("years", event.target.value)}
@@ -302,16 +309,18 @@ export default function MortgageTrackCard({
             </option>
           ))}
       </select>
-      <FieldError message={fieldErrorMessage(fieldErrors.years, labels)} />
+      <FieldError id={`${fieldId}-years-error`} message={fieldErrorMessage(fieldErrors.years, labels)} />
     </label>
   );
 
   // Single-choice segmented control (radio group) for the reset frequency.
   const frequencyField = (
     <div>
-      <span className={labelClass}>{labels.resetPeriodLabel}</span>
+      <span id={`${fieldId}-resetPeriodMonths-label`} className={labelClass}>{labels.resetPeriodLabel}</span>
       <div
         role="radiogroup"
+        tabIndex={-1}
+        {...errorProps("resetPeriodMonths")}
         aria-label={labels.resetPeriodLabel}
         className="flex flex-wrap gap-1.5"
       >
@@ -336,6 +345,7 @@ export default function MortgageTrackCard({
         })}
       </div>
       <FieldError
+        id={`${fieldId}-resetPeriodMonths-error`}
         message={fieldErrorMessage(fieldErrors.resetPeriodMonths, labels)}
       />
     </div>

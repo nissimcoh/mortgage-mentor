@@ -4,4 +4,6 @@
  * produced a given result_snapshot. Bump only when calculation
  * methodology changes, not on every unrelated app deploy.
  */
-export const CALCULATOR_VERSION = "1.1.0";
+// 1.2: calibrated Makam forecast baseline and full-precision CPI forecasts.
+// Previously saved snapshots retain their original version and values.
+export const CALCULATOR_VERSION = "1.2.0";

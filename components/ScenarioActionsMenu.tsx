@@ -9,6 +9,7 @@ import {
   renameScenario,
 } from "@/lib/scenarios/actions";
 import type { ScenarioActionError } from "@/lib/scenarios/contract";
+import ModalDialog from "./ModalDialog";
 
 type DropdownView = "menu" | "confirmDelete";
 type Pending = "none" | "renaming" | "duplicating" | "deleting";
@@ -45,6 +46,8 @@ export default function ScenarioActionsMenu({
 }: ScenarioActionsMenuProps) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const renamingRef = useRef(false);
 
   const [open, setOpen] = useState(false);
   const [dropdownView, setDropdownView] = useState<DropdownView>("menu");
@@ -73,15 +76,6 @@ export default function ScenarioActionsMenu({
     };
   }, [open]);
 
-  useEffect(() => {
-    if (!renameOpen) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setRenameOpen(false);
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [renameOpen]);
-
   function closeMenu() {
     setOpen(false);
     setDropdownView("menu");
@@ -105,48 +99,55 @@ export default function ScenarioActionsMenu({
     setOpen(true);
   }
 
-  async function handleDuplicate() {
-    setPending("duplicating");
+  /** Shared by duplicate/delete: a thrown request (network failure) must
+   * never leave the menu stuck in its pending state. */
+  async function runMenuAction(
+    kind: "duplicating" | "deleting",
+    action: () => ReturnType<typeof duplicateScenario> | ReturnType<typeof deleteScenario>,
+  ) {
+    if (pending !== "none") return;
+    setPending(kind);
     setMenuError(null);
-    const result = await duplicateScenario(id);
-    setPending("none");
-    if (result.ok) {
-      closeMenu();
-      router.refresh();
-      return;
+    try {
+      const result = await action();
+      if (result.ok) {
+        closeMenu();
+        router.refresh();
+        return;
+      }
+      setMenuError(messageForError(result.error, labels));
+    } catch {
+      setMenuError(labels.actionErrorMessage);
+    } finally {
+      setPending("none");
     }
-    setMenuError(messageForError(result.error, labels));
   }
 
-  async function handleDeleteConfirm() {
-    setPending("deleting");
-    setMenuError(null);
-    const result = await deleteScenario(id);
-    setPending("none");
-    if (result.ok) {
-      closeMenu();
-      router.refresh();
-      return;
-    }
-    setMenuError(messageForError(result.error, labels));
-  }
+  const handleDuplicate = () => runMenuAction("duplicating", () => duplicateScenario(id));
+  const handleDeleteConfirm = () => runMenuAction("deleting", () => deleteScenario(id));
 
   async function handleRenameSave() {
+    if (renamingRef.current) return;
+    renamingRef.current = true;
     setPending("renaming");
     setRenameError(null);
-    const result = await renameScenario({ id, name: renameValue });
-    setPending("none");
-    if (result.ok) {
-      setRenameOpen(false);
-      router.refresh();
-      return;
-    }
-    setRenameError(messageForError(result.error, labels));
+    try {
+      const result = await renameScenario({ id, name: renameValue });
+      setPending("none");
+      if (result.ok) {
+        setRenameOpen(false);
+        router.refresh();
+        return;
+      }
+      setRenameError(messageForError(result.error, labels));
+    } catch { setRenameError(labels.actionErrorMessage); }
+    finally { renamingRef.current = false; setPending("none"); }
   }
 
   return (
     <div ref={containerRef} className="relative">
       <button
+        ref={triggerRef}
         type="button"
         onClick={toggleMenu}
         aria-haspopup="menu"
@@ -235,13 +236,8 @@ export default function ScenarioActionsMenu({
       )}
 
       {renameOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={labels.renameDialogTitle}
-          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 px-4 pb-4 sm:items-center sm:pb-0"
-        >
-          <div className="glass-form glass-panel w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-lg">
+        <ModalDialog label={labels.renameDialogTitle} busy={pending === "renaming"} onClose={() => setRenameOpen(false)} returnFocusRef={triggerRef}>
+          <form onSubmit={event => { event.preventDefault(); void handleRenameSave(); }} className="glass-form glass-panel max-h-[85dvh] overflow-y-auto w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-lg">
             <h2 className="mb-3 text-lg font-bold text-slate-900">
               {labels.renameDialogTitle}
             </h2>
@@ -277,8 +273,7 @@ export default function ScenarioActionsMenu({
                 {labels.renameCancelButton}
               </button>
               <button
-                type="button"
-                onClick={handleRenameSave}
+                type="submit"
                 disabled={pending === "renaming"}
                 className="rounded-lg bg-accent px-4 py-1.5 text-sm font-medium text-accent-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -287,8 +282,8 @@ export default function ScenarioActionsMenu({
                   : labels.renameSaveButton}
               </button>
             </div>
-          </div>
-        </div>
+          </form>
+        </ModalDialog>
       )}
     </div>
   );

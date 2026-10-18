@@ -5,7 +5,7 @@
  * components need. Pure data transformation — no fetching, no calculation.
  */
 
-import type { MarketSnapshot } from "./types";
+import type { CalculatorRateSnapshot } from "./get-market-snapshot";
 import type {
   MakamAnchorData,
   MakamAnchorSnapshot,
@@ -33,7 +33,7 @@ export interface CalculatorMarketData {
 }
 
 export function buildCalculatorMarketData(
-  marketSnapshot: MarketSnapshot,
+  marketSnapshot: CalculatorRateSnapshot,
   forecastData: MortgageForecastData,
   makamData: MakamAnchorData,
 ): CalculatorMarketData {

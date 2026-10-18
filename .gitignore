@@ -42,3 +42,4 @@ next-env.d.ts
 
 # Local screenshot evidence and historical diagnostic captures.
 /docs/reviews/
+/output/playwright/

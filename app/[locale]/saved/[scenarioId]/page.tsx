@@ -87,6 +87,8 @@ function trackTypeLabel(
       return labels.trackTypeMakam;
     case "fixedLinked":
       return labels.trackTypeFixedLinked;
+    case "variableLinked":
+      return labels.trackTypeVariableLinked;
     default:
       return trackType;
   }
@@ -112,10 +114,12 @@ const RESET_PERIOD_LABEL_KEY: Record<
   "120": "resetEvery10Years",
 };
 
+/** Mirrors the option labels MortgageTrackCard shows for each track type. */
 function forecastOrInflationModeLabel(
   mode: string,
   labels: Dictionary["calculator"],
   isInflation: boolean,
+  isVariableLinked: boolean,
 ): string | null {
   const table = isInflation
     ? {
@@ -125,7 +129,9 @@ function forecastOrInflationModeLabel(
       }
     : {
         official: labels.forecastModeOfficial,
-        constant: labels.forecastModeConstant,
+        constant: isVariableLinked
+          ? labels.linkedForecastModeConstant
+          : labels.forecastModeConstant,
         stress: labels.forecastModeStress,
       };
   return (table as Record<string, string | undefined>)[mode] ?? null;
@@ -151,6 +157,7 @@ function trackRows(
 ): TrackRow[] {
   const isVariableStyle = track.trackType !== "fixedUnlinked";
   const isInflation = track.trackType === "fixedLinked";
+  const isVariableLinked = track.trackType === "variableLinked";
 
   const amountValue = parseWholeAmount(track.amount);
   const rows: TrackRow[] = [
@@ -189,7 +196,7 @@ function trackRows(
         : labels.repaymentMethodSpitzer,
   });
 
-  if (track.trackType === "variableGovernmentBond") {
+  if (track.trackType === "variableGovernmentBond" || isVariableLinked) {
     const resetKey = RESET_PERIOD_LABEL_KEY[track.resetPeriodMonths];
     rows.push({
       label: labels.resetPeriodLabel,
@@ -202,23 +209,33 @@ function trackRows(
       track.forecastMode,
       labels,
       isInflation,
+      isVariableLinked,
     );
     if (modeLabel) {
       rows.push({
-        label: isInflation ? labels.inflationModeLabel : labels.forecastModeLabel,
+        label: isInflation
+          ? labels.inflationModeLabel
+          : isVariableLinked
+            ? labels.linkedForecastModeLabel
+            : labels.forecastModeLabel,
         value: modeLabel,
       });
     }
     if (track.forecastMode === "stress") {
-      const shiftRaw = isInflation ? track.inflationStressShift : track.stressShift;
       // The stored value is already signed exactly as the user typed it
       // (e.g. "+1" or "-0.5") — parseSignedDecimal only gates whether the
       // row is worth showing at all, the raw string is what's displayed.
-      if (parseSignedDecimal(shiftRaw) !== null) {
-        rows.push({
-          label: isInflation ? labels.inflationStressShiftLabel : labels.stressShiftLabel,
-          value: shiftRaw,
-        });
+      // Variable CPI-linked tracks carry both a rate and an inflation shift.
+      const shifts = [
+        ...(isInflation ? [] : [{ label: labels.stressShiftLabel, raw: track.stressShift }]),
+        ...(isInflation || isVariableLinked
+          ? [{ label: labels.inflationStressShiftLabel, raw: track.inflationStressShift }]
+          : []),
+      ];
+      for (const shift of shifts) {
+        if (parseSignedDecimal(shift.raw) !== null) {
+          rows.push({ label: shift.label, value: shift.raw });
+        }
       }
     }
   }
@@ -364,7 +381,7 @@ export default async function ScenarioDetailPage({
           {dict.scenarioDetailPage.backToSavedLabel}
         </Link>
 
-        <h1 className="mt-3 mb-1 text-2xl font-bold tracking-tight sm:text-3xl">
+        <h1 className="mt-3 mb-1 break-words text-2xl font-bold tracking-tight sm:text-3xl">
           {row.name}
         </h1>
         <p className="mb-6 text-sm text-slate-500">
@@ -376,7 +393,7 @@ export default async function ScenarioDetailPage({
 
         {/* Hero: mirrors the calculator's own hero panel for visual
             consistency between "what I calculated" and "what I saved". */}
-        <div className="rounded-2xl bg-accent-soft p-5 sm:p-6">
+        <div className="glass-hero rounded-2xl bg-accent-soft p-5 sm:p-6">
           <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="text-sm font-medium text-slate-600">
@@ -411,9 +428,9 @@ export default async function ScenarioDetailPage({
             <dd className="mt-0.5 text-lg font-semibold text-slate-900 tabular-nums">
               {currencyFormat.format(resultSnapshot.highestPayment)}
             </dd>
-            <p className="mt-0.5 text-xs text-slate-500">
+            <dd className="mt-0.5 text-xs text-slate-500">
               {highestPaymentMonthText}
-            </p>
+            </dd>
           </div>
           <div>
             <dt className="text-xs text-slate-500">

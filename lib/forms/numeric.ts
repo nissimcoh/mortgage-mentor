@@ -4,14 +4,15 @@
  */
 
 /**
- * Parse a whole-shekel amount typed by a user: digits only, commas and
- * spaces allowed ("800000", "800,000"). Returns null when invalid
- * (including empty strings and decimal values).
+ * Whole shekels, optionally grouped in threes with commas or spaces and
+ * prefixed/suffixed with ₪. Never discard a sign, decimal or other text.
  */
 export function parseWholeAmount(raw: string): number | null {
-  const digits = raw.replace(/[\s,₪]/g, "");
-  if (!/^\d+$/.test(digits)) return null;
-  return Number(digits);
+  if ((raw.match(/₪/g) ?? []).length > 1) return null;
+  const amount = raw.trim().replace(/^₪\s*|\s*₪$/g, "");
+  if (!/^(?:\d+|\d{1,3}(?:,\d{3})+|\d{1,3}(?:[ \u00a0\u202f]\d{3})+)$/.test(amount)) return null;
+  const value = Number(stripAmountSeparators(amount));
+  return Number.isSafeInteger(value) ? value : null;
 }
 
 /**
@@ -40,25 +41,44 @@ export function formatThousands(value: number): string {
 }
 
 /**
- * Digits only — strips spaces, commas, currency symbols, and anything else
- * non-numeric. Used for live "format while typing" amount inputs and for
- * pasted values like "500,000" or "₪500,000".
+ * Remove display separators only. This is not validation: callers must
+ * validate before treating the result as an amount.
  */
 export function stripAmountSeparators(raw: string): string {
-  return raw.replace(/\D/g, "");
+  return raw.replace(/[\s,₪]/g, "");
 }
 
 /**
- * Live "format while typing" for amount inputs: keeps only digits typed or
- * pasted so far, then adds thousands separators as they accumulate ("500000"
- * -> "500,000" as each digit lands). Empty stays empty.
- *
- * Unlike `formatAmountForDisplay` (used on blur / URL hydration, where a
- * malformed value is shown as-is so the field-error message stays legible),
- * this never falls back to the raw input — every non-digit character is
- * simply dropped, since that's the expected live-typing/paste experience.
+ * Format valid amounts; keep invalid pasted/typed text visible for validation.
  */
 export function formatAmountWhileTyping(raw: string): string {
-  const digits = stripAmountSeparators(raw);
-  return digits === "" ? "" : formatThousands(Number(digits));
+  const amount = parseWholeAmount(raw);
+  return amount === null ? raw : formatThousands(amount);
+}
+
+/** Regroup only a native digit insertion/deletion in an already valid field.
+ * Pasted/replacement text always goes through the strict amount grammar. */
+export function formatAmountEdit(
+  raw: string,
+  start: number,
+  end: number,
+  previous: string,
+  inputType = "",
+  data: string | null = null,
+): { value: string; start: number; end: number } {
+  const regroup = parseWholeAmount(previous) !== null &&
+    ((inputType === "insertText" && /^\d+$/.test(data ?? "")) || inputType.startsWith("delete")) &&
+    /^[\d,]*$/.test(raw);
+  const value = formatAmountWhileTyping(regroup ? raw.replace(/,/g, "") : raw);
+  if (value === raw) return { value, start, end };
+  const position = (offset: number) => {
+    const removedDigits = raw.replace(/\D/g, "").length - value.replace(/\D/g, "").length;
+    let left = Math.max(0, raw.slice(0, offset).replace(/\D/g, "").length - removedDigits);
+    if (left === 0) return 0;
+    for (let index = 0; index < value.length; index++) {
+      if (/\d/.test(value[index]) && --left === 0) return index + 1;
+    }
+    return value.length;
+  };
+  return { value, start: position(start), end: position(end) };
 }

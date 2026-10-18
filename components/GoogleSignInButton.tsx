@@ -32,13 +32,16 @@ export default function GoogleSignInButton({
     const redirectTo = new URL(`/${locale}/auth/callback`, window.location.origin);
     redirectTo.searchParams.set("next", next);
 
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: redirectTo.toString() },
-    });
-
-    if (error) setStatus("error");
+    try {
+      const { error } = await createClient().auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: redirectTo.toString() },
+      });
+      if (error) setStatus("error");
+    } catch {
+      // A network failure must not leave the button disabled forever.
+      setStatus("error");
+    }
     // On success the browser navigates away to Google, so no "idle" reset.
   }
 

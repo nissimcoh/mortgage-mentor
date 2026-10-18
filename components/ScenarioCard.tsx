@@ -55,7 +55,7 @@ export default function ScenarioCard({
         href={`/${locale}/saved/${id}`}
         className="block rounded-2xl p-4 pe-14 transition hover:bg-slate-50"
       >
-        <h3 className="text-base font-bold text-slate-900">{name}</h3>
+        <h3 className="break-words text-base font-bold text-slate-900">{name}</h3>
 
         {resultSnapshot ? (
           <>
@@ -79,7 +79,8 @@ export default function ScenarioCard({
             </span>
           </>
         ) : (
-          <p role="alert" className="mt-2 text-sm text-red-600">
+          // Static server-rendered state, not a live event: no role="alert".
+          <p className="mt-2 text-sm text-red-600">
             {labels.invalidScenarioMessage}
           </p>
         )}

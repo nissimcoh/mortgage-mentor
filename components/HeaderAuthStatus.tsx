@@ -27,6 +27,11 @@ interface AuthState {
  * same client instance). Re-reading `next/navigation`'s pathname after
  * the action's redirect lands is what makes sign-out actually flip the
  * header back, without needing a full page reload.
+ *
+ * The per-navigation re-check reads the session cookie locally
+ * (getSession) instead of calling the auth server (getUser): this state
+ * only chooses between "Sign in" and the account menu, and every
+ * protected page and action re-verifies the user server-side anyway.
  */
 function useHeaderAuthState(): AuthState {
   const pathname = usePathname();
@@ -36,27 +41,28 @@ function useHeaderAuthState(): AuthState {
   });
 
   useEffect(() => {
-    const supabase = createClient();
-    let active = true;
-
-    supabase.auth.getUser().then(({ data }) => {
-      if (!active) return;
-      setState({ status: data.user ? "signedIn" : "signedOut", user: data.user });
-    });
-
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!active) return;
+    } = createClient().auth.onAuthStateChange((_event, session) => {
       setState({
         status: session?.user ? "signedIn" : "signedOut",
         user: session?.user ?? null,
       });
     });
+    return () => subscription.unsubscribe();
+  }, []);
 
+  useEffect(() => {
+    let active = true;
+    createClient().auth.getSession().then(({ data }) => {
+      if (!active) return;
+      const user = data.session?.user ?? null;
+      setState({ status: user ? "signedIn" : "signedOut", user });
+    }, () => {
+      if (active) setState({ status: "signedOut", user: null });
+    });
     return () => {
       active = false;
-      subscription.unsubscribe();
     };
   }, [pathname]);
 

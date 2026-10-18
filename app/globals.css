@@ -7,7 +7,6 @@
   @page { size: A4; margin: 14mm; }
   body.mortgage-printing > :not(.mortgage-print-root) { display: none !important; }
   body.mortgage-printing { background: white !important; color: #111; }
-  body.mortgage-printing::before { display: none !important; }
   .mortgage-print-root { display: block; font-size: 10pt; line-height: 1.55; }
   .mortgage-print-root h1 { font-size: 23pt; font-weight: 700; margin: 4mm 0; }
   .mortgage-print-root h2 { font-size: 15pt; font-weight: 700; margin: 5mm 0 2mm; }
@@ -66,13 +65,14 @@
   --color-accent-luxe-soft: var(--accent-luxe-soft);
 }
 
-html,
-body {
+/* html keeps the flat ivory for iOS overscroll / safe-area regions; body
+   paints the decorative gradient below over it. */
+html {
   background: var(--background);
-  color: var(--foreground);
 }
 
 body {
+  color: var(--foreground);
   font-family: var(--font-heebo), Arial, Helvetica, sans-serif;
 }
 
@@ -100,8 +100,6 @@ body {
     radial-gradient(ellipse 65% 55% at 50% 100%, rgba(76, 66, 110, .10) 0%, transparent 58%),
     radial-gradient(ellipse 70% 60% at 100% 100%, rgba(15, 110, 104, .10) 0%, transparent 55%),
     linear-gradient(175deg, #f8f7f2 0%, #eef1ee 100%);
-  background-attachment: scroll;
-  position: relative;
 }
 
 .glass-panel, .glass-track, .glass-hero, .glass-nav {
@@ -185,9 +183,8 @@ body {
   color: #0b5c57;
 }
 
-/* Keep glass depth without large fixed paint surfaces on phones. */
+/* Lighter blur on phones keeps scrolling smooth on lower-end GPUs. */
 @media (max-width: 767px) {
-  body { background-attachment: scroll; }
   .glass-panel, .glass-hero, .glass-nav {
     -webkit-backdrop-filter: blur(12px) saturate(130%);
     backdrop-filter: blur(12px) saturate(130%);

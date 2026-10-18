@@ -245,7 +245,7 @@ export async function duplicateScenario(
   return { ok: true, id: inserted.id as string };
 }
 
-export type UpdateScenarioResult = { ok: true } | ScenarioActionFailure;
+export type UpdateScenarioResult = { ok: true; name: string; updatedAt: string } | ScenarioActionFailure;
 
 export interface UpdateScenarioInput extends PrepareScenarioSaveInput {
   id: unknown;
@@ -309,13 +309,15 @@ export async function updateScenario(
     .eq("id", input.id)
     .eq("user_id", user.id)
     .eq("updated_at", input.expectedUpdatedAt)
-    .select("id");
+    .select("id, updated_at");
 
   if (error) {
     logDatabaseError("updateScenario failed", error);
     return { ok: false, error: "database-error" };
   }
-  if (data && data.length > 0) return { ok: true };
+  if (data && data.length > 0) {
+    return { ok: true, name: prepared.name, updatedAt: data[0].updated_at as string };
+  }
 
   // Zero rows updated — find out (best-effort) whether that's because the
   // row doesn't exist/isn't owned by this user, or because it exists but
