@@ -37,6 +37,11 @@ export async function generateMetadata({
   return {
     title: dict.metadata.title,
     description: dict.metadata.description,
+    applicationName: "Mortgage Mentor",
+    appleWebApp: {
+      title: "Mortgage Mentor",
+      capable: false,
+    },
     // Also available at Safari's conventional root discovery URL.
     icons: {
       apple: { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },

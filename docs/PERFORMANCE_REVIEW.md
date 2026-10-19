@@ -163,3 +163,10 @@ smoke check of the initial Hebrew/English head sent to an iPhone user agent,
 PNG response type, opaque RGB pixels, dimensions and legacy URL compatibility.
 Native iPhone Add to Home Screen still requires a device recheck; an existing
 shortcut may need to be recreated after publication.
+
+The user subsequently reported the icon works on their spouse's stable iOS 27
+device but still fails on their own iOS 27.2 beta device. This narrows the
+remaining investigation to device/version differences without establishing a
+specific Safari bug. The default home-screen name is now explicitly
+`Mortgage Mentor` in both locales using Apple title and application-name
+metadata, while retaining the existing localized page titles and launch mode.
