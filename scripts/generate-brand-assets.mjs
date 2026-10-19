@@ -11,7 +11,9 @@ for (const size of [120, 512, 1024]) {
 }
 await copyFile(new URL("public/brand/mortgagementor.svg", root), new URL("app/icon.svg", root));
 await sharp(source).resize(180, 180).flatten({ background: "#102f40" }).png()
-  .toFile(new URL("app/apple-icon.png", root).pathname);
+  .toFile(new URL("public/apple-touch-icon.png", root).pathname);
+// Preserve URLs referenced by previously cached pages, including their query string.
+await copyFile(new URL("public/apple-touch-icon.png", root), new URL("public/apple-icon.png", root));
 
 // ICO directory followed by PNG payloads, supported by modern browsers/Windows.
 const sizes = [16, 32, 48];

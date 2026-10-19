@@ -143,3 +143,23 @@ ESLint, the production build and all 27 smoke routes pass. Real authenticated
 repeated save/rename, copy and comparison flows passed; synthetic rows were
 removed and existing rows preserved. Authenticated comparison/admin and
 localized 404 layouts were checked at mobile/desktop widths.
+
+## Safari home-screen icon — October 19, 2026
+
+An iPhone screenshot showed Safari's fallback M monogram. Production already
+served the correct opaque 180×180 PNG through Next's generated Apple icon link,
+including in the initial head for an iPhone user agent, but the conventional
+`/apple-touch-icon.png` discovery URL returned 404. This does not establish why
+the existing shortcut missed its icon.
+
+The same logo now lives at the conventional root URL, with one explicit Apple
+icon link in both locale layouts. The old `/apple-icon.png` URL (including cached
+query strings) remains available. The asset generator produces both copies;
+the logo artwork and browser launch behavior are unchanged.
+
+Validation: production build including TypeScript, ESLint, 743 offline tests
+(two opt-in tests skipped), all 27 route smoke checks, and a new production
+smoke check of the initial Hebrew/English head sent to an iPhone user agent,
+PNG response type, opaque RGB pixels, dimensions and legacy URL compatibility.
+Native iPhone Add to Home Screen still requires a device recheck; an existing
+shortcut may need to be recreated after publication.

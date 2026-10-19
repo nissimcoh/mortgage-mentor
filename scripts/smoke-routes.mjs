@@ -9,9 +9,11 @@
  */
 
 import { spawn } from "node:child_process";
+import assert from "node:assert/strict";
 
 const PORT = process.env.SMOKE_PORT ?? "3100";
 const BASE = `http://localhost:${PORT}`;
+const IPHONE_SAFARI = "Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1";
 
 /** Every route the calculator must keep serving. */
 const ROUTES = [
@@ -143,6 +145,39 @@ try {
     const ok = status === expected && contentOk && locationOk;
     if (!ok) failures += 1;
     console.log(`${ok ? "PASS" : "FAIL"}  ${status}  ${path}`);
+  }
+  // Check the HTML actually sent to Safari and the publicly served PNG, not
+  // just layout metadata. Keep old icon URLs working for cached pages too.
+  try {
+    for (const locale of ["he", "en"]) {
+      const response = await fetch(`${BASE}/${locale}`, { headers: { "user-agent": IPHONE_SAFARI } });
+      assert.equal(response.status, 200);
+      const head = (await response.text()).match(/<head\b[^>]*>([\s\S]*?)<\/head>/i)?.[1] ?? "";
+      const icons = [...head.matchAll(/<link\b[^>]*>/gi)]
+        .map(([tag]) => Object.fromEntries([...tag.matchAll(/([\w-]+)="([^"]*)"/g)].map(([, name, value]) => [name, value])))
+        .filter((attributes) => attributes.rel === "apple-touch-icon");
+      assert.equal(icons.length, 1, `${locale}: expected one Apple icon in the initial head`);
+      assert.equal(icons[0].href, "/apple-touch-icon.png");
+      assert.equal(icons[0].sizes, "180x180");
+      assert.equal(icons[0].type, "image/png");
+    }
+    let canonical;
+    for (const path of ["/apple-touch-icon.png", "/apple-icon.png?apple-icon.03au4sd3t89f4.png"]) {
+      const response = await fetch(`${BASE}${path}`, { redirect: "manual", headers: { "user-agent": IPHONE_SAFARI } });
+      assert.equal(response.status, 200, path);
+      assert.match(response.headers.get("content-type") ?? "", /^image\/png\b/);
+      const png = Buffer.from(await response.arrayBuffer());
+      assert.equal(png.subarray(0, 8).toString("hex"), "89504e470d0a1a0a");
+      assert.equal(png.readUInt32BE(16), 180);
+      assert.equal(png.readUInt32BE(20), 180);
+      assert.equal(png[25], 2, "Apple icon should be opaque RGB");
+      if (canonical) assert.deepEqual(png, canonical);
+      else canonical = png;
+    }
+    console.log("PASS  Safari home-screen icon: he/en head, root fallback and legacy URL");
+  } catch (error) {
+    failures += 1;
+    console.log(`FAIL  Safari home-screen icon: ${error.message}`);
   }
 } finally {
   try {

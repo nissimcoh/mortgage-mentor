@@ -37,6 +37,10 @@ export async function generateMetadata({
   return {
     title: dict.metadata.title,
     description: dict.metadata.description,
+    // Also available at Safari's conventional root discovery URL.
+    icons: {
+      apple: { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    },
     verification: {
       google: "H7nqcJ-9_Xx4hLEr9C-FigdH7Rwet4R907Q0nzSk9j0",
     },
