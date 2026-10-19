@@ -153,8 +153,9 @@ try {
       const response = await fetch(`${BASE}/${locale}`, { headers: { "user-agent": IPHONE_SAFARI } });
       assert.equal(response.status, 200);
       const head = (await response.text()).match(/<head\b[^>]*>([\s\S]*?)<\/head>/i)?.[1] ?? "";
-      assert.ok(head.includes('<meta name="apple-mobile-web-app-title" content="Mortgage Mentor"'), `${locale}: short English home-screen name`);
-      assert.ok(head.includes('<meta name="application-name" content="Mortgage Mentor"'));
+      const name = locale === "he" ? "מנטור משכנתא" : "Mortgage Mentor";
+      assert.ok(head.includes(`<meta name="apple-mobile-web-app-title" content="${name}"`), `${locale}: localized home-screen name`);
+      assert.ok(head.includes(`<meta name="application-name" content="${name}"`));
       assert.ok(!head.includes('name="mobile-web-app-capable"'), "Setting the shortcut name should not enable standalone mode");
       const icons = [...head.matchAll(/<link\b[^>]*>/gi)]
         .map(([tag]) => Object.fromEntries([...tag.matchAll(/([\w-]+)="([^"]*)"/g)].map(([, name, value]) => [name, value])))

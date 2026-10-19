@@ -37,9 +37,9 @@ export async function generateMetadata({
   return {
     title: dict.metadata.title,
     description: dict.metadata.description,
-    applicationName: "Mortgage Mentor",
+    applicationName: dict.metadata.applicationName,
     appleWebApp: {
-      title: "Mortgage Mentor",
+      title: dict.metadata.applicationName,
       capable: false,
     },
     // Also available at Safari's conventional root discovery URL.

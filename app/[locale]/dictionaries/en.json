@@ -76,6 +76,7 @@
     "chartUnavailable": "We could not reconstruct monthly payments that match this mix's saved results, so its chart line is unavailable. Open, recalculate and save it to update the comparison. Its saved summary remains in the table."
   },
   "metadata": {
+    "applicationName": "Mortgage Mentor",
     "title": "MortgageMentor | Mortgage Simulator",
     "description": "A smart simulation tool for understanding mortgages in Israel"
   },
