@@ -48,12 +48,29 @@ export default async function LearnPage({
           {t.intro}
         </p>
 
+        <section aria-labelledby="rules-title" className="mb-8">
+          <h2 id="rules-title" className="text-xl font-bold">{t.rulesTitle}</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">{t.rulesIntro}</p>
+          <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {t.rules.map((rule) => (
+              <li key={rule.termId + rule.value}>
+                <a href={`#${rule.termId}`} className="glass-panel flex h-full items-start gap-4 p-5 transition hover:ring-2 hover:ring-accent/30">
+                  <span className="min-w-14 text-3xl font-bold tracking-tight text-accent"><bdi>{rule.value}</bdi></span>
+                  <span className="text-sm leading-6 text-slate-700">{rule.label}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 max-w-3xl text-xs leading-5 text-slate-500">{t.rulesAsOf}</p>
+        </section>
+
         <LearningGlossary labels={t} />
         <aside className="glass-panel mt-8 p-6">
           <h2 className="font-semibold">{t.sourceTitle}</h2>
           <ul className="mt-3 space-y-3 text-sm text-accent">
             <li><a className="underline underline-offset-4" href="https://www.boi.org.il/information/bank-paymnts/financial-education/הרפורמה-להגברת-שקיפות-המידע-והתחרות-במשכנתאות/" target="_blank" rel="noreferrer">{t.sourceGuide}</a></li>
             <li><a className="underline underline-offset-4" href="https://www.boi.org.il/information/interestrates/" target="_blank" rel="noreferrer">{t.sourceFees}</a></li>
+            <li><a className="underline underline-offset-4" href="https://www.gov.il/he/departments/units/housing_assistance_moch" target="_blank" rel="noreferrer">{t.sourceEligibility}</a></li>
           </ul>
           <Link href={`/${locale}/calculator`} className="glass-button mt-6 inline-block rounded-xl px-5 py-3 text-sm font-medium text-white">{dict.home.calcCardCta}</Link>
         </aside>

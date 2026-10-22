@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Dictionary } from "@/app/[locale]/dictionaries";
 
 const normalize = (text: string) => text.toLocaleLowerCase().replace(/[״׳'"“”]/g, "").trim();
@@ -8,6 +8,19 @@ const normalize = (text: string) => text.toLocaleLowerCase().replace(/[״׳'"“
 export default function LearningGlossary({ labels }: { labels: Dictionary["learnPage"] }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
+  // A link to #term-… must land on its card even when the current search or
+  // category filter hides it: clear the filters, then scroll once it renders.
+  useEffect(() => {
+    const revealHashTarget = () => {
+      const id = decodeURIComponent(window.location.hash.slice(1));
+      if (!labels.entries.some((entry) => entry.id === id)) return;
+      setQuery("");
+      setCategory("all");
+      requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ block: "start" }));
+    };
+    window.addEventListener("hashchange", revealHashTarget);
+    return () => window.removeEventListener("hashchange", revealHashTarget);
+  }, [labels.entries]);
   const terms = labels.entries.filter((entry) =>
     (category === "all" || entry.category === category) &&
     normalize(`${entry.title} ${entry.body} ${entry.example}`).includes(normalize(query)),
@@ -28,7 +41,7 @@ export default function LearningGlossary({ labels }: { labels: Dictionary["learn
       {terms.length === 0 && <p className="glass-panel p-6 text-sm leading-7">{labels.emptyLabel}</p>}
       <div className="grid items-start gap-4 md:grid-cols-2">
         {terms.map((entry) => (
-          <article key={entry.id} id={entry.id} className="glass-panel scroll-mt-24 p-5 sm:p-6">
+          <article key={entry.id} id={entry.id} className="glass-panel scroll-mt-24 p-5 target:ring-2 target:ring-accent/40 sm:p-6">
             <p className="mb-2 text-xs font-medium text-accent">{labels.categories.find((item) => item.id === entry.category)?.label}</p>
             <h3 className="text-lg font-bold">{entry.title}</h3>
             <p className="mt-3 text-sm leading-7 text-slate-600">{entry.body}</p>

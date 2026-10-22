@@ -152,20 +152,64 @@
       "The first payment uses the rate entered today. The maximum payment is the highest in the forecast schedule. For a linked track, even the forecast’s first month may include indexation and differ.",
       "This is an internal educational measure of track structure, covering rate, principal, and payment stability. It is not an official rating, a measure of mortgage cost, or a recommendation."
     ],
+    "rulesTitle": "Bank of Israel rules at a glance",
+    "rulesIntro": "The limits a bank checks before approving a mortgage. Select a card for the full explanation.",
+    "rulesAsOf": "As of October 2026, based on Bank of Israel Directive 329. The rules change from time to time and banks may apply stricter policies, so confirm with your bank before deciding.",
+    "rules": [
+      {
+        "value": "75%",
+        "label": "Maximum LTV for an only home (70% for upgraders, 50% for an additional home)",
+        "termId": "term-reg-ltv"
+      },
+      {
+        "value": "50%",
+        "label": "Cap on the monthly payment as a share of disposable income",
+        "termId": "term-reg-pti"
+      },
+      {
+        "value": "⅓",
+        "label": "At least one-third of the loan at a fixed rate",
+        "termId": "term-reg-fixed-share"
+      },
+      {
+        "value": "30",
+        "label": "Years at most for a mortgage term",
+        "termId": "term-reg-max-term"
+      },
+      {
+        "value": "24",
+        "label": "Days an approval in principle binds the bank",
+        "termId": "term-21"
+      },
+      {
+        "value": "3",
+        "label": "Uniform baskets every bank must quote",
+        "termId": "term-reg-baskets"
+      }
+    ],
     "glossaryTitle": "Your mortgage glossary",
     "searchLabel": "What would you like to understand?",
-    "searchPlaceholder": "Try prime, CPI, refinancing…",
+    "searchPlaceholder": "Try prime, eligibility, LTV…",
     "allLabel": "All terms",
     "exampleLabel": "Example and what to check",
     "emptyLabel": "No matching terms. Try another word or category.",
     "countLabel": "terms",
-    "sourceTitle": "Read the official sources",
-    "sourceGuide": "Bank of Israel mortgage comparison guide",
-    "sourceFees": "Interest and early repayment information",
+    "sourceTitle": "Official sources",
+    "sourceGuide": "Bank of Israel: mortgage transparency and competition reform",
+    "sourceFees": "Bank of Israel: average rates and early repayment",
+    "sourceEligibility": "Ministry of Construction and Housing: housing assistance",
     "categories": [
       {
         "id": "basics",
         "label": "Basics and budget"
+      },
+      {
+        "id": "regulation",
+        "label": "Bank of Israel rules"
+      },
+      {
+        "id": "eligibility",
+        "label": "Government eligibility"
       },
       {
         "id": "rates",
@@ -189,183 +233,309 @@
         "id": "term-0",
         "category": "basics",
         "title": "Principal",
-        "body": "The loan balance still to be repaid, excluding future interest. CPI linkage can also change this balance.",
-        "example": "A 500,000 ILS loan starts with 500,000 ILS of principal."
+        "body": "The part of the loan you still owe, not counting future interest. In a CPI-linked track, inflation also changes the principal balance.",
+        "example": "On a 500,000 ILS loan, that is the principal on day one. Each payment reduces it by the payment's principal portion (and in a linked track, CPI moves it too)."
       },
       {
         "id": "term-1",
         "category": "basics",
         "title": "Mortgage mix",
-        "body": "Several loan tracks combined, each with its own amount, rate and term. The monthly total adds the active tracks.",
-        "example": "300,000 ILS fixed unlinked plus 200,000 ILS prime makes a 500,000 ILS mortgage."
+        "body": "A mortgage split into several tracks, each with its own amount, rate and term. The monthly payment is the sum of whatever the active tracks charge that month.",
+        "example": "300,000 ILS fixed unlinked plus 200,000 ILS prime makes a 500,000 ILS mortgage. Each track reacts differently to rate and CPI changes, which is the point of spreading the loan."
       },
       {
         "id": "term-2",
         "category": "basics",
-        "title": "Equity and loan-to-value",
-        "body": "Equity is your own money toward the purchase. Loan-to-value compares the mortgage with property value; it does not include every purchase expense.",
-        "example": "A 900,000 ILS mortgage on a 1,500,000 ILS property is 60% LTV. Budget separately for additional costs."
+        "title": "Equity and loan-to-value (LTV)",
+        "body": "Equity is your own money going into the purchase. Loan-to-value is the mortgage divided by the property's value. The Bank of Israel caps it, and costs such as purchase tax, legal fees and brokerage are not included, so you need to fund them separately.",
+        "example": "A 900,000 ILS mortgage on a 1,500,000 ILS property is 60% LTV. The remaining 600,000 ILS and the additional costs come from your equity."
+      },
+      {
+        "id": "term-buyer-type",
+        "category": "basics",
+        "title": "Buyer type: only home, upgrader, additional home",
+        "body": "The bank classifies each purchase by your situation: an only home (you own no other home), a home upgrader (buying a replacement and committing to sell the current one within a set period), or an additional or investment home. The classification sets your maximum LTV.",
+        "example": "A couple who own a flat and buy a bigger one count as upgraders only if they commit to selling the current flat. Without that commitment it is an additional home, and the LTV cap drops to 50%."
       },
       {
         "id": "term-3",
         "category": "basics",
-        "title": "Payment-to-income ratio",
-        "body": "Monthly payment as a share of income helps describe budget pressure. A bank may also adjust for fixed obligations and eligible income.",
-        "example": "5,000 ILS divided by 20,000 ILS net income is 25%, before other adjustments."
+        "title": "Payment-to-income ratio (PTI)",
+        "body": "The share of your monthly disposable income that goes to the mortgage payment, and a measure of how stretched your budget will be. The bank uses the income it recognizes and deducts fixed obligations such as other loans.",
+        "example": "A 5,000 ILS payment on 20,000 ILS of disposable income is 25%. If you also pay 1,500 ILS a month on a car loan, the bank calculates the ratio against a lower income."
+      },
+      {
+        "id": "term-disposable-income",
+        "category": "basics",
+        "title": "Disposable income and repayment capacity",
+        "body": "Disposable income is the net income the bank recognizes, after fixed obligations are deducted. Repayment capacity is the monthly payment the bank will approve on that basis. Irregular income, such as bonuses or earnings from a new business, may be counted only in part.",
+        "example": "An employee earning 15,000 ILS net and a self-employed partner averaging 12,000 ILS over two years: the bank will ask for payslips and tax assessments, and may count the business income at a conservative average."
+      },
+      {
+        "id": "term-reg-ltv",
+        "category": "regulation",
+        "title": "LTV limits by buyer type",
+        "body": "Under Bank of Israel Directive 329: up to 75% LTV for an only home, up to 70% for home upgraders, and up to 50% for an additional or investment home. Value usually means the lower of the purchase price and the appraisal. A bank may lend less than the cap.",
+        "example": "On a 2,000,000 ILS home: only home, up to 1,500,000 ILS; upgrader, up to 1,400,000 ILS; additional home, up to 1,000,000 ILS. Additional purchase costs come on top."
+      },
+      {
+        "id": "term-reg-pti",
+        "category": "regulation",
+        "title": "PTI caps: 40% and 50%",
+        "body": "A bank may not approve a mortgage whose monthly payment exceeds 50% of disposable income. Between 40% and 50% the bank must hold more capital against the loan, so many banks get stricter above 40%. From October 2026, for an additional loan on an already-mortgaged property, existing payments on that property count together with the new one.",
+        "example": "With 16,000 ILS of disposable income the ceiling is 8,000 ILS a month, but expect closer scrutiny above 6,400 ILS (40%). Also check whether the payment still works if rates rise."
+      },
+      {
+        "id": "term-reg-fixed-share",
+        "category": "regulation",
+        "title": "At least one-third at a fixed rate",
+        "body": "The variable-rate portion of a loan is capped at two-thirds of the total, so at least one-third must carry a fixed rate (linked or unlinked). The old one-third cap on prime was removed, and prime can now reach two-thirds. The directive defines how each track counts toward the limit, so check with your bank.",
+        "example": "On a 900,000 ILS mortgage, at least 300,000 ILS must sit in a fixed-rate track, such as fixed unlinked or fixed CPI-linked."
+      },
+      {
+        "id": "term-reg-max-term",
+        "category": "regulation",
+        "title": "Maximum term: 30 years",
+        "body": "A housing loan may run for at most 30 years. Banks also look at the borrowers' age at the end of the term and may shorten it under their own policy.",
+        "example": "Borrowers aged 45 asking for 30 years would finish paying at 75. The bank may offer a shorter term or ask for a younger co-borrower."
+      },
+      {
+        "id": "term-reg-baskets",
+        "category": "regulation",
+        "title": "Three uniform baskets",
+        "body": "Every bank must include in its approval in principle three mixes that are identical across banks, to make comparison easy: 100% fixed unlinked; one-third each fixed unlinked, prime and five-year variable CPI-linked; half fixed unlinked and half prime. Each basket shows the forecast overall rate, forecast total payments and the highest expected monthly payment.",
+        "example": "Compare the same basket across banks for a like-for-like comparison. The mix a bank builds for you may differ, but the baskets give you a reference point."
+      },
+      {
+        "id": "term-reg-all-purpose",
+        "category": "regulation",
+        "title": "All-purpose loan secured by a home",
+        "body": "A loan secured on a home for any purpose other than buying one. Up to 50% of the property's value is standard; since February 2026 a bank may go up to 70%, with the part above 50% capped at 200,000 ILS in total per property. Rates are usually higher than on a purchase mortgage.",
+        "example": "A 2,000,000 ILS home with an existing 900,000 ILS mortgage (45%): you can reach 1,000,000 ILS at 50%, then up to 200,000 ILS more, so an extra loan of up to 300,000 ILS, subject to PTI."
+      },
+      {
+        "id": "term-boi-average-rates",
+        "category": "regulation",
+        "title": "Bank of Israel average rates",
+        "body": "Every month the Bank of Israel publishes the average rate granted for each track type and term. It is a good benchmark for an offer, and it also drives the early-repayment capitalization fee.",
+        "example": "If you are offered a 25-year fixed unlinked rate half a percentage point above the published average, ask the bank why and get a quote from another bank."
+      },
+      {
+        "id": "term-elig-certificate",
+        "category": "eligibility",
+        "title": "Ministry of Housing eligibility certificate",
+        "body": "A document confirming you qualify for government help buying a first home, and setting out the loan amount and terms. You apply through a mortgage bank, which checks eligibility with the Ministry of Construction and Housing. Typically eligible are people who have not owned a home in recent years: couples, single-parent families and single people above a certain age, under the Ministry's rules.",
+        "example": "Ask for an eligibility certificate before requesting approvals in principle, even if the amount looks small. The certificate is valid for a limited time, so check its date."
+      },
+      {
+        "id": "term-elig-loan",
+        "category": "eligibility",
+        "title": "Eligibility loan (subsidized mortgage)",
+        "body": "A loan on subsidized terms that the state provides through your bank, as one track in the mix. The rate is fixed and CPI-linked, below the market average and subject to a cap set by the Ministry. The amount is relatively small and depends on your points and location, and early repayment carries no capitalization fee.",
+        "example": "If your eligibility loan is 100,000 ILS, it becomes one track in the mortgage, and the rest comes from regular tracks. It is CPI-linked, so even at a low rate inflation can grow the balance."
+      },
+      {
+        "id": "term-elig-points",
+        "category": "eligibility",
+        "title": "Eligibility points",
+        "body": "The eligibility loan amount is set by a points score. Points are given for, among other things, years of marriage, children, siblings and military or national service. Below a threshold there is no loan, and above it the amount rises step by step. The tables are updated, so confirm with the Ministry or your bank.",
+        "example": "A couple married for a year with one child will score fewer points, and get a smaller loan, than a couple married seven years with three children."
+      },
+      {
+        "id": "term-elig-grant",
+        "category": "eligibility",
+        "title": "Location grants and priority areas",
+        "body": "In some towns, mainly national priority areas, eligibility includes extra help: a grant, or a loan that becomes a grant after a period of residence. The amount depends on the town and the date.",
+        "example": "If you are choosing between two towns, check whether one offers a location grant, since it can change how much equity you need."
+      },
+      {
+        "id": "term-elig-discounted",
+        "category": "eligibility",
+        "title": "Financing a discounted-price home",
+        "body": "For homes bought at a reduced price under a government program, the bank may base the LTV on the home's market value rather than only the discounted price, up to a value ceiling set in the rules. That lowers the equity you need, but the monthly payment still has to fit your repayment capacity.",
+        "example": "A home worth 2,000,000 ILS on the market, bought for 1,600,000 ILS: 75% of market value is 1,500,000 ILS, so you need only about 100,000 ILS of equity (before additional costs)."
       },
       {
         "id": "term-4",
         "category": "rates",
-        "title": "Bank of Israel and prime rates",
-        "body": "Israeli prime is the Bank of Israel rate plus 1.5 percentage points. Your offered prime-track rate also includes the agreed spread.",
-        "example": "A hypothetical BOI rate of 3% gives 4.5% prime. This is not a statement of the current rate."
+        "title": "Bank of Israel rate and prime",
+        "body": "Israeli prime is the Bank of Israel (BOI) rate plus 1.5 percentage points. On a prime track your rate is prime plus or minus a spread agreed with the bank, so it moves whenever the BOI changes its rate.",
+        "example": "If the BOI rate is 3%, prime is 4.5%. This illustrates the calculation; it is not today's rate."
       },
       {
         "id": "term-5",
         "category": "rates",
         "title": "Rate spread: P−0.5",
-        "body": "The difference between an anchor and your offered rate. P−0.5 subtracts half a percentage point from prime, so the offered rate moves with prime.",
-        "example": "If prime is 5%, P−0.5 means 4.5% annual interest."
+        "body": "The difference between the anchor and the rate the bank gives you. P−0.5 means half a percentage point below prime. The spread is fixed for the life of the loan, but when prime moves, your rate moves with it.",
+        "example": "If prime is 5%, P−0.5 is 4.5% a year. If prime rises to 6%, your rate rises to 5.5%."
       },
       {
         "id": "term-6",
         "category": "rates",
-        "title": "Fixed unlinked",
-        "body": "The rate is fixed and principal is not CPI-linked. A Spitzer payment generally stays constant, excluding extra costs or contract changes.",
-        "example": "A BOI rate increase does not change the contracted rate on an existing fixed unlinked loan."
+        "title": "Fixed unlinked (Kalatz)",
+        "body": "The rate is fixed for the whole term and the principal is not CPI-linked. On a Spitzer schedule the monthly payment stays the same from the first payment to the last. The price of that certainty: the rate is usually higher, and the early-repayment capitalization fee can be significant.",
+        "example": "A BOI rate rise does not change the rate on fixed unlinked debt you already have. But if market rates fall, you can only benefit by refinancing, which may trigger a capitalization fee."
       },
       {
         "id": "term-7",
         "category": "rates",
         "title": "Fixed CPI-linked",
-        "body": "The rate is fixed, but principal and payments respond to CPI. Fixed interest does not mean a fixed payment in shekels.",
-        "example": "Payments may rise with CPI even when the contractual rate stays unchanged."
+        "body": "The rate is fixed, but the principal is linked to the consumer price index, so the payment changes too. 'Fixed' refers to the rate, not to the shekel amount you pay.",
+        "example": "If CPI rises 3% in a year, the balance and payment rise by roughly the same amount, even though the contract rate has not changed."
       },
       {
         "id": "term-8",
         "category": "rates",
         "title": "Variable linked and unlinked",
-        "body": "The rate resets at specified dates using an anchor and spread. A linked track also applies CPI indexation between rate resets.",
-        "example": "A five-year track first resets after 60 months; CPI linkage does not wait for that reset."
+        "body": "On a variable track the rate resets on set dates (for example every year or every five years) based on an anchor plus a spread. On a linked track, CPI keeps adjusting the principal every month, including between resets.",
+        "example": "On a five-year variable track the first rate reset comes after 60 months, but CPI linkage applies from the first month."
       },
       {
         "id": "term-9",
         "category": "rates",
-        "title": "Anchor and rate reset",
-        "body": "An anchor is a reference such as bond yields or Makam. At a reset, the rate follows the contract’s anchor rules and payments are recalculated for the remaining balance.",
-        "example": "A 3% anchor plus a 1 percentage point spread gives 4% in a simple example."
+        "title": "Anchor and rate reset (exit point)",
+        "body": "The anchor is the market figure the rate is derived from, such as government bond yields or Makam (short-term Bank of Israel bills). At a reset, the rate is set again from the current anchor plus the contract spread, and the payment is recalculated on the remaining balance. Most variable tracks can be repaid at a reset without a capitalization fee.",
+        "example": "A 3% anchor plus a 1% spread gives 4%. If the anchor is 4.5% in five years, the rate rises to 5.5%."
       },
       {
         "id": "term-10",
         "category": "rates",
         "title": "Nominal and effective interest",
-        "body": "Nominal interest states an annual rate. Effective interest accounts for compounding frequency within the year.",
-        "example": "6% nominal compounded monthly is about 6.17% effective annually."
+        "body": "The nominal rate is the annual rate quoted in the offer. The effective rate accounts for interest compounding monthly, so it is slightly higher. When comparing offers, make sure you compare the same kind of rate.",
+        "example": "6% nominal compounded monthly is about 6.17% effective per year."
       },
       {
         "id": "term-11",
         "category": "payments",
-        "title": "Spitzer payments",
-        "body": "Payments stay constant when the rate is constant and there is no indexation. Interest takes a larger share early on; principal takes a larger share later.",
-        "example": "A fixed 3,000 ILS payment does not reduce principal by 3,000 ILS each month."
+        "title": "Spitzer (fixed-payment) schedule",
+        "body": "The most common repayment method in Israel: the monthly payment stays the same when the rate is fixed and there is no indexation. Early on most of each payment is interest; over time the principal share grows.",
+        "example": "A fixed 3,000 ILS payment does not cut the balance by 3,000 ILS each month. In the first years only a small part of it reduces principal."
       },
       {
         "id": "term-12",
         "category": "payments",
         "title": "Equal principal",
-        "body": "The same principal amount is repaid monthly, plus interest on the balance. With a fixed rate and no indexation, payments decline.",
-        "example": "120,000 ILS over 120 months means 1,000 ILS principal monthly, plus interest."
+        "body": "You repay the same amount of principal each month, plus interest on the balance. With a fixed rate and no indexation, payments start higher than Spitzer and decline over time, and total interest is lower.",
+        "example": "120,000 ILS over 120 months means 1,000 ILS of principal each month, plus interest on a shrinking balance."
       },
       {
         "id": "term-13",
         "category": "payments",
         "title": "Amortization schedule",
-        "body": "A monthly table of payment, principal, interest and balance. Check distant months and rate-reset dates too.",
-        "example": "100,000 ILS balance plus 1,000 indexation minus 800 principal leaves 100,200 ILS."
+        "body": "A month-by-month table of payment, principal, interest and balance. Look at distant years and rate-reset dates too, not just the first row.",
+        "example": "On a linked track, a 100,000 ILS balance plus 1,000 ILS of indexation minus 800 ILS of principal leaves 100,200 ILS: the balance rose despite the payment."
       },
       {
         "id": "term-14",
         "category": "payments",
         "title": "Loan term",
-        "body": "Time until repayment. For the same amount and positive interest rate, a longer term generally lowers monthly payments but increases total interest.",
-        "example": "Compare 20 and 25 years and examine both the monthly payment and total paid."
+        "body": "The time until the loan is fully repaid. For the same amount and rate, a longer term lowers the monthly payment and raises total interest.",
+        "example": "Compare 20 and 25 years on the same track, looking at both the monthly payment and total paid."
       },
       {
         "id": "term-15",
         "category": "forecast",
-        "title": "Consumer Price Index",
-        "body": "CBS publishes CPI to describe changes in the price of a basket of goods and services. Linked loans apply it under their contract rules.",
-        "example": "A 0.3% monthly increase is not a 0.3% annual forecast."
+        "title": "Consumer Price Index (CPI)",
+        "body": "An index published by Israel's Central Bureau of Statistics (CBS) that tracks price changes in a basket of goods and services. On a linked track it adjusts your balance according to the contract's indexation rules.",
+        "example": "A 0.3% rise in one month is not 0.3% annual inflation. If that pace held all year, it would be about 3.7%."
       },
       {
         "id": "term-16",
         "category": "forecast",
         "title": "Observed CPI and inflation expectations",
-        "body": "Observed CPI describes a measured past period. Expectations estimate future changes and supply the calculator’s projection path.",
-        "example": "A 0.3% monthly reading and a 2% expectation for the next year measure different things."
+        "body": "Observed CPI describes a period that has already been measured. Inflation expectations estimate future change, and the calculator uses them to build its forecast.",
+        "example": "A 0.3% monthly reading and a 2% expectation for the coming year are two different figures, not two versions of the same one."
       },
       {
         "id": "term-17",
         "category": "forecast",
         "title": "First and maximum forecast payment",
-        "body": "The first payment uses the entered rate. The forecast maximum is the peak in the projected schedule, not a guaranteed cap.",
-        "example": "If the first payment is 4,000 ILS and the forecast maximum 5,300, check when the peak occurs and why."
+        "body": "The first payment uses the rates entered today. The maximum forecast payment is the peak of the projected schedule. It is not a guaranteed cap; actual payments can be higher or lower.",
+        "example": "If the first payment is 4,000 ILS and the forecast maximum is 5,300 ILS, check when the peak hits and what drives it, and ask whether you could afford it."
       },
       {
         "id": "term-18",
         "category": "forecast",
         "title": "Total payments and financing cost",
-        "body": "Total payments add all repayments. The calculator’s financing cost subtracts the original loan amount, including CPI effects in linked tracks.",
-        "example": "A 500,000 ILS loan with 750,000 ILS total payments has 250,000 ILS financing cost in the model."
+        "body": "Total payments is every repayment over the life of the loan. The calculator's financing cost is that total minus the original loan, and for linked tracks it includes the effect of CPI.",
+        "example": "A 500,000 ILS loan with 750,000 ILS of total payments means 250,000 ILS of financing cost in the model."
       },
       {
         "id": "term-19",
         "category": "forecast",
-        "title": "Forecast overall rate — IRR",
-        "body": "An annual measure derived from the loan amount and timing of forecast repayments. The calculator excludes some fees and terms that a bank quote may include.",
-        "example": "Compare IRR together with amount, term, forecast and additional costs."
+        "title": "Forecast overall rate (IRR)",
+        "body": "A single annual rate derived from the loan amount and the forecast repayment schedule, including CPI effects. The Bank of Israel requires it on approvals in principle, and it helps compare mixes. The calculator does not include every fee and condition a bank offer may contain.",
+        "example": "Only compare IRR across offers with the same amount, term and forecast assumptions. The number alone is not enough."
       },
       {
         "id": "term-20",
         "category": "forecast",
         "title": "Stress scenario",
-        "body": "Changes an assumption such as interest or inflation to explore its effect. It is a sensitivity check, not a prediction.",
-        "example": "Try an extra percentage point of interest, then change inflation separately."
+        "body": "A test of what happens when an assumption changes, such as higher rates or inflation. It shows how the payment and balance respond; it does not claim that this will happen.",
+        "example": "Add a percentage point to the rate, then change inflation separately, to see each factor's effect on its own."
       },
       {
         "id": "term-21",
         "category": "process",
         "title": "Approval in principle",
-        "body": "A preliminary bank offer based on supplied information and subject to checks and conditions. It provides rates, a mix and cost measures for comparison.",
-        "example": "Compare the same amount and terms, and read validity and conditions on the offer itself."
+        "body": "A preliminary, binding offer from the bank, based on the information you provided and subject to verification. Under the Bank of Israel reform it comes in a uniform format within a few days, can be requested online, and its rates bind the bank for 24 days. It includes the three uniform baskets and the mix the bank proposes.",
+        "example": "Request approvals from several banks in the same week, for the same amount and terms, so they are all valid while you compare and negotiate."
+      },
+      {
+        "id": "term-appraisal",
+        "category": "process",
+        "title": "Appraisal",
+        "body": "A valuation of the property by an appraiser on the bank's approved list. It sets the value used for LTV. If the appraisal comes in below the purchase price, the maximum mortgage shrinks and you need more equity.",
+        "example": "You buy for 2,000,000 ILS and the appraiser values it at 1,900,000 ILS: for an only home the maximum mortgage falls from 1,500,000 ILS to 1,425,000 ILS."
+      },
+      {
+        "id": "term-insurance",
+        "category": "process",
+        "title": "Life and building insurance",
+        "body": "The bank requires life insurance on the borrowers and building insurance on the property, so the loan is repaid after a death or damage. You may buy them from any insurer, not only through the bank, and prices vary widely.",
+        "example": "Compare life-insurance quotes by age, smoking status and loan balance. A difference of a few dozen shekels a month adds up to thousands over the mortgage."
+      },
+      {
+        "id": "term-lien",
+        "category": "process",
+        "title": "Lien, mortgage registration and caveat",
+        "body": "The property secures the loan, and the bank registers a mortgage or lien on it. For a new-build, the developer usually first records a commitment to register the mortgage; final registration comes only after the building is registered as a condominium. While the lien exists, selling or borrowing more against the property needs the bank's consent.",
+        "example": "Before paying the seller, confirm with your lawyer that a caveat (he'arat azhara) has been registered in your favor and that the bank has what it needs to release the loan."
+      },
+      {
+        "id": "term-bridge-loan",
+        "category": "process",
+        "title": "Bridge loan",
+        "body": "A short-term loan for home upgraders that covers the gap between paying for the new home and receiving the proceeds from selling the current one. It is usually a balloon: you pay interest only, or nothing, and repay the principal once the home sells.",
+        "example": "If the current home does not sell in time, the bridge loan stays open and keeps accruing interest. Plan for a delayed sale."
       },
       {
         "id": "term-22",
         "category": "process",
         "title": "Refinancing",
-        "body": "Replacing all or part of a mortgage with new terms. Include transition and early-repayment costs, not just the monthly saving.",
-        "example": "A lower payment achieved by extending the term may increase the total paid."
+        "body": "Replacing all or part of your mortgage with a loan on different terms, at the same bank or another one. Factor in early-repayment fees and switching costs, not just the lower monthly payment.",
+        "example": "A lower payment that comes from stretching the term may raise the total you pay. Compare total payments before and after."
       },
       {
         "id": "term-23",
         "category": "process",
-        "title": "Early repayment and discounting fees",
-        "body": "Repaying part or all of a loan early may incur charges depending on the track and contract, including charges affected by rate differences.",
-        "example": "Request a dated settlement balance and fee breakdown before comparing refinancing options."
+        "title": "Early repayment and the capitalization fee",
+        "body": "You may repay all or part of the loan early. The heavy charge is the capitalization fee: it applies mainly to fixed-rate tracks, when your contract rate is above the current average rate. Prime has no capitalization fee, and variable tracks usually have none when repaid at a reset. There is also a small operational fee, plus up to 0.1% if you give less than 10 days' notice.",
+        "example": "Before comparing refinancing, ask the bank for a dated payoff statement with a fee breakdown. Give at least 10 days' written notice to avoid the no-notice fee."
       },
       {
         "id": "term-24",
         "category": "process",
         "title": "Grace periods and balloon loans",
-        "body": "Grace periods defer principal and sometimes interest; a balloon leaves a significant balance for the end. Deferral can add interest.",
-        "example": "Low early payments may become much higher later. These products are not currently supported by this calculator."
+        "body": "A grace period defers principal and sometimes interest; a balloon leaves a large balance for the end. Deferral does not erase the debt and usually raises total interest.",
+        "example": "A low starting payment can turn into a much higher one later. The calculator does not currently support these tracks."
       },
       {
         "id": "term-25",
         "category": "process",
-        "title": "Additional expenses",
-        "body": "Appraisal, registration and insurance may add to costs depending on the transaction and bank requirements. They affect your budget outside the repayment schedule.",
-        "example": "Allow for upfront costs and insurance; the current calculator does not include them in total payments."
+        "title": "Additional costs",
+        "body": "Beyond interest there are costs such as a file-opening fee, appraisal, mortgage registration, insurance, legal fees and purchase tax, depending on the deal. They hit your budget even though they do not appear in the repayment schedule.",
+        "example": "Budget for one-off costs and monthly insurance. The calculator does not include them in total payments."
       }
     ]
   },

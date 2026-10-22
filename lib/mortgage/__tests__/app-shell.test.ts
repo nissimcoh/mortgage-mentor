@@ -189,6 +189,31 @@ describe("learn page dictionary keys", () => {
     ]);
   });
 
+  it("keeps the glossary, categories and rule cards aligned across locales", () => {
+    const he = heDict.learnPage;
+    const en = enDict.learnPage;
+    expect(en.entries.map((e) => [e.id, e.category])).toEqual(
+      he.entries.map((e) => [e.id, e.category]),
+    );
+    expect(en.categories.map((c) => c.id)).toEqual(he.categories.map((c) => c.id));
+    expect(en.rules.map((r) => [r.value, r.termId])).toEqual(
+      he.rules.map((r) => [r.value, r.termId]),
+    );
+    for (const l of [he, en]) {
+      const ids = l.entries.map((e) => e.id);
+      expect(new Set(ids).size).toBe(ids.length);
+      const categoryIds = l.categories.map((c) => c.id);
+      for (const entry of l.entries) {
+        expect(categoryIds).toContain(entry.category);
+        expect(entry.title && entry.body && entry.example).toBeTruthy();
+      }
+      for (const category of categoryIds) {
+        expect(l.entries.some((e) => e.category === category)).toBe(true);
+      }
+      for (const rule of l.rules) expect(ids).toContain(rule.termId);
+    }
+  });
+
   it("no longer carries the retired comparison dictionary section", () => {
     for (const dict of [heDict, enDict]) {
       expect(
