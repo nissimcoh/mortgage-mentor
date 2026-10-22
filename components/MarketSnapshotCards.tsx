@@ -6,6 +6,7 @@ import { BOI_RATE_SERIES_URL } from "@/lib/market-data/sources/bank-of-israel";
 import { CBS_CPI_URL } from "@/lib/market-data/sources/cbs";
 import { FORECAST_WORKBOOK_URL } from "@/lib/market-data/sources/boi-mortgage-forecast";
 import { isStale } from "@/lib/market-data/derive";
+import { revealDelay } from "@/lib/ui/reveal-delay";
 
 type MarketLabels = Dictionary["market"];
 
@@ -15,6 +16,15 @@ function StatusChip({ live, stale, fallback, labels }: {
   return <span className={`inline-block rounded-full border px-2.5 py-1 text-xs ${live && !stale ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-900"}`}>
     {!live ? fallback : stale ? labels.statusStale : labels.statusLive}
   </span>;
+}
+
+/** Compact status for the headline tiles; the full chip lives in the details panel. */
+function StatusDot({ live, stale, fallback, labels }: {
+  live: boolean; stale: boolean; fallback: string; labels: MarketLabels;
+}) {
+  const ok = live && !stale;
+  const text = !live ? fallback : stale ? labels.statusStale : labels.statusLive;
+  return <span title={text} className={`h-2 w-2 shrink-0 rounded-full ${ok ? "bg-emerald-500" : "bg-amber-500"}`}><span className="sr-only">{text}</span></span>;
 }
 
 /** Server-rendered source values: never substitutes staff forecasts for the calculator curve. */
@@ -48,48 +58,64 @@ export default function MarketSnapshotCards({ snapshot, curve, labels, locale }:
   const cpiEnd = curve?.expectedCpiIndex[12];
   const expectedCpi = cpiStart && cpiEnd && Number.isFinite(cpiEnd / cpiStart) ? cpiEnd / cpiStart - 1 : null;
   const curveMonth = curve ? monthFormat.format(new Date(Date.UTC(curve.referenceYear, curve.referenceMonth - 1, 1))) : labels.unavailable;
+  const curveLive = curve?.status === "live";
+  const curveStale = curve ? (isStale(curve.publicationDate, new Date(snapshot.fetchedAt), 62) || isStale(curve.fetchedAt, new Date(snapshot.fetchedAt), 1)) : false;
+  const curveFallback = curve ? labels.curveFallback : labels.unavailable;
+  const tiles = [
+    ...cards.map((card) => ({ label: card.label, value: card.value, detail: card.detail, live: card.live, stale: card.stale, fallback })),
+    { label: labels.expectedCpiTitle, value: expectedCpi === null ? labels.unavailable : signedPercent.format(expectedCpi), detail: labels.expectedCpiDetail.replace("{month}", curveMonth), live: curveLive, stale: curveStale, fallback: curveFallback },
+  ];
 
   return (
     <div>
-      <h2 className="text-2xl font-bold tracking-tight">{labels.title}</h2>
-      <p className="mb-6 mt-2 max-w-3xl text-sm leading-6 text-slate-600">{labels.subtitle}</p>
+      <h2 className="text-xl font-bold tracking-tight sm:text-2xl">{labels.title}</h2>
+      <p className="mb-5 mt-1 max-w-3xl text-sm leading-6 text-slate-600">{labels.subtitle}</p>
       {(snapshot.status !== "live" || snapshot.boiRate.isStale || snapshot.cpi.isStale) && <p role="status" className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">{labels.dataWarning}</p>}
-      <div className="grid gap-4 sm:grid-cols-3">
-        {cards.map((card) => (
-          <article key={card.label} data-source-live={card.live} className="glass-panel flex flex-col p-5 sm:p-6">
-            <h3 className="text-sm font-medium text-slate-600">{card.label}</h3>
-            <p className="mt-3 text-4xl font-bold tracking-tight text-slate-900"><bdi>{card.value}</bdi></p>
-            <p className="mt-2 text-xs text-slate-500">{card.detail}</p>
-            {card.secondary && <p className="mt-1 text-xs text-slate-500">{card.secondary}</p>}
-            {card.live && card.checkedAt && <p className="mt-1 text-xs text-slate-500">{labels.sourceCheckedAt}<time dateTime={card.checkedAt}>{checkedFormat.format(new Date(card.checkedAt))}</time></p>}
-            <p className="mb-4 mt-4 flex-1 text-sm leading-6 text-slate-600">{card.help}</p>
-            <div className="flex flex-col items-start gap-3">
-              <StatusChip live={card.live} stale={card.stale} fallback={fallback} labels={labels} />
-              <a href={card.url} target="_blank" rel="noreferrer" className="text-xs text-accent underline decoration-accent/30 underline-offset-4">{labels.sourceLabel}: {card.source}</a>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {tiles.map((tile, index) => (
+          <article key={tile.label} data-source-live={tile.live} className="glass-panel mm-reveal flex flex-col p-4 sm:p-5" style={revealDelay(index * 0.08)}>
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="text-xs font-medium leading-5 text-slate-600 sm:text-sm">{tile.label}</h3>
+              <span className="mt-1.5"><StatusDot live={tile.live} stale={tile.stale} fallback={tile.fallback} labels={labels} /></span>
             </div>
+            <p className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl"><bdi>{tile.value}</bdi></p>
+            <p className="mt-auto pt-2 text-xs leading-5 text-slate-500">{tile.detail}</p>
           </article>
         ))}
       </div>
-      <article className="glass-panel mt-4 grid gap-6 p-5 sm:p-6 md:grid-cols-[1.4fr_1fr]" data-forecast-status={curve?.status ?? "unavailable"}>
-        <div>
-          <div className="flex flex-wrap items-center gap-3">
-            <h3 className="font-semibold">{labels.curveTitle}</h3>
-            <StatusChip live={curve?.status === "live"} stale={curve ? (isStale(curve.publicationDate, new Date(snapshot.fetchedAt), 62) || isStale(curve.fetchedAt, new Date(snapshot.fetchedAt), 1)) : false} fallback={curve ? labels.curveFallback : labels.unavailable} labels={labels} />
-          </div>
-          <p className="mt-3 text-xl font-bold">{curveMonth}</p>
-          {curve && <p className="mt-1 text-xs text-slate-500">{curve.averageType === "calendar" ? labels.curveCalendar : labels.curveIndex} · {labels.publicationPrefix}{formatDate(curve.publicationDate)}</p>}
-          {curve && <p className="mt-1 text-xs text-slate-500">{labels.effectiveFrom}{formatDate(curve.effectiveDate)}</p>}
-          {curve?.status === "live" && <p className="mt-1 text-xs text-slate-500">{labels.sourceCheckedAt}<time dateTime={curve.fetchedAt}>{checkedFormat.format(new Date(curve.fetchedAt))}</time></p>}
-          <p className="mt-3 max-w-xl text-sm leading-6 text-slate-600">{labels.curveHelp}</p>
-          <a href={FORECAST_WORKBOOK_URL} className="mt-3 inline-block text-xs text-accent underline underline-offset-4">{labels.sourceOpen} · {labels.sourceBoi}</a>
+      {snapshot.nextDecision.at && <p className="mt-3 text-sm text-slate-600"><span className="font-medium text-slate-800">{labels.nextDecisionLabel}:</span> {formatDate(snapshot.nextDecision.at)}</p>}
+
+      <details className="glass-track mt-4 px-4 py-3 sm:px-5">
+        <summary className="cursor-pointer text-sm font-medium text-accent">{labels.detailsToggle}</summary>
+        <div className="mt-4 grid gap-5 md:grid-cols-2">
+          {cards.map((card) => (
+            <section key={card.label} className="text-sm">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-semibold">{card.label}</h3>
+                <StatusChip live={card.live} stale={card.stale} fallback={fallback} labels={labels} />
+              </div>
+              <p className="mt-2 leading-6 text-slate-600">{card.help}</p>
+              <p className="mt-1 text-xs text-slate-500">{card.detail}</p>
+              {card.secondary && <p className="mt-1 text-xs text-slate-500">{card.secondary}</p>}
+              {card.live && card.checkedAt && <p className="mt-1 text-xs text-slate-500">{labels.sourceCheckedAt}<time dateTime={card.checkedAt}>{checkedFormat.format(new Date(card.checkedAt))}</time></p>}
+              <a href={card.url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs text-accent underline decoration-accent/30 underline-offset-4">{labels.sourceLabel}: {card.source}</a>
+            </section>
+          ))}
+          <section className="text-sm" data-forecast-status={curve?.status ?? "unavailable"}>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="font-semibold">{labels.curveTitle}: {curveMonth}</h3>
+              <StatusChip live={curveLive} stale={curveStale} fallback={curveFallback} labels={labels} />
+            </div>
+            <p className="mt-2 leading-6 text-slate-600">{labels.curveHelp} {labels.expectedCpiHelp}</p>
+            {curve && <p className="mt-1 text-xs text-slate-500">{curve.averageType === "calendar" ? labels.curveCalendar : labels.curveIndex} · {labels.publicationPrefix}{formatDate(curve.publicationDate)}</p>}
+            {curve && <p className="mt-1 text-xs text-slate-500">{labels.effectiveFrom}{formatDate(curve.effectiveDate)}</p>}
+            {curveLive && <p className="mt-1 text-xs text-slate-500">{labels.sourceCheckedAt}<time dateTime={curve.fetchedAt}>{checkedFormat.format(new Date(curve.fetchedAt))}</time></p>}
+            <a href={FORECAST_WORKBOOK_URL} className="mt-2 inline-block text-xs text-accent underline underline-offset-4">{labels.sourceOpen} · {labels.sourceBoi}</a>
+          </section>
         </div>
-        <div className="glass-track p-5">
-          <h4 className="text-sm font-medium text-slate-600">{labels.expectedCpiTitle}</h4>
-          <p className="mt-2 text-3xl font-bold"><bdi>{expectedCpi === null ? labels.unavailable : signedPercent.format(expectedCpi)}</bdi></p>
-          <p className="mt-3 text-xs leading-6 text-slate-600">{labels.expectedCpiHelp}</p>
-        </div>
-      </article>
-      <p className="mt-4 text-xs leading-6 text-slate-500">{labels.refreshNote}</p>
+        <p className="mt-5 text-xs leading-6 text-slate-500">{labels.refreshNote}</p>
+        <form action={`/${locale}`} method="get"><button type="submit" className="glass-secondary mt-3 inline-block rounded-xl px-4 py-2.5 text-sm font-medium">{labels.refreshNow}</button></form>
+      </details>
     </div>
   );
 }

@@ -104,13 +104,13 @@
     "heroPrimaryCta": "Start calculating",
     "heroTrustNote": "This calculator is for learning and comparing scenarios, and is not mortgage advice.",
     "calcCardTitle": "Free-form calculator",
-    "calcCardBody": "Build a mix with several tracks, and check the first payment, maximum payment, and total payments.",
+    "calcCardBody": "Build a mix, compare tracks and get a full month-by-month amortization schedule.",
     "calcCardCta": "Open calculator",
     "learnCardTitle": "Learning center",
-    "learnCardBody": "Short explanations of tracks, CPI linkage, and payments to help you read your results.",
+    "learnCardBody": "{count} terms, Bank of Israel rules and housing eligibility, in plain language.",
     "learnCardCta": "Open learning center",
     "savedCardTitle": "Saving offers",
-    "savedCardBody": "Sign in to name and save scenarios, revisit previous offers, and edit them.",
+    "savedCardBody": "Sign in to save scenarios, come back to them and compare them.",
     "comingSoonBadge": "Coming soon",
     "comingSoonCta": "Learn more",
     "eyebrow": "Your mortgage, in one view",
@@ -129,9 +129,14 @@
         "body": "Principal and financing cost over the life of the mortgage."
       }
     ],
-    "toolsTitle": "From market data to your mortgage mix",
-    "toolsSubtitle": "Calculate, understand the differences, and save scenarios to revisit.",
-    "savedCardCta": "View saved scenarios"
+    "toolsTitle": "Where to next",
+    "savedCardCta": "View saved scenarios",
+    "heroLearnCta": "Learn the terms",
+    "overviewNote": "Illustration, not a calculation",
+    "overviewChartLabel": "Illustrative chart: the monthly payment over the life of a mortgage, from the first payment through the forecast peak to the end of the term",
+    "overviewAxisStart": "Today",
+    "overviewAxisEnd": "End of term",
+    "rulesMoreCta": "See all rules"
   },
   "learnPage": {
     "title": "Learn mortgages in plain language",
@@ -661,7 +666,9 @@
     "sourceCheckedAt": "Checked against source: ",
     "cpiReferenceMonth": "Index reference month: ",
     "cpiFallbackMonth": "Saved index month: ",
-    "fallbackVerifiedLabel": "Fallback verified: "
+    "fallbackVerifiedLabel": "Fallback verified: ",
+    "detailsToggle": "Details, sources and data freshness",
+    "expectedCpiDetail": "From the {month} forecast"
   },
   "calculator": {
     "pdfButton": "Save as PDF / Print",

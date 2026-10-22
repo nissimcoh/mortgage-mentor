@@ -104,13 +104,13 @@
     "heroPrimaryCta": "התחל חישוב",
     "heroTrustNote": "החישוב מיועד ללמידה והשוואה בין תרחישים ואינו ייעוץ משכנתאות.",
     "calcCardTitle": "מחשבון חופשי",
-    "calcCardBody": "בנו תמהיל עם כמה מסלולים, בדקו החזר ראשון, החזר מרבי וסך תשלומים.",
+    "calcCardBody": "בנו תמהיל, השוו בין מסלולים וקבלו לוח סילוקין מלא לכל חודש.",
     "calcCardCta": "פתח מחשבון",
     "learnCardTitle": "לומדים משכנתא",
-    "learnCardBody": "הסברים קצרים על מסלולים, הצמדה והחזרים, כדי להבין את התוצאה.",
+    "learnCardBody": "{count} מושגים, כללי בנק ישראל וזכאות ממשרד השיכון – בשפה פשוטה.",
     "learnCardCta": "פתח מרכז למידה",
     "savedCardTitle": "שמירת הצעות",
-    "savedCardBody": "שמרו תרחישים בשם, חזרו להצעות קודמות וערכו אותן לאחר התחברות.",
+    "savedCardBody": "שמרו תרחישים, חזרו אליהם והשוו ביניהם אחרי התחברות.",
     "comingSoonBadge": "בקרוב",
     "comingSoonCta": "לפרטים",
     "eyebrow": "המשכנתא שלכם, בתמונה אחת",
@@ -129,9 +129,14 @@
         "body": "הקרן ועלות המימון לאורך כל חיי המשכנתא."
       }
     ],
-    "toolsTitle": "מנתוני השוק לתמהיל שלכם",
-    "toolsSubtitle": "חשבו, הבינו את ההבדלים ושמרו תרחישים לחזרה בהמשך.",
-    "savedCardCta": "לתמהילים השמורים"
+    "toolsTitle": "להמשיך מכאן",
+    "savedCardCta": "לתמהילים השמורים",
+    "heroLearnCta": "למדו את המושגים",
+    "overviewNote": "המחשה, לא חישוב",
+    "overviewChartLabel": "גרף להמחשה: ההחזר החודשי לאורך חיי המשכנתא, מההחזר הראשון דרך השיא החזוי ועד סוף התקופה",
+    "overviewAxisStart": "היום",
+    "overviewAxisEnd": "סוף התקופה",
+    "rulesMoreCta": "לכל הכללים"
   },
   "learnPage": {
     "title": "לומדים משכנתא בשפה פשוטה",
@@ -661,7 +666,9 @@
     "sourceCheckedAt": "נבדק מול המקור: ",
     "cpiReferenceMonth": "חודש המדד במקור: ",
     "cpiFallbackMonth": "חודש המדד השמור: ",
-    "fallbackVerifiedLabel": "נתון הגיבוי אומת: "
+    "fallbackVerifiedLabel": "נתון הגיבוי אומת: ",
+    "detailsToggle": "פרטים, מקורות ועדכניות הנתונים",
+    "expectedCpiDetail": "לפי תחזית {month}"
   },
   "calculator": {
     "pdfButton": "שמירה כ־PDF / הדפסה",
