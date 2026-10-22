@@ -199,6 +199,7 @@
     "exampleLabel": "Example and what to check",
     "emptyLabel": "No matching terms. Try another word or category.",
     "countLabel": "terms",
+    "clearFilters": "Clear filters",
     "sourceTitle": "Official sources",
     "sourceGuide": "Bank of Israel: mortgage transparency and competition reform",
     "sourceFees": "Bank of Israel: average rates and early repayment",
@@ -542,7 +543,21 @@
         "body": "Beyond interest there are costs such as a file-opening fee, appraisal, mortgage registration, insurance, legal fees and purchase tax, depending on the deal. They hit your budget even though they do not appear in the repayment schedule.",
         "example": "Budget for one-off costs and monthly insurance. The calculator does not include them in total payments."
       }
-    ]
+    ],
+    "visuals": {
+      "principal": "Principal",
+      "interest": "Interest",
+      "yearFirst": "Year 1",
+      "yearLast": "Year 20",
+      "repaymentCaption": "Illustration: 100,000 ILS over 20 years at 5%, principal and interest paid each year, on the same scale for both methods.",
+      "basket": "Basket",
+      "fixedUnlinked": "Fixed unlinked",
+      "prime": "Prime",
+      "variableLinked": "5-year variable linked",
+      "boiRate": "Bank of Israel rate (3% in this example)",
+      "primeMargin": "Fixed 1.5-point margin",
+      "primeCaption": "Prime = Bank of Israel rate + 1.5 percentage points. Here: 3% + 1.5 = 4.5%."
+    }
   },
   "savedPage": {
     "intro": "Your saved scenarios, sorted by most recently updated.",

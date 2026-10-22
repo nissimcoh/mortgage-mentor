@@ -363,3 +363,20 @@ body {
     select option:disabled { color: #94a3b8; }
   }
 }
+
+/* Glossary cards fade up as they mount (filter changes, new search hits),
+   and the example disclosure opens with a height transition where
+   ::details-content is supported. */
+@keyframes mm-card-in { from { opacity: 0; transform: translateY(10px); } }
+.mm-card-in { animation: mm-card-in .4s cubic-bezier(.2,.7,.2,1) both; }
+:root { interpolate-size: allow-keywords; }
+details::details-content {
+  block-size: 0;
+  overflow-y: clip;
+  transition: block-size .25s ease, content-visibility .25s allow-discrete;
+}
+details[open]::details-content { block-size: auto; }
+@media (prefers-reduced-motion: reduce) {
+  .mm-card-in { animation: none; }
+  details::details-content { transition: none; }
+}
