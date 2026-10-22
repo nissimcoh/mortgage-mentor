@@ -8,6 +8,7 @@ import { getMortgageForecastData } from "@/lib/market-data/sources/boi-mortgage-
 import HeroPaymentIllustration from "@/components/HeroPaymentIllustration";
 import MarketSnapshotCards from "@/components/MarketSnapshotCards";
 import MarketSnapshotSkeleton from "@/components/MarketSnapshotSkeleton";
+import RuleCardContent from "@/components/RuleCardContent";
 import { revealDelay } from "@/lib/ui/reveal-delay";
 import { getDictionary, type Dictionary } from "./dictionaries";
 
@@ -64,9 +65,8 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
         <ul className="mt-4 grid gap-3 sm:grid-cols-3">
           {rules.map((rule) => (
             <li key={rule.termId}>
-              <Link href={`/${locale}/learn#${rule.termId}`} className="glass-panel flex h-full items-center gap-4 p-4 transition hover:-translate-y-0.5 hover:ring-2 hover:ring-accent/25 sm:p-5">
-                <span className="min-w-12 text-2xl font-bold tracking-tight text-accent"><bdi>{rule.value}</bdi></span>
-                <span className="text-sm leading-6 text-slate-700">{rule.label}</span>
+              <Link href={`/${locale}/learn#${rule.termId}`} className="glass-panel flex h-full p-4 transition hover:-translate-y-0.5 hover:ring-2 hover:ring-accent/25 sm:p-5">
+                <RuleCardContent rule={rule} />
               </Link>
             </li>
           ))}

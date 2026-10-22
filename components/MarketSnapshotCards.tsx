@@ -27,6 +27,37 @@ function StatusDot({ live, stale, fallback, labels }: {
   return <span title={text} className={`h-2 w-2 shrink-0 rounded-full ${ok ? "bg-emerald-500" : "bg-amber-500"}`}><span className="sr-only">{text}</span></span>;
 }
 
+/**
+ * Expected year-over-year inflation for forecast years 1..10, read from the
+ * curve's cumulative CPI index (base 100 at month 0). Null when the index is
+ * missing or too short to cover ten years.
+ */
+function inflationTrend(index: number[]): number[] | null {
+  if (index.length <= 120) return null;
+  const trend = Array.from({ length: 109 }, (_, month) => index[month + 12] / index[month] - 1);
+  return trend.every(Number.isFinite) ? trend : null;
+}
+
+/** Single-series stat-tile trend: 2px line, hairline baseline, start/end values as text. */
+function Sparkline({ points, caption, format }: { points: number[]; caption: string; format: (rate: number) => string }) {
+  const min = Math.min(...points);
+  const span = Math.max(...points) - min || 1;
+  const path = points.map((rate, i) => `${(i / (points.length - 1)) * 100},${22 - ((rate - min) / span) * 18}`).join(" ");
+  const first = format(points[0]);
+  const last = format(points[points.length - 1]);
+  return (
+    <figure className="mt-2">
+      <div dir="ltr">
+        <svg viewBox="0 0 100 24" preserveAspectRatio="none" className="h-7 w-full" aria-hidden="true">
+          <line x1="0" x2="100" y1="23.5" y2="23.5" stroke="#cbd5e1" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+          <polyline points={path} fill="none" stroke="#0f6e68" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" className="mm-fade" />
+        </svg>
+      </div>
+      <figcaption className="mt-1 text-[11px] leading-4 text-slate-500">{caption} <bdi dir="ltr">{first} → {last}</bdi></figcaption>
+    </figure>
+  );
+}
+
 /** Server-rendered source values: never substitutes staff forecasts for the calculator curve. */
 export default function MarketSnapshotCards({ snapshot, curve, labels, locale }: {
   snapshot: MarketSnapshot;
@@ -62,8 +93,8 @@ export default function MarketSnapshotCards({ snapshot, curve, labels, locale }:
   const curveStale = curve ? (isStale(curve.publicationDate, new Date(snapshot.fetchedAt), 62) || isStale(curve.fetchedAt, new Date(snapshot.fetchedAt), 1)) : false;
   const curveFallback = curve ? labels.curveFallback : labels.unavailable;
   const tiles = [
-    ...cards.map((card) => ({ label: card.label, value: card.value, detail: card.detail, live: card.live, stale: card.stale, fallback })),
-    { label: labels.expectedCpiTitle, value: expectedCpi === null ? labels.unavailable : signedPercent.format(expectedCpi), detail: labels.expectedCpiDetail.replace("{month}", curveMonth), live: curveLive, stale: curveStale, fallback: curveFallback },
+    ...cards.map((card) => ({ label: card.label, value: card.value, detail: card.detail, live: card.live, stale: card.stale, fallback, trend: null })),
+    { label: labels.expectedCpiTitle, value: expectedCpi === null ? labels.unavailable : signedPercent.format(expectedCpi), detail: labels.expectedCpiDetail.replace("{month}", curveMonth), live: curveLive, stale: curveStale, fallback: curveFallback, trend: inflationTrend(curve?.expectedCpiIndex ?? []) },
   ];
 
   return (
@@ -79,6 +110,7 @@ export default function MarketSnapshotCards({ snapshot, curve, labels, locale }:
               <span className="mt-1.5"><StatusDot live={tile.live} stale={tile.stale} fallback={tile.fallback} labels={labels} /></span>
             </div>
             <p className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl"><bdi>{tile.value}</bdi></p>
+            {tile.trend && <Sparkline points={tile.trend} caption={labels.expectedCpiTrend} format={(rate) => percent.format(rate)} />}
             <p className="mt-auto pt-2 text-xs leading-5 text-slate-500">{tile.detail}</p>
           </article>
         ))}

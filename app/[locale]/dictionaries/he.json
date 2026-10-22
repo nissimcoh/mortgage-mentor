@@ -668,7 +668,8 @@
     "cpiFallbackMonth": "חודש המדד השמור: ",
     "fallbackVerifiedLabel": "נתון הגיבוי אומת: ",
     "detailsToggle": "פרטים, מקורות ועדכניות הנתונים",
-    "expectedCpiDetail": "לפי תחזית {month}"
+    "expectedCpiDetail": "לפי תחזית {month}",
+    "expectedCpiTrend": "קצב שנתי צפוי, שנה 1 עד 10:"
   },
   "calculator": {
     "pdfButton": "שמירה כ־PDF / הדפסה",

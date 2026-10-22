@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isValidLocale } from "@/lib/i18n/config";
 import LearningGlossary from "@/components/LearningGlossary";
+import RuleCardContent from "@/components/RuleCardContent";
 import { getDictionary } from "../dictionaries";
 
 export async function generateMetadata({
@@ -54,9 +55,8 @@ export default async function LearnPage({
           <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {t.rules.map((rule) => (
               <li key={rule.termId + rule.value}>
-                <a href={`#${rule.termId}`} className="glass-panel flex h-full items-start gap-4 p-5 transition hover:ring-2 hover:ring-accent/30">
-                  <span className="min-w-14 text-3xl font-bold tracking-tight text-accent"><bdi>{rule.value}</bdi></span>
-                  <span className="text-sm leading-6 text-slate-700">{rule.label}</span>
+                <a href={`#${rule.termId}`} className="glass-panel flex h-full p-5 transition hover:-translate-y-0.5 hover:ring-2 hover:ring-accent/25">
+                  <RuleCardContent rule={rule} />
                 </a>
               </li>
             ))}

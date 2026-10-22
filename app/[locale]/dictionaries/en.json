@@ -668,7 +668,8 @@
     "cpiFallbackMonth": "Saved index month: ",
     "fallbackVerifiedLabel": "Fallback verified: ",
     "detailsToggle": "Details, sources and data freshness",
-    "expectedCpiDetail": "From the {month} forecast"
+    "expectedCpiDetail": "From the {month} forecast",
+    "expectedCpiTrend": "Expected yearly rate, years 1–10:"
   },
   "calculator": {
     "pdfButton": "Save as PDF / Print",
