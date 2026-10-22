@@ -59,14 +59,14 @@ function PaymentBreakdownCard({
         </span>
       </div>
 
-      <div className="mt-3 flex h-3 overflow-hidden rounded-full bg-slate-100">
+      <div className="mt-3 flex h-3 gap-[2px] overflow-hidden rounded-full bg-slate-100">
         <div
-          className="bg-slate-900"
+          className="mm-grow-x bg-slate-900 ltr:origin-left rtl:origin-right"
           style={{ width: `${principalShare * 100}%` }}
         />
         <div
-          className="bg-slate-300"
-          style={{ width: `${interestShare * 100}%` }}
+          className="mm-grow-x bg-slate-300 ltr:origin-left rtl:origin-right"
+          style={{ width: `${interestShare * 100}%`, animationDelay: ".12s" }}
         />
       </div>
 
@@ -248,7 +248,7 @@ const AmortizationSchedule = memo(function AmortizationSchedule({
               <tr
                 key={entry.month}
                 data-calculation-basis={basis}
-                className={`border-b last:border-0 ${contractual ? "border-emerald-100 bg-emerald-50/80" : "border-amber-100 bg-amber-50/80"}`}
+                className={`border-b border-slate-100 transition-colors last:border-0 hover:bg-accent-soft/60 ${contractual ? "bg-white" : "bg-amber-50/40"}`}
               >
                 <td className="px-4 py-2.5 text-start text-slate-500">
                   {entry.month}

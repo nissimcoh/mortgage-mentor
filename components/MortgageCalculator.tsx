@@ -64,6 +64,9 @@ import MortgageTrackCard, {
   type TrackCardMarketInfo,
 } from "./MortgageTrackCard";
 import PaymentTimeline from "./PaymentTimeline";
+import AnimatedNumber from "./AnimatedNumber";
+import MixCompositionBar from "./MixCompositionBar";
+import { TRACK_COLORS } from "@/lib/ui/track-colors";
 import ScheduleSelector from "./ScheduleSelector";
 import ExportMortgagePdfButton from "./ExportMortgagePdfButton";
 import { scheduleBasisForMonth } from "@/lib/mortgage/schedule-certainty";
@@ -327,6 +330,14 @@ export default function MortgageCalculator({
     maximumFractionDigits: 0,
   }), [intlLocale]);
   const numberFormat = useMemo(() => new Intl.NumberFormat(intlLocale), [intlLocale]);
+  const trackTypeLabels: Record<MortgageTrackInput["type"], string> = {
+    prime: labels.trackTypePrime,
+    variableGovernmentBond: labels.trackTypeGovernmentBond,
+    variableMakam: labels.trackTypeMakam,
+    fixedLinked: labels.trackTypeFixedLinked,
+    variableLinked: labels.trackTypeVariableLinked,
+    fixedUnlinked: labels.trackTypeFixedUnlinked,
+  };
   const percentFormat = useMemo(() => new Intl.NumberFormat(intlLocale, {
     style: "percent",
     minimumFractionDigits: 2,
@@ -896,7 +907,7 @@ export default function MortgageCalculator({
 
       {submitted && (
         <>
-          <section id="results" ref={resultsRef} className="mt-6 scroll-mt-24">
+          <section id="results" ref={resultsRef} className="mm-reveal mt-6 scroll-mt-24">
             <h2 className="mb-3 text-2xl font-bold tracking-tight">
               {labels.combinedResultsTitle}
             </h2>
@@ -915,10 +926,8 @@ export default function MortgageCalculator({
                   <div className="text-sm font-medium text-slate-600">
                     {labels.firstMonthlyPaymentLabel}
                   </div>
-                  <div className="mt-1 text-4xl font-bold tracking-tight text-slate-900 tabular-nums sm:text-5xl">
-                    {currencyFormat.format(
-                      submitted.summary.currentCombinedFirstPayment,
-                    )}
+                  <div className="mt-1 text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
+                    <AnimatedNumber value={submitted.summary.currentCombinedFirstPayment} format={(value) => currencyFormat.format(value)} />
                   </div>
                   <div className="mt-1 text-sm text-slate-600">
                     {labels.heroFirstPaymentContext}
@@ -930,6 +939,17 @@ export default function MortgageCalculator({
                   accessibleLabel={stabilityAccessibleLabel}
                 />
               </div>
+              {submitted.inputs.length > 1 && totalPrincipal > 0 && (
+                <MixCompositionBar
+                  title={labels.mixCompositionTitle}
+                  items={submitted.inputs.map((input, index) => ({
+                    label: `${labels.trackLabel} ${index + 1} · ${trackTypeLabels[input.type]}`,
+                    amount: wholeCurrencyFormat.format(input.loanAmount),
+                    share: new Intl.NumberFormat(intlLocale, { style: "percent", maximumFractionDigits: 0 }).format(input.loanAmount / totalPrincipal),
+                    fraction: input.loanAmount / totalPrincipal,
+                  }))}
+                />
+              )}
             </div>
 
             {/* Actions: Save is primary, Share/Copy is secondary. No
@@ -982,7 +1002,7 @@ export default function MortgageCalculator({
                   {labels.forecastMaxPaymentLabel}
                 </dt>
                 <dd className="mt-0.5 text-lg font-semibold text-slate-900 tabular-nums">
-                  {currencyFormat.format(submitted.summary.maximumPayment)}
+                  <AnimatedNumber value={submitted.summary.maximumPayment} format={(value) => currencyFormat.format(value)} />
                 </dd>
                 <dd className="mt-0.5 text-xs text-slate-500">
                   {formatMaxMonth(submitted.summary.monthOfMaximumPayment)}
@@ -993,7 +1013,7 @@ export default function MortgageCalculator({
                   {labels.forecastTotalPaymentLabel}
                 </dt>
                 <dd className="mt-0.5 text-lg font-semibold text-slate-900 tabular-nums">
-                  {currencyFormat.format(submitted.summary.totalPayment)}
+                  <AnimatedNumber value={submitted.summary.totalPayment} format={(value) => currencyFormat.format(value)} />
                 </dd>
               </div>
               <div>
@@ -1001,9 +1021,7 @@ export default function MortgageCalculator({
                   {labels.financingCostLabel}
                 </dt>
                 <dd className="mt-0.5 text-lg font-semibold text-slate-900 tabular-nums">
-                  {currencyFormat.format(
-                    getForecastFinancingCost(submitted.summary),
-                  )}
+                  <AnimatedNumber value={getForecastFinancingCost(submitted.summary)} format={(value) => currencyFormat.format(value)} />
                 </dd>
               </div>
               <div>
@@ -1242,20 +1260,13 @@ export default function MortgageCalculator({
                       className="glass-panel rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
                     >
                       <h3 className="mb-2 text-sm font-bold text-slate-900">
+                        {submitted.inputs.length > 1 && (
+                          <span aria-hidden="true" className="me-2 inline-block h-2.5 w-2.5 rounded-full align-middle" style={{ backgroundColor: TRACK_COLORS[index] }} />
+                        )}
                         {labels.trackLabel} {index + 1}
                         <span className="font-normal text-slate-500">
                           {" · "}
-                          {
-                            {
-                              prime: labels.trackTypePrime,
-                              variableGovernmentBond:
-                                labels.trackTypeGovernmentBond,
-                              variableMakam: labels.trackTypeMakam,
-                              fixedLinked: labels.trackTypeFixedLinked,
-                              variableLinked: labels.trackTypeVariableLinked,
-                              fixedUnlinked: labels.trackTypeFixedUnlinked,
-                            }[input.type]
-                          }
+                          {trackTypeLabels[input.type]}
                           {" · "}
                           {methodLabel}
                         </span>

@@ -879,6 +879,7 @@
     "csvButton": "Download displayed schedule (CSV)",
     "csvHelp": "Exports the selected schedule for Excel. Amounts are in ILS; annual rates are in percent. Each row retains its entered-terms or estimated label.",
     "csvError": "Could not download the schedule. Please try again.",
-    "csvEstimated": "Estimated"
+    "csvEstimated": "Estimated",
+    "mixCompositionTitle": "Mix composition"
   }
 }

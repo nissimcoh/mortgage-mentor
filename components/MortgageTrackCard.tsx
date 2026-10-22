@@ -386,7 +386,7 @@ export default function MortgageTrackCard({
           </div>
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[1.3fr_1fr_1fr_1fr_1fr]">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[1.15fr_1.5fr_1fr_1fr_0.85fr]">
           {amountField}
           {typeField}
           {methodField}
