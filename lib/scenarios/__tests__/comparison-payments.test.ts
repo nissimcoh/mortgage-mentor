@@ -71,9 +71,14 @@ describe("historical comparison payments", () => {
     expect(reconstructComparisonPayments({ ...row, market_references: { ...refs, tracks: [...refs.tracks, ...refs.tracks] } }, market)).toBeNull();
   });
 
+  it("charts a mix saved by an earlier calculator version when today's engine reproduces it exactly", () => {
+    const { row } = saved([draft("prime")]);
+    expect(reconstructComparisonPayments({ ...row, calculator_version: "1.0.0" }, market)).toEqual(reconstructComparisonPayments(row, market));
+    expect(reconstructComparisonPayments({ ...row, calculator_version: "1.0.0" }, market)).not.toBeNull();
+  });
+
   it("does not display a revised curve or a schedule that disagrees with any saved payment metric", () => {
     const { row } = saved([draft("prime")]);
-    expect(reconstructComparisonPayments({ ...row, calculator_version: "previous-methodology" }, market)).toBeNull();
     expect(reconstructComparisonPayments(row, { ...market, curves: [{ ...curve, nominalZeroYieldsPercent: Array(360).fill(9) }] })).toBeNull();
     for (const field of ["firstPayment", "highestPayment", "highestPaymentMonth", "forecastTotalPaid", "totalInterestOrFinancingCost"]) {
       const snapshot = row.result_snapshot as Record<string, number>;

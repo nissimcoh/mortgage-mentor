@@ -41,7 +41,6 @@ export default async function ComparePage({ params }: { params: Promise<{ locale
         <p className="mt-3 text-base leading-7 text-slate-600">{labels.intro}</p>
         {error ? <p role="alert" className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{labels.loadError}</p> : (
           <>
-            {hasInvalid && <p role="status" className="mt-4 text-sm text-amber-800">{labels.invalid}</p>}
             {scenarios.length < 2 ? (
               <div className="glass-panel mt-6 p-6 text-center">
                 <h2 className="text-xl font-semibold">{labels.emptyTitle}</h2>
@@ -49,6 +48,7 @@ export default async function ComparePage({ params }: { params: Promise<{ locale
                 <Link href={`/${locale}/calculator`} className="mt-5 inline-block rounded-xl bg-accent px-5 py-3 text-sm font-medium text-white">{labels.calculator}</Link>
               </div>
             ) : <SavedScenarioComparison scenarios={scenarios} locale={locale} labels={labels} />}
+            {hasInvalid && <p role="status" className="mt-6 text-sm leading-6 text-slate-500">{labels.invalid}</p>}
           </>
         )}
       </section>

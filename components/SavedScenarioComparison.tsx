@@ -79,6 +79,8 @@ export default function SavedScenarioComparison({ scenarios, locale, labels }: {
     };
   }, [locale]);
   const warnings = comparisonWarnings(selected);
+  const notes = (Object.keys(warnings) as (keyof typeof warnings)[]).filter(key => warnings[key]);
+  const withoutChart = chartsLoading ? [] : selected.filter(item => item.payments === null);
   const { highlights, insights, cheapest } = buildInsights(selected, labels, formats.whole);
   const badgesFor = (item: ComparisonScenario) =>
     (Object.keys(highlights) as ComparisonHighlight[]).filter(key => highlights[key] === item.id);
@@ -119,11 +121,6 @@ export default function SavedScenarioComparison({ scenarios, locale, labels }: {
         )}
       </div>
       <p className="mt-5 text-sm leading-7 text-slate-600">{labels.snapshotNote}</p>
-      <div aria-live="polite" className="mt-3 space-y-2">
-        {(Object.keys(warnings) as (keyof typeof warnings)[]).filter(key => warnings[key]).map(key => (
-          <p key={key} className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{labels[key]}</p>
-        ))}
-      </div>
 
       <section aria-labelledby={`${id}-verdict`} className="mt-8">
         <h2 id={`${id}-verdict`} className="text-xl font-bold">{labels.verdictTitle}</h2>
@@ -176,7 +173,7 @@ export default function SavedScenarioComparison({ scenarios, locale, labels }: {
           <p role="status" className="mt-2 text-sm leading-6 text-slate-600">{labels.chartsLoading}</p>
           <div aria-hidden="true" className="glass-panel mt-4 h-72 animate-pulse" />
         </section>
-      ) : <ComparisonPaymentCharts scenarios={selected} locale={locale} labels={labels} />}
+      ) : withoutChart.length < selected.length && <ComparisonPaymentCharts scenarios={selected} locale={locale} labels={labels} />}
       <p id={`${id}-scroll`} className="mt-6 text-xs text-slate-500">{labels.scrollHint}</p>
       <div className="mt-2 overflow-x-auto rounded-2xl border border-slate-200 bg-white" role="region" aria-label={labels.title} tabIndex={0}>
         <table className="w-full min-w-[640px] text-sm" aria-describedby={`${id}-scroll ${id}-exposure`}>
@@ -206,6 +203,22 @@ export default function SavedScenarioComparison({ scenarios, locale, labels }: {
         </table>
       </div>
       <p id={`${id}-exposure`} className="mt-4 text-xs leading-6 text-slate-500">{labels.exposureHelp}</p>
+
+      {/* Caveats close the page: they qualify the results, they are not the results. */}
+      {(notes.length > 0 || withoutChart.length > 0) && <section aria-labelledby={`${id}-notes`} className="mt-8 border-t border-slate-900/10 pt-5">
+        <h2 id={`${id}-notes`} className="text-sm font-semibold text-slate-700">{labels.notesTitle}</h2>
+        <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
+          {notes.map(key => <li key={key} className="flex gap-2"><span aria-hidden="true" className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400" />{labels[key]}</li>)}
+          {withoutChart.length > 0 && <li className="flex gap-2">
+            <span aria-hidden="true" className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400" />
+            <span>
+              {labels.chartsMissingLead}{" "}
+              {withoutChart.map((item, index) => <span key={item.id}>{index > 0 && ", "}<Link href={`/${locale}/saved/${item.id}`} className="font-medium underline decoration-slate-300 underline-offset-4">{item.name}</Link></span>)}.{" "}
+              {labels.chartUnavailable}
+            </span>
+          </li>}
+        </ul>
+      </section>}
     </div>
   );
 }

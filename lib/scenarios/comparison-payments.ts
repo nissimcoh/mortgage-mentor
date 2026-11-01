@@ -1,15 +1,17 @@
 import { calculateScenarioSummary } from "../mortgage/calculations";
-import { CALCULATOR_VERSION } from "../mortgage/calculator-version";
 import { parseAllTrackDrafts, type MarketContextForParsing } from "../mortgage/scenario-form";
 import { toComparisonScenario, type ComparisonRow } from "./comparison";
 import { isValidMarketReferences, validateInputPayload } from "./payload";
 import { buildResultSnapshot } from "./snapshot";
 
-/** Reconstruct only the saved context. Never substitute today's curve or BOI rate. */
+/** Reconstruct only the saved context. Never substitute today's curve or BOI rate.
+ * Any calculator version is accepted: the series is shown only if today's
+ * engine reproduces every saved money figure to the agora, so a methodology
+ * change that moved the numbers still comes back null. */
 export function reconstructComparisonPayments(row: ComparisonRow, market: Omit<MarketContextForParsing, "boiRatePercent">): number[] | null {
   const scenario = toComparisonScenario(row);
   const payload = validateInputPayload(row.input_payload);
-  if (!scenario || !payload || row.calculator_version !== CALCULATOR_VERSION) return null;
+  if (!scenario || !payload) return null;
   const needsMarket = payload.tracks.some(track => track.trackType !== "fixedUnlinked");
   const refs = isValidMarketReferences(row.market_references) ? row.market_references : null;
   if (needsMarket && !refs) return null;

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useId, useMemo, useState, type PointerEvent } from "react";
 import type { Dictionary } from "@/app/[locale]/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
@@ -88,13 +87,9 @@ export default function ComparisonPaymentCharts({ scenarios, locale, labels }: {
     <section aria-labelledby={`${id}-title`} className="mt-6">
       <h2 id={`${id}-title`} className="text-xl font-bold">{labels.chartsTitle}</h2>
       <p className="mt-2 text-sm leading-6 text-slate-600">{labels.chartsHelp}</p>
-      {series.filter(item => !item.scenario.payments).map(item => (
-        <p key={item.scenario.id} role="status" className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-900">
-          <Link href={`/${locale}/saved/${item.scenario.id}`} className="font-semibold underline underline-offset-4">{item.scenario.name}</Link>: {labels.chartUnavailable}
-        </p>
-      ))}
       <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm" aria-label={labels.chartLegend}>
-        {series.map((item, index) => <span key={item.scenario.id} className="flex min-w-0 items-center gap-2">
+        {/* Mixes without a series are explained in the page's closing notes. */}
+        {series.map((item, index) => item.scenario.payments && <span key={item.scenario.id} className="flex min-w-0 items-center gap-2">
           <svg width="30" height="12" aria-hidden="true" className="shrink-0"><line x1="0" x2="30" y1="6" y2="6" stroke={item.style.color} strokeWidth="3" strokeDasharray={item.style.dash} /></svg>
           <span className="min-w-0 break-words">{index + 1}. {item.scenario.name}</span>
         </span>)}
@@ -144,10 +139,11 @@ export default function ComparisonPaymentCharts({ scenarios, locale, labels }: {
             </div>}
             <dl className="mt-4 space-y-3">
               {series.map((item, index) => {
-                const values = item.scenario.payments ? comparisonMonthValues(item.scenario.payments, item.cumulative!, month) : null;
+                if (!item.scenario.payments) return null;
+                const values = comparisonMonthValues(item.scenario.payments, item.cumulative!, month);
                 return <div key={item.scenario.id} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-t border-slate-200 pt-3 text-sm">
                   <dt className="min-w-0 break-words">{index + 1}. {item.scenario.name}</dt>
-                  <dd className="flex items-center gap-2 font-semibold tabular-nums"><span aria-hidden="true" className="h-2 w-2 rounded-full" style={{ backgroundColor: item.style.color }} /><bdi>{values ? formats.money.format(kind === "monthly" ? values.payment : values.cumulative) : labels.chartNoData}</bdi></dd>
+                  <dd className="flex items-center gap-2 font-semibold tabular-nums"><span aria-hidden="true" className="h-2 w-2 rounded-full" style={{ backgroundColor: item.style.color }} /><bdi>{formats.money.format(kind === "monthly" ? values.payment : values.cumulative)}</bdi></dd>
                 </div>;
               })}
             </dl>

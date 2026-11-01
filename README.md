@@ -95,6 +95,17 @@ MortgageMentor answers that question with the same inputs banks are required to 
 
 <table>
   <tr>
+    <td width="46%"><img src="docs/images/saved-he.jpg" alt="Saved scenarios page in Hebrew: three saved mixes with loan amount, first payment and stability" /></td>
+    <td width="54%"><img src="docs/images/compare-table-he.jpg" alt="Saved-mix comparison table in Hebrew: payments, total cost and rate exposure side by side, with the leader in each row marked" /></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>Saved scenarios:</b> every mix you save, with its key figures</sub></td>
+    <td align="center"><sub><b>Compare:</b> two or three saved mixes side by side, best value per row marked</sub></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
     <td width="56%"><img src="docs/images/learn-he.jpg" alt="Learning centre in Hebrew: Bank of Israel rules and the searchable mortgage glossary" /></td>
     <td width="22%"><img src="docs/images/mobile-home-he.jpg" alt="Hebrew home page on a phone" /></td>
     <td width="22%"><img src="docs/images/mobile-results-he.jpg" alt="Hebrew calculator results on a phone" /></td>

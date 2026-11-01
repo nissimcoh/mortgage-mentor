@@ -40,12 +40,14 @@ it("keeps three lines distinguishable by number and dash pattern in both charts"
   expect(html).toContain("3. Synthetic C");
 });
 
-it("warns by name for unavailable history, with no invented line or zero-valued result", () => {
-  const html = renderToStaticMarkup(<ComparisonPaymentCharts scenarios={[base, { ...second, payments: null }]} locale="he" labels={he.savedComparison} />);
+it("names a mix without history once, after the results, with no invented line or empty chart row", () => {
+  const html = renderToStaticMarkup(<SavedScenarioComparison scenarios={[base, { ...second, payments: null }]} locale="he" labels={he.savedComparison} />);
   expect((html.match(/<polyline /g) ?? []).length).toBe(2);
-  expect(html).toContain(he.savedComparison.chartUnavailable);
-  expect(html).toContain(he.savedComparison.chartNoData);
+  expect((html.match(new RegExp(he.savedComparison.chartUnavailable, "g")) ?? []).length).toBe(1);
+  // The note follows the comparison table instead of preceding the charts.
+  expect(html.indexOf(he.savedComparison.chartsMissingLead)).toBeGreaterThan(html.indexOf("</table>"));
   expect(html).toContain(`/he/saved/${second.id}`);
+  expect(html).not.toContain("amber");
   // A missing longer mix still defines the common time axis.
   expect(html).toContain('max="240"');
 });
@@ -54,6 +56,8 @@ it("retains the summary table when neither historical chart can be reconstructed
   const html = renderToStaticMarkup(<SavedScenarioComparison scenarios={[{ ...base, payments: null }, { ...second, payments: null }]} locale="en" labels={en.savedComparison} />);
   expect(html).not.toContain("<polyline");
   expect(html).not.toContain('type="range"');
+  // No empty chart panels: the charts section is omitted entirely.
+  expect(html).not.toContain(en.savedComparison.monthlyChartTitle);
   expect(html).toContain(en.savedComparison.chartUnavailable.replaceAll("'", "&#x27;"));
   expect(html).toContain(en.savedComparison.total);
   expect(html).toContain("240,000");
