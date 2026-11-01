@@ -7,6 +7,9 @@ import { createClient } from "@/lib/supabase/server";
 import ScenarioCard from "@/components/ScenarioCard";
 import { getDictionary } from "../dictionaries";
 
+/** Cards per page; a multiple of the two-column grid. */
+const PAGE_SIZE = 24;
+
 export async function generateMetadata({
   params,
 }: {
@@ -24,11 +27,15 @@ export async function generateMetadata({
 
 export default async function SavedPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ page?: string | string[] }>;
 }) {
   const { locale } = await params;
   if (!isValidLocale(locale)) notFound();
+  const { page: rawPage } = await searchParams;
+  const requestedPage = typeof rawPage === "string" && /^[1-9]\d{0,5}$/.test(rawPage) ? Number(rawPage) : 1;
 
   const supabase = await createClient();
   const {
@@ -43,11 +50,19 @@ export default async function SavedPage({
   // RLS's "select own scenarios" policy is the real ownership boundary;
   // this .eq("user_id", ...) is the normal, expected app-level filter on
   // top of it, using the signed-in user's own session as usual.
-  const { data: rows, error } = await supabase
+  // One page of rows plus the exact total, in a single request.
+  const from = (requestedPage - 1) * PAGE_SIZE;
+  const { data: rows, error, count } = await supabase
     .from("mortgage_scenarios")
-    .select("id, name, result_snapshot, updated_at")
+    .select("id, name, result_snapshot, updated_at", { count: "exact" })
     .eq("user_id", user.id)
-    .order("updated_at", { ascending: false });
+    .order("updated_at", { ascending: false })
+    .order("id", { ascending: false })
+    .range(from, from + PAGE_SIZE - 1);
+  const total = count ?? rows?.length ?? 0;
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  // Past the end (e.g. after deleting the last cards of the last page).
+  if (!error && requestedPage > pageCount) redirect(pageHref(locale, pageCount));
 
   if (error) {
     // Safe fields only (never the caller's session/tokens) — the user
@@ -78,7 +93,7 @@ export default async function SavedPage({
         </p>
 
         {/* Comparing needs at least two saved mixes. */}
-        {!error && rows && rows.length >= 2 && (
+        {!error && total >= 2 && (
           <Link href={`/${locale}/compare`} className="mb-6 inline-flex min-h-11 items-center rounded-xl bg-accent px-5 py-2.5 text-sm font-medium text-white">
             {dict.savedComparison.open}
           </Link>
@@ -93,7 +108,7 @@ export default async function SavedPage({
           </p>
         )}
 
-        {!error && rows && rows.length === 0 && (
+        {!error && total === 0 && (
           <div className="glass-panel rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center">
             <p className="text-base font-medium text-slate-700">
               {dict.savedPage.emptyTitle}
@@ -131,7 +146,29 @@ export default async function SavedPage({
             })}
           </div>
         )}
+
+        {!error && pageCount > 1 && (
+          <nav aria-label={dict.savedPage.paginationLabel} className="mt-6 flex items-center justify-between gap-3 text-sm">
+            {requestedPage > 1 ? (
+              <Link href={pageHref(locale, requestedPage - 1)} className="glass-secondary inline-flex min-h-11 items-center rounded-xl px-4 font-medium">
+                {dict.savedPage.newerPage}
+              </Link>
+            ) : <span />}
+            <span className="text-slate-500">
+              {dict.savedPage.pageStatus.replace("{page}", String(requestedPage)).replace("{pages}", String(pageCount))}
+            </span>
+            {requestedPage < pageCount ? (
+              <Link href={pageHref(locale, requestedPage + 1)} className="glass-secondary inline-flex min-h-11 items-center rounded-xl px-4 font-medium">
+                {dict.savedPage.olderPage}
+              </Link>
+            ) : <span />}
+          </nav>
+        )}
       </section>
     </main>
   );
+}
+
+function pageHref(locale: string, page: number) {
+  return page > 1 ? `/${locale}/saved?page=${page}` : `/${locale}/saved`;
 }

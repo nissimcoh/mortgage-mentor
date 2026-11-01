@@ -117,12 +117,22 @@ async function fetchWorkbookHistory(): Promise<MortgageForecastCurveSnapshot[]> 
 // New key: older cache entries contain raw rows rather than joined snapshots.
 const readDailyHistory = dailyServerCache("forecast-curve-history-v2", fetchWorkbookHistory);
 
+/** Newest snapshots kept in a separate small cache entry. The full history
+ * is ~1 MB and grows by two curves a month; most requests need only the
+ * operative curve, so they read this entry and the full one is read only
+ * for a pinned curve outside it. Six covers any future-dated curves that
+ * are waiting to activate plus the operative ones (history is newest first). */
+const RECENT_CURVE_COUNT = 6;
+const readDailyRecent = dailyServerCache("forecast-curve-recent-v1",
+  async () => (await fetchWorkbookHistory()).slice(0, RECENT_CURVE_COUNT));
+
 /**
  * Fetch, parse, and resolve the official forecast curves for one request.
  *
  * The FULL workbook history is parsed server-side; only the latest
  * effective curve plus the explicitly requested historical curves are
- * returned (and thus reach the client). Requested IDs that don't exist are
+ * returned (and thus reach the client). The full cached history is read
+ * only when a requested ID is not among the recent curves. Requested IDs that don't exist are
  * reported in `missingCurveIds`, never silently replaced.
  *
  * Never throws: on any failure it returns the dated bundled fallback with
@@ -133,12 +143,28 @@ export async function getMortgageForecastData(
 ): Promise<MortgageForecastData> {
   const fetchedAt = new Date().toISOString();
   try {
-    const history = (await readDailyHistory()).value;
-    const effective = effectiveCurvesAt(history, new Date());
+    const now = new Date();
+    const recentHistory = (await readDailyRecent()).value;
+    const recent = effectiveCurvesAt(recentHistory, now);
 
-    if (effective.length === 0) {
+    if (recent.length === 0) {
       throw new Error("No valid effective curve rows found in BOI workbook");
     }
+
+    // A recent ID that isn't effective yet is reported missing, as before;
+    // only IDs older than the recent window need the full history.
+    const needsHistory = requestedCurveIds.some(
+      (id) => id !== "" && !recentHistory.some((curve) => curve.id === id),
+    );
+    // Recent curves stay first, so the latest curve comes from the fresher entry.
+    const effective = needsHistory
+      ? [
+          ...recent,
+          ...effectiveCurvesAt((await readDailyHistory()).value, now).filter(
+            (curve) => !recent.some((item) => item.id === curve.id),
+          ),
+        ]
+      : recent;
 
     const { curves, missingCurveIds } = pickCurvesForRequest(
       effective,

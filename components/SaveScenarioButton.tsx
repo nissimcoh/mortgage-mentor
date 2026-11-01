@@ -7,7 +7,7 @@ import type { Dictionary } from "@/app/[locale]/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 import { createScenario } from "@/lib/scenarios/actions";
 import type { TrackDraft } from "@/lib/mortgage/scenario-form";
-import { createClient } from "@/lib/supabase/client";
+import { loadSupabaseClient } from "@/lib/supabase/lazy-client";
 import LegalNotice from "./LegalNotice";
 import ModalDialog from "./ModalDialog";
 
@@ -78,7 +78,7 @@ export default function SaveScenarioButton({
     // the auth server, so the dialog opens without a network round trip.
     const {
       data: { session },
-    } = await createClient().auth.getSession();
+    } = await (await loadSupabaseClient()).auth.getSession();
     const user = session?.user ?? null;
 
     if (!user) {

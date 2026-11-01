@@ -7,7 +7,7 @@ import type { User } from "@supabase/supabase-js";
 import type { Dictionary } from "@/app/[locale]/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 import { signOut } from "@/lib/auth/actions";
-import { createClient } from "@/lib/supabase/client";
+import { loadSupabaseClient } from "@/lib/supabase/lazy-client";
 
 type Status = "loading" | "signedOut" | "signedIn";
 
@@ -41,20 +41,31 @@ function useHeaderAuthState(): AuthState {
   });
 
   useEffect(() => {
-    const {
-      data: { subscription },
-    } = createClient().auth.onAuthStateChange((_event, session) => {
-      setState({
-        status: session?.user ? "signedIn" : "signedOut",
-        user: session?.user ?? null,
+    let active = true;
+    let unsubscribe: (() => void) | undefined;
+    loadSupabaseClient().then((client) => {
+      if (!active) return;
+      const {
+        data: { subscription },
+      } = client.auth.onAuthStateChange((_event, session) => {
+        setState({
+          status: session?.user ? "signedIn" : "signedOut",
+          user: session?.user ?? null,
+        });
       });
+      unsubscribe = () => subscription.unsubscribe();
+    }, () => {
+      // The per-navigation read below reports a failed SDK load.
     });
-    return () => subscription.unsubscribe();
+    return () => {
+      active = false;
+      unsubscribe?.();
+    };
   }, []);
 
   useEffect(() => {
     let active = true;
-    createClient().auth.getSession().then(({ data }) => {
+    loadSupabaseClient().then((client) => client.auth.getSession()).then(({ data }) => {
       if (!active) return;
       const user = data.session?.user ?? null;
       setState({ status: user ? "signedIn" : "signedOut", user });
@@ -142,7 +153,7 @@ function AccountMenu({ user, locale, labels }: AccountMenuProps) {
     // AccountMenu is keyed by user ID: token refreshes keep this result, while
     // switching accounts immediately discards the previous account's access.
     let active = true;
-    createClient().rpc("is_current_user_admin").then(({ data, error }) => {
+    loadSupabaseClient().then((client) => client.rpc("is_current_user_admin")).then(({ data, error }) => {
       if (active) setAdminAccess(error ? "error" : data === true ? "allowed" : "denied");
     }, () => { if (active) setAdminAccess("error"); });
     return () => { active = false; };

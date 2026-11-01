@@ -4,13 +4,16 @@ import { defaultLocale, locales } from "@/lib/i18n/config";
 import { updateSession } from "@/lib/supabase/middleware";
 
 export async function proxy(request: NextRequest) {
-  // Refresh the Supabase session cookie first. getUser() (never
-  // getSession(), which trusts a possibly-stale cookie) revalidates
-  // against the auth server and triggers the setAll callback in
-  // updateSession when the token needs refreshing.
+  // Refresh the Supabase session cookie first. getClaims() (never
+  // getSession(), which trusts a possibly-stale cookie) refreshes an
+  // expiring token, triggering the setAll callback in updateSession, and
+  // verifies the JWT signature locally against the cached JWKS. That keeps
+  // the auth server off this per-request path, prefetches included; for a
+  // symmetric (legacy-secret) token it falls back to getUser() itself.
+  // Pages and actions still call getUser() before reading or writing data.
   const { getResponse, supabase } = updateSession(request);
-  await supabase.auth.getUser();
-  // Read only after getUser(): a refresh swaps in a new response object.
+  await supabase.auth.getClaims();
+  // Read only after getClaims(): a refresh swaps in a new response object.
   const response = getResponse();
 
   const { pathname } = request.nextUrl;

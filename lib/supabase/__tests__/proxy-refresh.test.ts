@@ -5,31 +5,31 @@ import { proxy } from "../../../proxy";
 
 type Cookie = { name: string; value: string; options: CookieOptions };
 const mocks = vi.hoisted(() => ({
-  getUser: vi.fn(),
+  getClaims: vi.fn(),
   cookies: null as null | { getAll: () => {name: string; value: string}[]; setAll: (cookies: Cookie[], headers: Record<string, string>) => void },
 }));
 vi.mock("../env", () => ({ SUPABASE_URL: "https://test.invalid", SUPABASE_PUBLISHABLE_KEY: "test-only" }));
 vi.mock("@supabase/ssr", () => ({
   createServerClient: (_url: string, _key: string, options: { cookies: NonNullable<typeof mocks.cookies> }) => {
     mocks.cookies = options.cookies;
-    return { auth: { getUser: mocks.getUser } };
+    return { auth: { getClaims: mocks.getClaims } };
   },
 }));
-beforeEach(() => { mocks.getUser.mockReset(); mocks.cookies = null; });
+beforeEach(() => { mocks.getClaims.mockReset(); mocks.cookies = null; });
 const headers = { "Cache-Control": "private, no-cache, no-store, must-revalidate, max-age=0", Expires: "0", Pragma: "no-cache" };
 
 it.each(["/he/calculator", "/en/saved", "/calculator?track1Amount=500000"])("returns refreshed/chunked cookies and private response headers for %s", async path => {
   const request = new NextRequest(`https://mortgage.test${path}`, { headers: { Cookie: "sb-test-auth-token.0=old; sb-test-auth-token.1=obsolete" } });
-  mocks.getUser.mockImplementation(async () => {
+  mocks.getClaims.mockImplementation(async () => {
     expect(mocks.cookies!.getAll().find(c => c.name === "sb-test-auth-token.0")?.value).toBe("old");
     mocks.cookies!.setAll([
       {name:"sb-test-auth-token.0",value:"refreshed-test-cookie",options:{path:"/",sameSite:"lax",secure:true,maxAge:3600}},
       {name:"sb-test-auth-token.1",value:"",options:{path:"/",maxAge:0}},
     ], headers);
-    return {data:{user:{id:"test-only"}},error:null};
+    return {data:{claims:{sub:"test-only"}},error:null};
   });
   const response = await proxy(request);
-  expect(mocks.getUser).toHaveBeenCalledOnce();
+  expect(mocks.getClaims).toHaveBeenCalledOnce();
   expect(request.cookies.get("sb-test-auth-token.0")?.value).toBe("refreshed-test-cookie");
   expect(response.cookies.get("sb-test-auth-token.0")).toMatchObject({value:"refreshed-test-cookie",path:"/",sameSite:"lax",secure:true,maxAge:3600});
   expect(response.cookies.get("sb-test-auth-token.1")).toMatchObject({value:"",maxAge:0});
@@ -45,7 +45,7 @@ it.each(["/he/calculator", "/en/saved", "/calculator?track1Amount=500000"])("ret
 });
 
 it("does not issue cookies or add private-refresh headers to an unchanged anonymous request", async () => {
-  mocks.getUser.mockResolvedValue({data:{user:null},error:null});
+  mocks.getClaims.mockResolvedValue({data:null,error:null});
   const response = await proxy(new NextRequest("https://mortgage.test/he/learn"));
   expect(response.cookies.getAll()).toEqual([]);
   expect(response.headers.has("cache-control")).toBe(false);

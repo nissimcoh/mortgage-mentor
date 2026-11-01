@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { Dictionary } from "@/app/[locale]/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
-import { createClient } from "@/lib/supabase/client";
+import { loadSupabaseClient } from "@/lib/supabase/lazy-client";
 
 type Status = "idle" | "loading" | "error";
 
@@ -33,7 +33,7 @@ export default function GoogleSignInButton({
     redirectTo.searchParams.set("next", next);
 
     try {
-      const { error } = await createClient().auth.signInWithOAuth({
+      const { error } = await (await loadSupabaseClient()).auth.signInWithOAuth({
         provider: "google",
         options: { redirectTo: redirectTo.toString() },
       });

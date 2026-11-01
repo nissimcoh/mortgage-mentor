@@ -15,8 +15,9 @@ export interface ComparisonScenario {
   fixedShare: number;
   forecastSignature: string | null;
   customForecast: boolean;
-  /** Verified historical forecast payments, one per month; null if unavailable. */
-  payments: number[] | null;
+  /** Verified historical forecast payments, one per month; null if unavailable,
+   * undefined while not loaded yet (see loadComparisonScenarios). */
+  payments: number[] | null | undefined;
 }
 
 export interface ComparisonRow {

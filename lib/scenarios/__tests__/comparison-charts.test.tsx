@@ -1,10 +1,12 @@
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import ComparisonPaymentCharts from "../../../components/ComparisonPaymentCharts";
 import SavedScenarioComparison from "../../../components/SavedScenarioComparison";
 import he from "../../../app/[locale]/dictionaries/he.json";
 import en from "../../../app/[locale]/dictionaries/en.json";
 import type { ComparisonScenario } from "../comparison";
+
+vi.mock("@/lib/scenarios/comparison-actions", () => ({ loadComparisonPayments: vi.fn() }));
 
 const base: ComparisonScenario = {
   id: "11111111-1111-4111-8111-111111111111", name: "Synthetic A", calculatedAt: "2026-10-06T12:00:00Z",
@@ -22,9 +24,9 @@ it.each(["he", "en"] as const)("renders both charts with one accessible shared m
   expect((html.match(/type="range"/g) ?? []).length).toBe(1);
   expect(html).toContain('min="1" max="240" step="1"');
   expect(html).toContain("aria-valuetext=");
-  expect(html).toContain('stroke="#0f6e68"');
-  expect(html).toContain('stroke="#6d28d9" stroke-dasharray="8 4"');
-  expect(html).toContain("color:#6d28d9");
+  expect(html).toContain('stroke="#00897b"');
+  expect(html).toContain('stroke="#6250d6" stroke-dasharray="8 4"');
+  expect(html).toContain("background-color:#6250d6");
   expect(html).toContain(labels.metric);
   expect(html).not.toContain(labels.chartUnavailable);
   expect(html).not.toContain("NaN");
@@ -34,7 +36,7 @@ it("keeps three lines distinguishable by number and dash pattern in both charts"
   const third = { ...base, id: "33333333-3333-4333-8333-333333333333", name: "Synthetic C" };
   const html = renderToStaticMarkup(<ComparisonPaymentCharts scenarios={[base, second, third]} locale="en" labels={en.savedComparison} />);
   expect((html.match(/<polyline /g) ?? []).length).toBe(6);
-  expect(html).toContain('stroke="#b45309" stroke-dasharray="2 4"');
+  expect(html).toContain('stroke="#b8862e" stroke-dasharray="2 4"');
   expect(html).toContain("3. Synthetic C");
 });
 

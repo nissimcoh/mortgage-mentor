@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { isValidLocale } from "@/lib/i18n/config";
 import { createClient } from "@/lib/supabase/server";
-import { loadComparisonScenarios } from "@/lib/scenarios/load-comparison";
+import { COMPARISON_COLUMNS, loadComparisonScenarios } from "@/lib/scenarios/load-comparison";
 import SavedScenarioComparison from "@/components/SavedScenarioComparison";
 import { getDictionary } from "../dictionaries";
 
@@ -27,7 +27,7 @@ export default async function ComparePage({ params }: { params: Promise<{ locale
   // and no current-market substitution: charts reconstruct the pinned historical
   // context and must match the saved snapshot before displaying any payments.
   const { data: rows, error } = await supabase.from("mortgage_scenarios")
-    .select("id, name, input_payload, result_snapshot, market_references, calculated_at, calculator_version")
+    .select(COMPARISON_COLUMNS)
     .eq("user_id", user.id)
     .order("updated_at", { ascending: false });
   const scenarios = error ? [] : await loadComparisonScenarios(rows ?? []);

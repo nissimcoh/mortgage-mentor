@@ -62,6 +62,7 @@
     "customForecast": "At least one mix assumes constant rates, zero inflation or a stress scenario. Take these assumptions into account.",
     "scrollHint": "Scroll sideways to see all selected mixes.",
     "chartsTitle": "How do payments change over time?",
+    "chartsLoading": "Loading the payment charts…",
     "chartsHelp": "Each mix uses the same color in both charts and the table. Touch a chart or move the month slider to compare the same point in time.",
     "monthlyChartTitle": "Forecast monthly payment",
     "monthlyChartHelp": "Uses the saved forecast, which can differ from the table's first payment at saved current rates. Payments reach zero after the mix is fully repaid.",
@@ -73,7 +74,23 @@
     "chartAxis": "Years from loan start · amounts in ILS",
     "chartLegend": "Mixes and chart colors",
     "chartNoData": "Chart unavailable",
-    "chartUnavailable": "We could not reconstruct monthly payments that match this mix's saved results, so its chart line is unavailable. Open, recalculate and save it to update the comparison. Its saved summary remains in the table."
+    "chartUnavailable": "We could not reconstruct monthly payments that match this mix's saved results, so its chart line is unavailable. Open, recalculate and save it to update the comparison. Its saved summary remains in the table.",
+    "verdictTitle": "The bottom line",
+    "lowestTotal": "Lowest total payments",
+    "lowestFirst": "Lowest first payment",
+    "lowestPeak": "Lowest peak payment",
+    "mostFixed": "Most fixed unlinked",
+    "cheapestTag": "Cheapest overall",
+    "moreThanCheapest": "{amount} more than the cheapest",
+    "insightsTitle": "What stands out",
+    "insightCheapest": "“{name}” has the lowest forecast total: {amount} less than “{other}”.",
+    "insightTradeoff": "“{first}” starts {firstGap} a month lower, but “{cheapest}” costs {totalGap} less overall.",
+    "insightCrossover": "From around year {year}, “{first}” has paid more in total than “{cheapest}”.",
+    "insightPeak": "The highest forecast monthly payment is in “{name}”: {amount} in month {month}.",
+    "insightsNote": "Based on the saved forecasts; not a recommendation.",
+    "differenceChartTitle": "Cumulative difference vs. mix 1",
+    "differenceChartHelp": "Above the line, you have paid more than mix 1 by that month; below it, less. Where a line crosses zero is the break-even point.",
+    "differenceZero": "Mix 1"
   },
   "metadata": {
     "applicationName": "Mortgage Mentor",
@@ -589,7 +606,11 @@
     "renameCancelButton": "Cancel",
     "renameNameInvalidMessage": "Name must be between 1 and 120 characters.",
     "actionErrorMessage": "Something went wrong. Please try again.",
-    "notFoundMessage": "This scenario is no longer available."
+    "notFoundMessage": "This scenario is no longer available.",
+    "paginationLabel": "Saved scenarios pages",
+    "newerPage": "Newer",
+    "olderPage": "Older",
+    "pageStatus": "Page {page} of {pages}"
   },
   "scenarioDetailPage": {
     "backToSavedLabel": "Back to saved scenarios",

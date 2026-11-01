@@ -1,7 +1,12 @@
+/**
+ * Mix identity: one color per comparison slot, validated all-pairs on the
+ * light surface (chroma, CVD, normal-vision floor, 3:1 contrast). The dash
+ * pattern is the secondary channel, so identity never relies on hue alone.
+ */
 export const COMPARISON_LINE_STYLES = [
-  { color: "#0f6e68", dash: undefined },
-  { color: "#6d28d9", dash: "8 4" },
-  { color: "#b45309", dash: "2 4" },
+  { color: "#00897b", dash: undefined },
+  { color: "#6250d6", dash: "8 4" },
+  { color: "#b8862e", dash: "2 4" },
 ] as const;
 
 /** Integer agorot avoid accumulated floating-point drift. Includes month zero. */

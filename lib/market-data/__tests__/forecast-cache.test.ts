@@ -58,6 +58,24 @@ it("activates a cached future curve at Israeli midnight without refetching, reta
   expect(after.curves[0].fetchedAt).toBe("2026-10-05T20:59:59.000Z");
   expect(after.curves[0].realZeroYieldsPercent).toHaveLength(360);
   expect(after.curves[0].expectedCpiIndex).toHaveLength(361);
+  // The unknown ID needed the full-history entry: its own first fill.
+  expect(fetcher).toHaveBeenCalledTimes(4);
+});
+
+it("serves the operative curve and recent pinned curves without reading the full history", async () => {
+  const { curveBytes, scheduleBytes } = await workbookResponses();
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-10-06T09:00:00Z"));
+  const fetcher = vi.fn(async (url: string) => new Response(
+    new Uint8Array(url.includes("The_data_publication") ? scheduleBytes : curveBytes),
+  ));
+  vi.stubGlobal("fetch", fetcher);
+  const { getMortgageForecastData } = await import("../sources/boi-mortgage-forecast");
+  expect((await getMortgageForecastData()).curves.map(curve => curve.id)).toEqual(["2026-09-calendar"]);
+  const pinned = await getMortgageForecastData(["2026-09-index"]);
+  expect(pinned.curves.map(curve => curve.id)).toEqual(["2026-09-calendar", "2026-09-index"]);
+  expect(pinned.missingCurveIds).toEqual([]);
+  // Two workbooks, fetched once, for the recent entry only.
   expect(fetcher).toHaveBeenCalledTimes(2);
 });
 
