@@ -88,17 +88,7 @@
     "insightTradeoff": "“{first}” starts {firstGap} a month lower, but “{cheapest}” costs {totalGap} less overall.",
     "insightCrossover": "From around year {year}, “{first}” has paid more in total than “{cheapest}”.",
     "insightPeak": "The highest forecast monthly payment is in “{name}”: {amount} in month {month}.",
-    "insightsNote": "Based on the saved forecasts; not a recommendation.",
-    "differenceChartTitle": "Cumulative savings vs. “{name}”",
-    "differenceChartHelp": "How much each mix has saved, or paid extra, from the start of the loan up to the chosen month, compared with “{name}”. Above the line you are saving; below it you are paying more. Where a line crosses zero is the break-even point. A mix that ends early stops paying, so the gap moves quickly after it ends.",
-    "differenceSaving": "Saving",
-    "differenceCosting": "Paying more",
-    "differenceEnds": "“{name}” ends",
-    "differenceAtMonth": "By month {month}",
-    "differenceAtEnd": "At the end",
-    "differenceSaves": "saves {amount}",
-    "differenceCosts": "pays {amount} more",
-    "differenceEven": "no difference"
+    "insightsNote": "Based on the saved forecasts; not a recommendation."
   },
   "metadata": {
     "applicationName": "Mortgage Mentor",
