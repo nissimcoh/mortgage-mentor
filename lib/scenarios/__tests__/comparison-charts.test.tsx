@@ -62,3 +62,17 @@ it("retains the summary table when neither historical chart can be reconstructed
   expect(html).toContain(en.savedComparison.total);
   expect(html).toContain("240,000");
 });
+
+it("frames the gap as savings against mix 1, in words, and marks where a mix ends", () => {
+  const labels = en.savedComparison;
+  const html = renderToStaticMarkup(<ComparisonPaymentCharts scenarios={[base, second]} locale="en" labels={labels} />);
+  const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "ILS", maximumFractionDigits: 0 });
+  expect(html).toContain(labels.differenceChartTitle.replace("{name}", "Synthetic A"));
+  // Month 1: B pays 1,000 against A's 1,200, so B is ahead by 200.
+  expect(html).toContain(labels.differenceSaves.replace("{amount}", money.format(200)));
+  // A ends after 180 months (216,000) while B keeps paying to 240,000.
+  expect(html).toContain(labels.differenceCosts.replace("{amount}", money.format(24000)));
+  expect(html).toContain(labels.differenceEnds.replace("{name}", "Synthetic A"));
+  expect(html).toContain(labels.differenceSaving);
+  expect(html).toContain(labels.differenceCosting);
+});

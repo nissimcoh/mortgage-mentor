@@ -89,9 +89,16 @@
     "insightCrossover": "מסביבות שנה {year}, סך התשלומים המצטבר של „{first}“ עובר את זה של „{cheapest}“.",
     "insightPeak": "ההחזר החודשי הגבוה ביותר צפוי ב„{name}“: {amount} בחודש {month}.",
     "insightsNote": "התובנות מבוססות על התחזיות שנשמרו ואינן המלצה.",
-    "differenceChartTitle": "ההפרש המצטבר מול תמהיל 1",
-    "differenceChartHelp": "מעל הקו – עד אותו חודש שילמתם יותר מאשר בתמהיל 1; מתחת לקו – פחות. נקודה שבה קו חוצה את האפס היא נקודת האיזון.",
-    "differenceZero": "תמהיל 1"
+    "differenceChartTitle": "חיסכון מצטבר לעומת „{name}“",
+    "differenceChartHelp": "כמה כל תמהיל חסך, או שילם יותר, מתחילת ההלוואה ועד החודש הנבחר, לעומת „{name}“. מעל הקו – חוסכים; מתחת לקו – משלמים יותר. נקודה שבה הקו חוצה את האפס היא נקודת האיזון. כשתמהיל מסתיים מוקדם הוא מפסיק לשלם, ולכן הפער משתנה מהר אחרי הסיום.",
+    "differenceSaving": "חוסכים",
+    "differenceCosting": "משלמים יותר",
+    "differenceEnds": "„{name}“ מסתיים",
+    "differenceAtMonth": "עד חודש {month}",
+    "differenceAtEnd": "בסוף התקופה",
+    "differenceSaves": "חוסך {amount}",
+    "differenceCosts": "משלם {amount} יותר",
+    "differenceEven": "אין הפרש"
   },
   "metadata": {
     "applicationName": "מנטור משכנתא",
