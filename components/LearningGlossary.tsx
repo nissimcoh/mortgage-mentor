@@ -68,7 +68,7 @@ export default function LearningGlossary({ labels }: { labels: Labels }) {
 
   return (
     <section aria-labelledby="glossary-title">
-      <h2 id="glossary-title" className="text-2xl font-semibold tracking-tight sm:text-3xl">{labels.glossaryTitle}</h2>
+      <h2 id="glossary-title" className="scroll-mt-20 text-2xl font-semibold tracking-tight sm:text-4xl">{labels.glossaryTitle}</h2>
       <div className="glass-panel glass-form sticky! top-[calc(3.5rem+env(safe-area-inset-top))] z-30 mt-5 overflow-hidden p-3 sm:p-4">
         <label htmlFor="term-search" className="sr-only">{labels.searchLabel}</label>
         <input id="term-search" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={labels.searchPlaceholder} className="w-full rounded-xl border px-4 py-2.5 text-[17px]" />

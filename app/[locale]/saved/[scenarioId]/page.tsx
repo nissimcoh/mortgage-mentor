@@ -1,3 +1,4 @@
+import { TRACK_COLORS } from "@/lib/ui/track-colors";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -59,7 +60,7 @@ function StatusMessage({
       <section className="mx-auto max-w-2xl px-6 pt-10 pb-16 sm:pt-12">
         <Link
           href={`/${locale}/saved`}
-          className="text-sm text-slate-500 transition hover:text-slate-800"
+          className="inline-flex items-center gap-1 text-sm text-slate-500 transition-colors hover:text-slate-900"
         >
           {backLabel}
         </Link>
@@ -373,10 +374,10 @@ export default async function ScenarioDetailPage({
 
   return (
     <main className="bg-transparent text-slate-900">
-      <section className="mx-auto max-w-3xl px-6 pt-10 pb-16 sm:pt-12">
+      <section className="mx-auto max-w-3xl px-4 pt-8 pb-16 sm:px-6 sm:pt-14">
         <Link
           href={`/${locale}/saved`}
-          className="text-sm text-slate-500 transition hover:text-slate-800"
+          className="inline-flex items-center gap-1 text-sm text-slate-500 transition-colors hover:text-slate-900"
         >
           {dict.scenarioDetailPage.backToSavedLabel}
         </Link>
@@ -393,13 +394,13 @@ export default async function ScenarioDetailPage({
 
         {/* Hero: mirrors the calculator's own hero panel for visual
             consistency between "what I calculated" and "what I saved". */}
-        <div className="glass-hero rounded-2xl bg-accent-soft p-5 sm:p-6">
+        <div className="glass-hero p-6 sm:p-9">
           <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="text-sm font-medium text-slate-600">
                 {dict.savedPage.cardFirstPaymentLabel}
               </div>
-              <div className="mt-1 text-4xl font-bold tracking-tight text-slate-900 tabular-nums sm:text-5xl">
+              <div className="mt-2 text-5xl font-semibold leading-none tracking-tight text-slate-900 tabular-nums sm:text-7xl">
                 {currencyFormat.format(resultSnapshot.firstPayment)}
               </div>
             </div>
@@ -415,17 +416,17 @@ export default async function ScenarioDetailPage({
 
         <Link
           href={editHref}
-          className="mt-3 inline-block rounded-full bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground transition hover:opacity-90 transition-colors hover:bg-accent-strong"
+          className="glass-button mt-5 inline-flex min-h-11 items-center px-6 text-[15px] font-medium text-white"
         >
           {dict.scenarioDetailPage.editInCalculatorButton}
         </Link>
 
-        <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-slate-200 pt-4 sm:grid-cols-4">
+        <dl className="glass-panel mt-6 grid grid-cols-2 gap-x-6 gap-y-5 p-5 sm:grid-cols-4 sm:p-7">
           <div>
             <dt className="text-xs text-slate-500">
               {dict.savedPage.cardHighestPaymentLabel}
             </dt>
-            <dd className="mt-0.5 text-lg font-semibold text-slate-900 tabular-nums">
+            <dd className="mt-1 text-xl font-semibold tracking-tight text-slate-900 tabular-nums">
               {currencyFormat.format(resultSnapshot.highestPayment)}
             </dd>
             <dd className="mt-0.5 text-xs text-slate-500">
@@ -436,7 +437,7 @@ export default async function ScenarioDetailPage({
             <dt className="text-xs text-slate-500">
               {dict.calculator.forecastTotalPaymentLabel}
             </dt>
-            <dd className="mt-0.5 text-lg font-semibold text-slate-900 tabular-nums">
+            <dd className="mt-1 text-xl font-semibold tracking-tight text-slate-900 tabular-nums">
               {currencyFormat.format(resultSnapshot.forecastTotalPaid)}
             </dd>
           </div>
@@ -444,7 +445,7 @@ export default async function ScenarioDetailPage({
             <dt className="text-xs text-slate-500">
               {dict.calculator.financingCostLabel}
             </dt>
-            <dd className="mt-0.5 text-lg font-semibold text-slate-900 tabular-nums">
+            <dd className="mt-1 text-xl font-semibold tracking-tight text-slate-900 tabular-nums">
               {currencyFormat.format(resultSnapshot.totalInterestOrFinancingCost)}
             </dd>
           </div>
@@ -452,7 +453,7 @@ export default async function ScenarioDetailPage({
             <dt className="text-xs text-slate-500">
               {dict.savedPage.cardAmountLabel}
             </dt>
-            <dd className="mt-0.5 text-lg font-semibold text-slate-900 tabular-nums">
+            <dd className="mt-1 text-xl font-semibold tracking-tight text-slate-900 tabular-nums">
               {wholeCurrencyFormat.format(resultSnapshot.totalPrincipal)}
             </dd>
           </div>
@@ -465,13 +466,14 @@ export default async function ScenarioDetailPage({
         <h2 className="mt-10 mb-4 text-2xl font-semibold tracking-tight">
           {dict.calculator.perTrackResultsTitle}
         </h2>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
           {payload.tracks.map((track, index) => (
             <div
               key={track.id}
-              className="glass-panel rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+              className="glass-panel p-5 sm:p-6"
             >
-              <p className="mb-2 text-sm font-bold text-slate-900">
+              <p className="mb-3 flex items-center gap-2 text-base font-semibold tracking-tight text-slate-900">
+                <span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: TRACK_COLORS[index] }} />
                 {dict.calculator.trackLabel} {index + 1} —{" "}
                 {trackTypeLabel(track.trackType, dict.calculator)}
               </p>

@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { isValidLocale } from "@/lib/i18n/config";
 import { isValidResultSnapshot } from "@/lib/scenarios/payload";
 import { createClient } from "@/lib/supabase/server";
+import Icon from "@/components/Icon";
 import ScenarioCard from "@/components/ScenarioCard";
 import { getDictionary } from "../dictionaries";
 
@@ -92,11 +93,18 @@ export default async function SavedPage({
           {dict.savedPage.intro}
         </p>
 
-        {/* Comparing needs at least two saved mixes. */}
-        {!error && total >= 2 && (
-          <Link href={`/${locale}/compare`} className="mb-6 inline-flex min-h-11 items-center rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-accent-strong">
-            {dict.savedComparison.open}
-          </Link>
+        {!error && total > 0 && (
+          <div className="mb-6 flex flex-wrap gap-2">
+            {/* Comparing needs at least two saved mixes. */}
+            {total >= 2 && (
+              <Link href={`/${locale}/compare`} className="inline-flex min-h-11 items-center rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-accent-strong">
+                {dict.savedComparison.open}
+              </Link>
+            )}
+            <Link href={`/${locale}/calculator`} className="glass-secondary inline-flex min-h-11 items-center px-5 py-2.5 text-sm font-medium">
+              {dict.savedPage.emptyCta}
+            </Link>
+          </div>
         )}
 
         {error && (
@@ -109,16 +117,17 @@ export default async function SavedPage({
         )}
 
         {!error && total === 0 && (
-          <div className="glass-panel rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center">
-            <p className="text-base font-medium text-slate-700">
+          <div className="glass-panel px-6 py-14 text-center">
+            <span aria-hidden="true" className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-soft text-accent"><Icon name="bookmark" size={26} /></span>
+            <p className="text-xl font-semibold tracking-tight text-slate-900">
               {dict.savedPage.emptyTitle}
             </p>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-2 text-base text-slate-500">
               {dict.savedPage.emptyBody}
             </p>
             <Link
               href={`/${locale}/calculator`}
-              className="mt-4 inline-block rounded-full bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-700"
+              className="glass-button mt-6 inline-flex min-h-11 items-center px-6 text-[15px] font-medium text-white"
             >
               {dict.savedPage.emptyCta}
             </Link>
@@ -126,7 +135,7 @@ export default async function SavedPage({
         )}
 
         {!error && rows && rows.length > 0 && (
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
             {rows.map((row) => {
               const resultSnapshot = isValidResultSnapshot(row.result_snapshot)
                 ? row.result_snapshot

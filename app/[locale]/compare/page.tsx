@@ -42,9 +42,9 @@ export default async function ComparePage({ params }: { params: Promise<{ locale
         {error ? <p role="alert" className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{labels.loadError}</p> : (
           <>
             {scenarios.length < 2 ? (
-              <div className="glass-panel mt-6 p-6 text-center">
-                <h2 className="text-xl font-semibold">{labels.emptyTitle}</h2>
-                <p className="mt-2 text-sm text-slate-600">{labels.emptyBody}</p>
+              <div className="glass-panel mt-8 px-6 py-14 text-center">
+                <h2 className="text-xl font-semibold tracking-tight">{labels.emptyTitle}</h2>
+                <p className="mt-2 text-base text-slate-500">{labels.emptyBody}</p>
                 <Link href={`/${locale}/calculator`} className="mt-5 inline-block rounded-full bg-accent px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-accent-strong">{labels.calculator}</Link>
               </div>
             ) : <SavedScenarioComparison scenarios={scenarios} locale={locale} labels={labels} />}

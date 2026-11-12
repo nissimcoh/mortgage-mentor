@@ -102,7 +102,7 @@ export default function SavedScenarioComparison({ scenarios, locale, labels }: {
 
   return (
     <div className="mt-6">
-      <div className="glass-panel grid gap-4 p-4 sm:grid-cols-3">
+      <div className="glass-panel glass-form grid gap-4 p-4 sm:grid-cols-3 sm:p-5">
         {selected.map((scenario, index) => (
           <div key={index}>
             <label htmlFor={`${id}-${index}`} className="mb-2 flex items-center gap-2 text-sm font-medium"><MixDot index={index} />{labels.choose} {index + 1}</label>
@@ -114,7 +114,7 @@ export default function SavedScenarioComparison({ scenarios, locale, labels }: {
           </div>
         ))}
         {scenarios.length > 2 && (
-          <button type="button" className="glass-secondary min-h-11 self-end rounded-xl px-4 py-2 text-sm font-medium"
+          <button type="button" className="glass-secondary min-h-11 self-end px-4 py-2 text-sm font-medium"
             onClick={() => setSelectedIds(current => current.length === 3 ? current.slice(0, 2) : [...current, scenarios.find(item => !current.includes(item.id))!.id])}>
             {selected.length === 3 ? labels.remove : labels.add}
           </button>

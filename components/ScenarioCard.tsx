@@ -47,47 +47,60 @@ export default function ScenarioCard({
 
   return (
     <div className="glass-panel lift relative">
-      <div className="absolute end-2 top-2 z-10">
+      <div className="absolute end-3 top-3 z-10">
         <ScenarioActionsMenu id={id} currentName={name} labels={labels} />
       </div>
 
       <Link
         href={`/${locale}/saved/${id}`}
-        className="block rounded-3xl p-5 pe-14 sm:p-6 sm:pe-14"
+        className="flex h-full flex-col rounded-3xl p-5 pe-14 sm:p-6 sm:pe-14"
       >
         <h3 className="break-words text-lg font-semibold tracking-tight text-slate-900">{name}</h3>
+        <p className="mt-0.5 text-xs text-slate-500">
+          {labels.cardUpdatedLabel} {formatDateOnly(updatedAt, locale)}
+        </p>
 
         {resultSnapshot ? (
           <>
-            <p className="mt-2 text-xs text-slate-500">
-              {labels.cardAmountLabel}
-            </p>
-            <p className="text-3xl font-semibold tracking-tight text-slate-900 tabular-nums">
-              {currencyFormat.format(resultSnapshot.totalPrincipal)}
-            </p>
-            <p className="mt-1 text-sm text-slate-600">
-              {labels.cardFirstPaymentLabel}{" "}
-              <span className="tabular-nums">
-                {currencyFormat.format(resultSnapshot.firstPayment)}
+            {/* The two figures people compare first: what it costs each
+                month, and how much was borrowed. */}
+            <dl className="-me-9 mt-5 grid grid-cols-2 gap-x-4 gap-y-3">
+              <div>
+                <dt className="text-xs text-slate-500">{labels.cardFirstPaymentLabel}</dt>
+                <dd className="mt-0.5 text-2xl font-semibold tracking-tight text-slate-900 tabular-nums">
+                  <bdi>{currencyFormat.format(resultSnapshot.firstPayment)}</bdi>
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-slate-500">{labels.cardAmountLabel}</dt>
+                <dd className="mt-0.5 text-2xl font-semibold tracking-tight text-slate-900 tabular-nums">
+                  <bdi>{currencyFormat.format(resultSnapshot.totalPrincipal)}</bdi>
+                </dd>
+              </div>
+            </dl>
+            <p className="-me-9 mt-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-black/[.06] pt-4 text-xs text-slate-500">
+              <span
+                className={`inline-block rounded-full border px-2 py-0.5 font-medium ${STABILITY_BADGE_CLASS[stabilityColorState(resultSnapshot.stabilityScore)]}`}
+              >
+                {labels.cardStabilityLabel}{" "}
+                {Math.round(resultSnapshot.stabilityScore)}/100
+              </span>
+              <span>
+                {labels.cardHighestPaymentLabel}{" "}
+                <bdi className="tabular-nums text-slate-700">{currencyFormat.format(resultSnapshot.highestPayment)}</bdi>
+              </span>
+              <span>
+                {labels.cardTrackCountLabel}{" "}
+                <span className="tabular-nums text-slate-700">{resultSnapshot.trackCount}</span>
               </span>
             </p>
-            <span
-              className={`mt-2 inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${STABILITY_BADGE_CLASS[stabilityColorState(resultSnapshot.stabilityScore)]}`}
-            >
-              {labels.cardStabilityLabel}{" "}
-              {Math.round(resultSnapshot.stabilityScore)}/100
-            </span>
           </>
         ) : (
           // Static server-rendered state, not a live event: no role="alert".
-          <p className="mt-2 text-sm text-red-600">
+          <p className="mt-3 text-sm text-red-600">
             {labels.invalidScenarioMessage}
           </p>
         )}
-
-        <p className="mt-3 text-xs text-slate-400">
-          {labels.cardUpdatedLabel} {formatDateOnly(updatedAt, locale)}
-        </p>
       </Link>
     </div>
   );
