@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { connection } from "next/server";
 import { notFound } from "next/navigation";
 import { isValidLocale, type Locale } from "@/lib/i18n/config";
 import { getMarketSnapshot } from "@/lib/market-data/get-market-snapshot";
 import { getMortgageForecastData } from "@/lib/market-data/sources/boi-mortgage-forecast";
 import HeroSimulator from "@/components/home/HeroSimulator";
+import HomeFreshness from "@/components/home/HomeFreshness";
 import MortgageStory from "@/components/home/MortgageStory";
 import Icon, { type IconName } from "@/components/Icon";
 import MarketSnapshotCards from "@/components/MarketSnapshotCards";
@@ -17,15 +17,30 @@ import { TRACK_COLORS } from "@/lib/ui/track-colors";
 import { pageAlternates, SITE_URL } from "@/lib/site";
 import { getDictionary, type Dictionary } from "./dictionaries";
 
+/**
+ * The home page is prerendered and served from the CDN close to the visitor,
+ * instead of being rendered per request in the functions region (Sydney, next
+ * to the database, which this page never reads). Vercel rebuilds it in the
+ * background at most this often. Must stay a literal: Next.js reads it
+ * statically.
+ */
+export const revalidate = 300;
+const REVALIDATE_SECONDS = 300;
+
 async function HomeMarketData({ locale, labels, eyebrow }: { locale: Locale; labels: Dictionary["market"]; eyebrow: string }) {
-  // Only this section depends on request-time data. Keep the hero and
-  // calculator link available while a cold cache fetches official sources.
-  // Still evaluate freshness per request rather than caching fallback HTML.
-  await connection();
+  // Rendered when the page is (re)built, at most every REVALIDATE_SECONDS,
+  // not per request. The sources themselves are cached for a day, so a
+  // rebuild is cheap; it re-evaluates freshness and which curve is active.
+  // HomeFreshness covers the gap when a visitor receives an older copy.
   const [snapshot, forecast] = await Promise.all([
     getMarketSnapshot(), getMortgageForecastData(),
   ]);
-  return <MarketSnapshotCards snapshot={snapshot} curve={forecast.curves[0]} labels={labels} locale={locale} eyebrow={eyebrow} />;
+  return (
+    <>
+      <MarketSnapshotCards snapshot={snapshot} curve={forecast.curves[0]} labels={labels} locale={locale} eyebrow={eyebrow} />
+      <HomeFreshness renderedAt={snapshot.fetchedAt} maxAgeSeconds={REVALIDATE_SECONDS} />
+    </>
+  );
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {

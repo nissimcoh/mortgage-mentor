@@ -9,7 +9,7 @@ import en from "../../app/[locale]/dictionaries/en.json";
 
 const mocks = vi.hoisted(() => ({ snapshot: vi.fn(), forecast: vi.fn() }));
 vi.mock("next/server", () => ({ connection: async () => {} }));
-vi.mock("next/navigation", () => ({ notFound: () => { throw new Error("not-found"); } }));
+vi.mock("next/navigation", () => ({ notFound: () => { throw new Error("not-found"); }, useRouter: () => ({ refresh() {} }) }));
 vi.mock("next/link", () => ({ default: (props: ComponentProps<"a">) => <a {...props} /> }));
 vi.mock("@/app/[locale]/dictionaries", () => ({ getDictionary: async (locale: string) => locale === "he" ? he : en }));
 vi.mock("@/lib/market-data/get-market-snapshot", () => ({ getMarketSnapshot: mocks.snapshot }));

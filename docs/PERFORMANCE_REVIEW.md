@@ -171,3 +171,50 @@ specific Safari bug. At the user's request, the default home-screen name follows
 the page language: `מנטור משכנתא` for Hebrew and `Mortgage Mentor` for English.
 Both Apple title and application-name metadata use the locale dictionary,
 while retaining the existing localized page titles and launch mode.
+
+
+## Redesign and home page caching — November 12, 2026
+
+Measured from Israel against production before this change (three requests
+each, `curl`): pages rendered per request answered through `fra1::syd1` with a
+time to first byte of 560–740 ms (`/he`, `/he/calculator`, `/he/signin`);
+prerendered pages answered from `fra1` alone in about 250 ms (`/he/learn`,
+`/he/privacy`). The TLS handshake accounts for roughly 150 ms of both.
+
+The home page never reads the database, so it no longer needs to run in the
+functions region. It is now prerendered and revalidated every five minutes
+(`export const revalidate = 300` in `app/[locale]/page.tsx`); the `connection()`
+call that forced per-request rendering is gone. This reverses the October 16
+decision recorded above ("fallback HTML is not made into a static home page"),
+at the owner's request. What changes:
+
+- Freshness status, staleness and the active forecast curve are evaluated when
+  the page is rebuilt, not on every request. They can lag by the revalidation
+  window.
+- Revalidation is stale-while-revalidate: after a quiet period the first
+  visitor receives the previous copy while the rebuild runs. `HomeFreshness`
+  (client) notices a copy older than the window and refreshes the route a few
+  seconds later, at most twice.
+- If the official sources fail during a rebuild, the dated fallback values are
+  served until the next rebuild, labelled as fallback as before. Source
+  responses are still cached for a day and failures are never cached.
+
+Not changed: the functions region (`syd1`), the database region, and per-request
+rendering of the calculator, sign-in and all signed-in pages. Per-route regions
+are not available for Node.js functions through `preferredRegion` on Vercel,
+and Cache Components would turn the 307 redirects of protected pages into
+client-side redirects, so neither was used.
+
+The same change set fixes a hydration mismatch on shared calculator links
+(`AnimatedNumber` rendered 0 on the client against the server's figure, React
+error 418, which made React rebuild the page in the browser), removes
+`backdrop-filter` from all cards, and stops preloading the web font (Apple
+devices use the system face and never request it). Local Chrome measurements
+with mobile emulation and 4x CPU throttling: home LCP 124 → 64 ms, learn
+104 → 76 ms, calculator unchanged within noise. These exclude network latency
+and are not production measurements. The home page gained content: about 8 KB
+more HTML and 8 KB more JavaScript, compressed.
+
+Validation: 785 offline tests, TypeScript, ESLint, production build and all 27
+route smoke checks pass. Signed-in pages were restyled but not viewed with a
+signed-in account in this pass.
