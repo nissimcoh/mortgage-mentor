@@ -116,7 +116,7 @@ export default function HeaderAuthStatus({
     return (
       <span
         aria-hidden="true"
-        className="block h-9 w-9 animate-pulse rounded-full bg-slate-100 md:w-24"
+        className="block h-8 w-16 animate-pulse rounded-full bg-black/5"
       />
     );
   }
@@ -125,7 +125,7 @@ export default function HeaderAuthStatus({
     return (
       <Link
         href={`/${locale}/signin`}
-        className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+        className="flex h-8 min-w-16 items-center justify-center rounded-full bg-slate-900 px-3.5 text-[13px] font-medium text-white transition-colors hover:bg-slate-700"
       >
         {signInLabel}
       </Link>
@@ -196,7 +196,7 @@ function AccountMenu({ user, locale, labels }: AccountMenuProps) {
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label={labels.menuLabel}
-        className="flex items-center gap-2 rounded-full border border-slate-200 bg-white py-1 ps-1 pe-2 text-sm text-slate-700 shadow-sm transition hover:bg-slate-50 md:pe-3"
+        className="flex h-9 items-center gap-2 rounded-full p-1 text-[13px] text-slate-700 transition-colors hover:bg-black/5 md:pe-3"
       >
         {avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- external Google-hosted avatar URL, not known at build time
@@ -219,10 +219,10 @@ function AccountMenu({ user, locale, labels }: AccountMenuProps) {
       {open && (
         <div
           role="menu"
-          className="absolute end-0 top-full z-50 mt-2 w-56 glass-menu overflow-hidden rounded-xl border border-slate-200 bg-white shadow-md"
+          className="glass-menu absolute end-0 top-full z-50 mt-2 w-60 overflow-hidden border p-1"
         >
           {(displayName || user.email) && (
-            <div className="border-b border-slate-100 px-4 py-3">
+            <div className="mb-1 border-b border-black/[.07] px-3 py-3">
               {displayName && (
                 <p className="truncate text-sm font-medium text-slate-900">
                   {displayName}
@@ -238,23 +238,23 @@ function AccountMenu({ user, locale, labels }: AccountMenuProps) {
             role="menuitem"
             href={`/${locale}/saved`}
             onClick={() => setOpen(false)}
-            className="block px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
+            className="block rounded-xl px-3 py-2.5 text-sm text-slate-700 transition-colors hover:bg-black/5"
           >
             {labels.savedScenarios}
           </Link>
 
           {adminAccess === "loading" && <span role="menuitem" aria-disabled="true"
-            className="block px-4 py-2.5 text-sm text-slate-500">
+            className="block px-3 py-2.5 text-sm text-slate-500">
             {locale === "he" ? "בודק הרשאות…" : "Checking access…"}
           </span>}
           {adminAccess === "error" && <button type="button" role="menuitem"
             onClick={() => { setAdminAccess("loading"); setAdminRetry(value => value + 1); }}
-            className="block w-full px-4 py-2.5 text-start text-sm text-slate-600 transition hover:bg-slate-50">
+            className="block w-full rounded-xl px-3 py-2.5 text-start text-sm text-slate-600 transition-colors hover:bg-black/5">
             {locale === "he" ? "בדיקת הרשאות מחדש" : "Retry access check"}
           </button>}
           {adminAccess === "allowed" && <Link
             role="menuitem" href={`/${locale}/admin`} onClick={() => setOpen(false)}
-            className="block px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50">
+            className="block rounded-xl px-3 py-2.5 text-sm text-slate-700 transition-colors hover:bg-black/5">
             {labels.admin}
           </Link>}
 
@@ -262,7 +262,7 @@ function AccountMenu({ user, locale, labels }: AccountMenuProps) {
             <button
               type="submit"
               role="menuitem"
-              className="block w-full px-4 py-2.5 text-start text-sm text-slate-700 transition hover:bg-slate-50"
+              className="block w-full rounded-xl px-3 py-2.5 text-start text-sm text-slate-700 transition-colors hover:bg-black/5"
             >
               {labels.signOut}
             </button>

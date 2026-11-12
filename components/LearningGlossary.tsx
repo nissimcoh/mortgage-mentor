@@ -30,9 +30,9 @@ function TermCard({ entry, labels, query, index, Heading }: {
   return (
     <article id={entry.id} className="glass-panel mm-card-in scroll-mt-56 p-5 target:ring-2 target:ring-accent/40 sm:p-6"
       style={{ animationDelay: `${Math.min(index, 8) * 0.04}s` }}>
-      <p className="mb-2 text-xs font-medium text-accent">{labels.categories.find((item) => item.id === entry.category)?.label}</p>
-      <Heading className="text-lg font-bold">{highlight(entry.title, query)}</Heading>
-      <p className="mt-3 text-sm leading-7 text-slate-600">{highlight(entry.body, query)}</p>
+      <p className="mb-2 text-xs font-semibold text-accent">{labels.categories.find((item) => item.id === entry.category)?.label}</p>
+      <Heading className="text-xl font-semibold tracking-tight">{highlight(entry.title, query)}</Heading>
+      <p className="mt-3 text-[15px] leading-7 text-slate-600">{highlight(entry.body, query)}</p>
       <TermVisual id={entry.id} labels={labels.visuals} />
       <details className="glass-track mt-4 px-4 py-3">
         <summary className="cursor-pointer text-sm font-medium text-accent">{labels.exampleLabel}</summary>
@@ -68,10 +68,10 @@ export default function LearningGlossary({ labels }: { labels: Labels }) {
 
   return (
     <section aria-labelledby="glossary-title">
-      <h2 id="glossary-title" className="text-xl font-bold">{labels.glossaryTitle}</h2>
-      <div className="glass-panel glass-form sticky! top-[4.25rem] z-30 mt-4 overflow-hidden p-3 sm:top-[4.75rem] sm:p-4">
+      <h2 id="glossary-title" className="text-2xl font-semibold tracking-tight sm:text-3xl">{labels.glossaryTitle}</h2>
+      <div className="glass-panel glass-form sticky! top-[calc(3.5rem+env(safe-area-inset-top))] z-30 mt-5 overflow-hidden p-3 sm:p-4">
         <label htmlFor="term-search" className="sr-only">{labels.searchLabel}</label>
-        <input id="term-search" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={labels.searchPlaceholder} className="w-full rounded-xl border px-4 py-2.5 text-base" />
+        <input id="term-search" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={labels.searchPlaceholder} className="w-full rounded-xl border px-4 py-2.5 text-[17px]" />
         <div className="-mx-3 mt-3 flex gap-2 overflow-x-auto px-3 pb-0.5 [scrollbar-width:none] sm:-mx-4 sm:px-4" aria-label={labels.allLabel}>
           {[{ id: "all", label: labels.allLabel }, ...labels.categories].map((item) => {
             const count = countIn(item.id);
@@ -97,7 +97,7 @@ export default function LearningGlossary({ labels }: { labels: Labels }) {
           return (
             <section key={group.id} aria-labelledby={`topic-${group.id}`} className="mm-scroll-reveal mb-10">
               <div className="mb-4 flex items-baseline gap-3 border-b border-slate-900/10 pb-2">
-                <h3 id={`topic-${group.id}`} className="text-lg font-bold text-slate-900">{group.label}</h3>
+                <h3 id={`topic-${group.id}`} className="text-xl font-semibold tracking-tight text-slate-900">{group.label}</h3>
                 <span className="text-sm text-slate-500">{groupTerms.length} {labels.countLabel}</span>
               </div>
               <div className="grid items-start gap-4 md:grid-cols-2">

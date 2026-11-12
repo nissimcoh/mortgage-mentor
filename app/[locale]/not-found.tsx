@@ -16,13 +16,13 @@ export default function NotFound() {
   const t = text[locale];
   return (
     <main className="mx-auto w-full max-w-2xl px-6 py-16 text-slate-900 sm:py-24">
-      <div className="glass-panel p-6 text-center sm:p-10">
-        <p className="text-sm font-semibold tracking-wide text-accent">404</p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight">{t.title}</h1>
-        <p className="mt-3 text-base leading-7 text-slate-600">{t.body}</p>
+      <div className="glass-panel p-8 text-center sm:p-14">
+        <p className="text-7xl font-semibold tracking-tight text-slate-200 sm:text-8xl">404</p>
+        <h1 className="mt-2 text-4xl font-semibold tracking-tight sm:text-5xl">{t.title}</h1>
+        <p className="mt-3 text-lg leading-8 text-slate-500">{t.body}</p>
         <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
-          <Link href={`/${locale}/calculator`} className="glass-button rounded-xl px-5 py-3 text-sm font-semibold text-white">{t.calculator}</Link>
-          <Link href={`/${locale}`} className="glass-secondary rounded-xl px-5 py-3 text-sm font-semibold">{t.home}</Link>
+          <Link href={`/${locale}/calculator`} className="glass-button inline-flex min-h-11 items-center justify-center px-6 text-[15px] font-medium text-white">{t.calculator}</Link>
+          <Link href={`/${locale}`} className="glass-secondary inline-flex min-h-11 items-center justify-center px-6 text-[15px] font-medium">{t.home}</Link>
         </div>
       </div>
     </main>

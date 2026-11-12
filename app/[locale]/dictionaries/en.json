@@ -104,7 +104,21 @@
     "learn": "Learn",
     "saved": "Saved",
     "signIn": "Sign in",
-    "bottomNavLearn": "Learn"
+    "bottomNavLearn": "Learn",
+    "search": "Search",
+    "searchPlaceholder": "Search terms, tools and pages",
+    "searchPages": "Page",
+    "searchTerms": "Term",
+    "searchEmpty": "No results. Try another word.",
+    "searchLoading": "Loading…",
+    "searchError": "Search didn't load. Close and try again.",
+    "searchHintMove": "Move",
+    "searchHintOpen": "Open",
+    "searchHintClose": "Close",
+    "searchClose": "Close search",
+    "footerProduct": "Tools",
+    "footerInfo": "Information",
+    "footerSources": "Market data comes from the Bank of Israel and the Central Bureau of Statistics."
   },
   "accountMenu": {
     "admin": "Site administration",
@@ -129,29 +143,92 @@
     "comingSoonBadge": "Coming soon",
     "comingSoonCta": "Learn more",
     "eyebrow": "Your mortgage, in one view",
-    "overviewTitle": "Three numbers to understand",
-    "overviewItems": [
-      {
-        "title": "First payment",
-        "body": "Your payment at the rates you enter today."
-      },
-      {
-        "title": "Maximum forecast payment",
-        "body": "How high payments may rise under the rate and CPI forecast."
-      },
-      {
-        "title": "Total payments",
-        "body": "Principal and financing cost over the life of the mortgage."
-      }
-    ],
     "toolsTitle": "Where to next",
     "savedCardCta": "View saved scenarios",
     "heroLearnCta": "Learn the terms",
-    "overviewNote": "Illustration, not a calculation",
-    "overviewChartLabel": "Illustrative chart: the monthly payment over the life of a mortgage, from the first payment through the forecast peak to the end of the term",
-    "overviewAxisStart": "Today",
-    "overviewAxisEnd": "End of term",
-    "rulesMoreCta": "See all rules"
+    "rulesMoreCta": "See all rules",
+    "simEyebrow": "Try it now",
+    "simTitle": "Move it. See what changes.",
+    "simSubtitle": "Three numbers tell most of the story: how much you borrow, for how long, and at what rate.",
+    "simAmount": "Loan amount",
+    "simYears": "Term",
+    "simYearsUnit": "years",
+    "simRate": "Annual rate",
+    "simMonthly": "Monthly payment",
+    "simTotalInterest": "Total interest",
+    "simTotalPaid": "Total repaid",
+    "simPerShekel": "Repaid per ₪1 borrowed",
+    "simPrincipal": "Principal",
+    "simInterest": "Interest",
+    "simChartTitle": "Where each payment goes",
+    "simChartLabel": "The interest and principal parts of the monthly payment over the life of the loan. Arrow keys move between years.",
+    "simScrubYear": "Year {year}",
+    "simScrubStart": "First payment",
+    "simBalance": "Remaining balance",
+    "simScrubHint": "Drag across the chart to move through the years",
+    "simNote": "One fixed-rate, unlinked track on a Spitzer schedule. A real mortgage usually combines several tracks.",
+    "simContinue": "Continue with these numbers in the calculator",
+    "storyEyebrow": "How a mortgage behaves",
+    "storyTitle": "Thirty years.\nOne scroll.",
+    "storyIntro": "Example: ₪1,000,000 at a fixed 5% over 30 years. Scroll to move through time.",
+    "storyBeats": [
+      {
+        "title": "At first you mostly pay interest",
+        "body": "In the first payment, {share} of what you pay is interest. The principal barely moves."
+      },
+      {
+        "title": "The turning point comes late",
+        "body": "Only in year {year} does most of each payment start reducing the principal. From here the debt falls faster."
+      },
+      {
+        "title": "At the end, almost all principal",
+        "body": "In the final years nearly every shekel reduces the debt, and the balance drops quickly."
+      },
+      {
+        "title": "The bottom line",
+        "body": "On ₪1,000,000 borrowed, {interest} went to interest. That is why the term and the rate matter as much as the monthly payment."
+      }
+    ],
+    "storyYear": "Year",
+    "storyBalance": "Remaining balance",
+    "storyInterestPaid": "Interest paid so far",
+    "storySplit": "The monthly payment",
+    "storyToInterest": "Interest",
+    "storyToPrincipal": "Principal",
+    "storyChartLabel": "Chart: the balance falls slowly in the early years and faster toward the end of the term",
+    "storyCta": "Build your own mix",
+    "highlightsEyebrow": "What the calculator does",
+    "highlightsTitle": "Everything you need to understand a mortgage offer.",
+    "highlights": [
+      {
+        "title": "Up to five tracks in a mix",
+        "body": "Fixed unlinked, prime, fixed CPI-linked, variable linked and unlinked, and Makam. Each track has its own amount, term and rate."
+      },
+      {
+        "title": "An official forecast, not a guess",
+        "body": "Variable and linked tracks follow the forecast curve the Bank of Israel publishes for banks."
+      },
+      {
+        "title": "A full amortization schedule",
+        "body": "Principal, interest and balance for every month, with file export and print."
+      },
+      {
+        "title": "A stability meter",
+        "body": "How much of the mix is exposed to rate and CPI changes, at a glance."
+      },
+      {
+        "title": "Save and compare",
+        "body": "Save several offers and compare them side by side."
+      },
+      {
+        "title": "A link to share",
+        "body": "The calculation lives in the URL. Send the link and the other person sees the same mix."
+      }
+    ],
+    "marketEyebrow": "Real data",
+    "rulesEyebrow": "The rules",
+    "finalTitle": "Your numbers are waiting.",
+    "finalBody": "Start without signing up. Save only if you want to."
   },
   "learnPage": {
     "title": "Learn mortgages in plain language",

@@ -779,8 +779,8 @@ export default function MortgageCalculator({
       {canRestore && <div role="status" className="mb-4 rounded-xl border border-accent/30 bg-accent-soft p-4 text-sm">
         <p>{labels.draftFound}</p>
         <div className="mt-2 flex flex-wrap gap-2">
-          <button type="button" onClick={restoreDraft} className="min-h-11 rounded-xl bg-accent px-4 py-2 font-medium text-white">{labels.draftRestore}</button>
-          <button type="button" onClick={forgetCalculatorDraft} className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 py-2">{labels.draftDiscard}</button>
+          <button type="button" onClick={restoreDraft} className="min-h-11 rounded-full bg-accent px-4 py-2 font-medium text-white transition-colors hover:bg-accent-strong">{labels.draftRestore}</button>
+          <button type="button" onClick={forgetCalculatorDraft} className="min-h-11 rounded-full bg-black/[.055] px-4 py-2 transition-colors hover:bg-black/[.09]">{labels.draftDiscard}</button>
         </div>
       </div>}
       {(marketData.boiRateStatus === "fallback" || marketData.boiRateIsStale) && (
@@ -814,7 +814,7 @@ export default function MortgageCalculator({
         ref={formRef}
         onSubmit={handleSubmit}
         noValidate
-        className="glass-form glass-panel rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6"
+        className="glass-form glass-panel p-4 sm:p-7"
       >
         <div className="mb-5 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 border-b border-slate-100 pb-4 text-sm text-slate-600">
           <span>
@@ -853,16 +853,16 @@ export default function MortgageCalculator({
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <button
             type="submit"
-            className="glass-button rounded-xl bg-accent px-7 py-3 font-semibold text-white shadow-sm transition hover:bg-accent/90"
+            className="glass-button min-h-12 px-8 text-[17px] font-medium text-white"
           >
             {labels.calculateButton}
           </button>
-          <button type="button" onClick={clearDraft} className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700">{labels.draftClear}</button>
+          <button type="button" onClick={clearDraft} className="min-h-11 rounded-full bg-black/[.055] px-4 py-2 text-sm text-slate-700 transition-colors hover:bg-black/[.09]">{labels.draftClear}</button>
           {drafts.length < MAX_TRACKS && (
             <button
               type="button"
               onClick={addTrack}
-              className="rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm text-slate-700 transition hover:bg-slate-100"
+              className="rounded-full bg-black/[.055] px-5 py-2.5 text-sm text-slate-700 transition hover:bg-black/[.09]"
             >
               {labels.addTrack}
             </button>
@@ -871,7 +871,7 @@ export default function MortgageCalculator({
             <button
               type="button"
               onClick={scrollToResults}
-              className="rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm text-slate-700 transition hover:bg-slate-100"
+              className="rounded-full bg-black/[.055] px-5 py-2.5 text-sm text-slate-700 transition hover:bg-black/[.09]"
             >
               {labels.viewResultsButton} <span aria-hidden>↓</span>
             </button>
@@ -879,7 +879,7 @@ export default function MortgageCalculator({
         </div>
         <p className="mt-3 text-xs leading-5 text-slate-500">{draftStorageFailed ? labels.draftStorageUnavailable : labels.draftPrivacy}</p>
 
-        <details className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+        <details className="glass-track mt-5 px-4 py-3">
           <summary className="cursor-pointer text-sm font-medium text-slate-700">
             {labels.fieldHelpTitle}
           </summary>
@@ -907,8 +907,8 @@ export default function MortgageCalculator({
 
       {submitted && (
         <>
-          <section id="results" ref={resultsRef} className="mm-reveal mt-6 scroll-mt-24">
-            <h2 className="mb-3 text-2xl font-bold tracking-tight">
+          <section id="results" ref={resultsRef} className="mm-reveal mt-12 scroll-mt-20">
+            <h2 className="mb-4 text-2xl font-semibold tracking-tight sm:text-3xl">
               {labels.combinedResultsTitle}
             </h2>
 
@@ -920,13 +920,13 @@ export default function MortgageCalculator({
 
             {/* Hero: the dominant figure on the whole screen, grouped with
                 the stability meter in one panel — not two separate cards. */}
-            <div className="glass-hero rounded-2xl bg-accent-soft p-5 sm:p-6">
+            <div className="glass-hero p-6 sm:p-9">
               <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <div className="text-sm font-medium text-slate-600">
                     {labels.firstMonthlyPaymentLabel}
                   </div>
-                  <div className="mt-1 text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
+                  <div className="mt-2 text-5xl font-semibold leading-none tracking-tight tabular-nums text-slate-900 sm:text-7xl">
                     <AnimatedNumber value={submitted.summary.currentCombinedFirstPayment} format={(value) => currencyFormat.format(value)} />
                   </div>
                   <div className="mt-1 text-sm text-slate-600">
@@ -955,7 +955,7 @@ export default function MortgageCalculator({
             {/* Actions: Save is primary, Share/Copy is secondary. No
                 Compare stub here — it would compete with real actions for
                 no reason until saved scenarios exist to compare against. */}
-            <div className="mt-3 flex flex-wrap items-start gap-2">
+            <div className="mt-5 flex flex-wrap items-start gap-2">
               {submittedDrafts && editState.context && (
                 <EditScenarioSaveButton
                   locale={locale}
@@ -996,12 +996,12 @@ export default function MortgageCalculator({
             <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-500">{labels.pdfHelp}</p>
 
             {/* Secondary metrics: a quiet stat row, not four more cards. */}
-            <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-slate-200 pt-4 sm:grid-cols-4">
+            <dl className="glass-panel mt-6 grid grid-cols-2 gap-x-6 gap-y-5 p-5 sm:grid-cols-4 sm:p-7">
               <div>
                 <dt className="text-xs text-slate-500">
                   {labels.forecastMaxPaymentLabel}
                 </dt>
-                <dd className="mt-0.5 text-lg font-semibold text-slate-900 tabular-nums">
+                <dd className="mt-1 text-xl font-semibold tracking-tight text-slate-900 tabular-nums sm:text-2xl">
                   <AnimatedNumber value={submitted.summary.maximumPayment} format={(value) => currencyFormat.format(value)} />
                 </dd>
                 <dd className="mt-0.5 text-xs text-slate-500">
@@ -1012,7 +1012,7 @@ export default function MortgageCalculator({
                 <dt className="text-xs text-slate-500">
                   {labels.forecastTotalPaymentLabel}
                 </dt>
-                <dd className="mt-0.5 text-lg font-semibold text-slate-900 tabular-nums">
+                <dd className="mt-1 text-xl font-semibold tracking-tight text-slate-900 tabular-nums sm:text-2xl">
                   <AnimatedNumber value={submitted.summary.totalPayment} format={(value) => currencyFormat.format(value)} />
                 </dd>
               </div>
@@ -1020,7 +1020,7 @@ export default function MortgageCalculator({
                 <dt className="text-xs text-slate-500">
                   {labels.financingCostLabel}
                 </dt>
-                <dd className="mt-0.5 text-lg font-semibold text-slate-900 tabular-nums">
+                <dd className="mt-1 text-xl font-semibold tracking-tight text-slate-900 tabular-nums sm:text-2xl">
                   <AnimatedNumber value={getForecastFinancingCost(submitted.summary)} format={(value) => currencyFormat.format(value)} />
                 </dd>
               </div>
@@ -1028,7 +1028,7 @@ export default function MortgageCalculator({
                 <dt className="text-xs text-slate-500">
                   {labels.mortgageAmountLabel}
                 </dt>
-                <dd className="mt-0.5 text-lg font-semibold text-slate-900 tabular-nums">
+                <dd className="mt-1 text-xl font-semibold tracking-tight text-slate-900 tabular-nums sm:text-2xl">
                   {wholeCurrencyFormat.format(totalPrincipal)}
                 </dd>
               </div>
@@ -1079,7 +1079,7 @@ export default function MortgageCalculator({
 
           {showPerTrackSection && (
             <section className="mt-6">
-              <h2 className="mb-3 text-2xl font-bold tracking-tight">
+              <h2 className="mb-4 text-2xl font-semibold tracking-tight sm:text-3xl">
                 {labels.perTrackResultsTitle}
               </h2>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

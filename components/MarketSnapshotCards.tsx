@@ -7,6 +7,7 @@ import { CBS_CPI_URL } from "@/lib/market-data/sources/cbs";
 import { FORECAST_WORKBOOK_URL } from "@/lib/market-data/sources/boi-mortgage-forecast";
 import { isStale } from "@/lib/market-data/derive";
 import { revealDelay } from "@/lib/ui/reveal-delay";
+import MarketHeading from "./MarketHeading";
 
 type MarketLabels = Dictionary["market"];
 
@@ -59,11 +60,12 @@ function Sparkline({ points, caption, format }: { points: number[]; caption: str
 }
 
 /** Server-rendered source values: never substitutes staff forecasts for the calculator curve. */
-export default function MarketSnapshotCards({ snapshot, curve, labels, locale }: {
+export default function MarketSnapshotCards({ snapshot, curve, labels, locale, eyebrow }: {
   snapshot: MarketSnapshot;
   curve?: MortgageForecastCurveSnapshot;
   labels: MarketLabels;
   locale: Locale;
+  eyebrow?: string;
 }) {
   const intlLocale = locale === "he" ? "he-IL" : "en-US";
   const percent = new Intl.NumberFormat(intlLocale, { style: "percent", maximumFractionDigits: 2 });
@@ -99,26 +101,25 @@ export default function MarketSnapshotCards({ snapshot, curve, labels, locale }:
 
   return (
     <div>
-      <h2 className="text-xl font-bold tracking-tight sm:text-2xl">{labels.title}</h2>
-      <p className="mb-5 mt-1 max-w-3xl text-sm leading-6 text-slate-600">{labels.subtitle}</p>
+      <MarketHeading labels={labels} eyebrow={eyebrow} />
       {(snapshot.status !== "live" || snapshot.boiRate.isStale || snapshot.cpi.isStale) && <p role="status" className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">{labels.dataWarning}</p>}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {tiles.map((tile, index) => (
-          <article key={tile.label} data-source-live={tile.live} className="glass-panel mm-reveal flex flex-col p-4 sm:p-5" style={revealDelay(index * 0.08)}>
+          <article key={tile.label} data-source-live={tile.live} className="glass-panel mm-reveal flex min-h-44 flex-col p-5 sm:min-h-56 sm:p-7" style={revealDelay(index * 0.08)}>
             <div className="flex items-start justify-between gap-2">
-              <h3 className="text-xs font-medium leading-5 text-slate-600 sm:text-sm">{tile.label}</h3>
+              <h3 className="text-[13px] font-medium leading-5 text-slate-500 sm:text-[15px]">{tile.label}</h3>
               <span className="mt-1.5"><StatusDot live={tile.live} stale={tile.stale} fallback={tile.fallback} labels={labels} /></span>
             </div>
-            <p className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl"><bdi>{tile.value}</bdi></p>
+            <p className="mt-3 text-4xl font-semibold leading-none tracking-tight tabular-nums text-slate-900 sm:text-6xl"><bdi>{tile.value}</bdi></p>
             {tile.trend && <Sparkline points={tile.trend} caption={labels.expectedCpiTrend} format={(rate) => percent.format(rate)} />}
             <p className="mt-auto pt-2 text-xs leading-5 text-slate-500">{tile.detail}</p>
           </article>
         ))}
       </div>
-      {snapshot.nextDecision.at && <p className="mt-3 text-sm text-slate-600"><span className="font-medium text-slate-800">{labels.nextDecisionLabel}:</span> {formatDate(snapshot.nextDecision.at)}</p>}
+      {snapshot.nextDecision.at && <p className="mt-4 text-sm text-slate-600"><span className="font-medium text-slate-800">{labels.nextDecisionLabel}:</span> {formatDate(snapshot.nextDecision.at)}</p>}
 
       <details className="glass-track mt-4 px-4 py-3 sm:px-5">
-        <summary className="cursor-pointer text-sm font-medium text-accent">{labels.detailsToggle}</summary>
+        <summary className="cursor-pointer py-1 text-sm font-medium text-accent">{labels.detailsToggle}</summary>
         <div className="mt-4 grid gap-5 md:grid-cols-2">
           {cards.map((card) => (
             <section key={card.label} className="text-sm">

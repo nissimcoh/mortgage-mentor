@@ -6,6 +6,7 @@ import { formatDateOnly } from "@/lib/forms/dates";
 import { legalContent, type LegalPageKind } from "@/lib/legal/content";
 import { legalLabels } from "@/lib/legal/labels";
 import { legalDetailsComplete, legalOperator, legalUpdatedAt } from "@/lib/legal/config";
+import { pageAlternates } from "@/lib/site";
 
 export type LegalPageProps = { params: Promise<{ locale: string }> };
 
@@ -14,6 +15,7 @@ export async function legalMetadata(kind: LegalPageKind, { params }: LegalPagePr
   if (!isValidLocale(locale)) notFound();
   return {
     title: `${legalLabels[locale][kind]} | MortgageMentor`,
+    alternates: pageAlternates(locale, `/${kind}`),
     robots: legalDetailsComplete ? { index: true, follow: true } : { index: false, follow: false },
   };
 }
@@ -24,9 +26,9 @@ export default async function LegalPage({ kind, params }: LegalPageProps & { kin
   const he = locale === "he";
   return (
     <main className="mx-auto w-full max-w-3xl px-6 py-10 text-slate-900 sm:py-14">
-      <Link href={`/${locale}`} className="text-sm underline underline-offset-4">{he ? "חזרה לדף הבית" : "Back to home"}</Link>
+      <Link href={`/${locale}`} className="inline-flex items-center gap-1 text-sm text-slate-500 transition-colors hover:text-slate-900">{he ? "חזרה לדף הבית" : "Back to home"}</Link>
       <article className="glass-panel mt-5 p-6 sm:p-10">
-        <h1 className="text-3xl font-bold">{legalLabels[locale][kind]}</h1>
+        <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">{legalLabels[locale][kind]}</h1>
         <p className="mt-3 text-sm text-slate-600">{he ? "עדכון אחרון: " : "Last updated: "}<time dateTime={legalUpdatedAt}>{formatDateOnly(legalUpdatedAt, locale)}</time></p>
         {!legalDetailsComplete && (
           <p role="status" className="mt-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
@@ -43,7 +45,7 @@ export default async function LegalPage({ kind, params }: LegalPageProps & { kin
         <div className="mt-8 space-y-8">
           {legalContent[locale][kind].map((section) => (
             <section key={section.title}>
-              <h2 className="mb-3 text-xl font-semibold">{section.title}</h2>
+              <h2 className="mb-3 text-xl font-semibold tracking-tight">{section.title}</h2>
               {section.paragraphs.map((paragraph) => <p key={paragraph} className="mt-3 text-base leading-8 text-slate-700">{paragraph}</p>)}
             </section>
           ))}

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
+import Icon from "./Icon";
 import {
   defaultLocale,
   isValidLocale,
@@ -80,24 +81,17 @@ export default function LanguageSwitcher({ queryString }: { queryString: string 
         onClick={() => setOpenPath(open ? null : pathname)}
         aria-expanded={open}
         aria-haspopup="menu"
-        className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-slate-700 shadow-sm transition hover:bg-slate-50 sm:px-3"
+        className="flex h-9 items-center gap-1.5 rounded-full px-2.5 text-[13px] text-slate-600 transition-colors hover:bg-black/5 hover:text-slate-900"
       >
-        <span aria-hidden className="hidden sm:inline">🌐</span>
+        <Icon name="globe" size={17} />
         <span lang={currentLocale}>{localeLabels[currentLocale]}</span>
-        <span
-          aria-hidden
-          className={`hidden text-xs text-slate-400 transition-transform sm:inline ${
-            open ? "rotate-180" : ""
-          }`}
-        >
-          ▾
-        </span>
+        <Icon name="chevron" size={11} strokeWidth={2.2} className={`hidden text-slate-400 transition-transform sm:block ${open ? "-rotate-90" : "rotate-90"}`} />
       </button>
 
       {open && (
         <div
           role="menu"
-          className="absolute left-1/2 top-full mt-1 min-w-full -translate-x-1/2 glass-menu overflow-hidden rounded-xl border border-slate-200 bg-white shadow-md"
+          className="glass-menu absolute left-1/2 top-full mt-2 min-w-32 -translate-x-1/2 overflow-hidden border p-1"
         >
           {locales.map((locale) => {
             const isActive = locale === currentLocale;
@@ -109,10 +103,10 @@ export default function LanguageSwitcher({ queryString }: { queryString: string 
                 lang={locale}
                 aria-current={isActive ? "page" : undefined}
                 onClick={() => setOpenPath(null)}
-                className={`block px-4 py-2 text-center transition ${
+                className={`block rounded-xl px-4 py-2 text-center text-sm transition-colors ${
                   isActive
-                    ? "bg-slate-100 font-semibold text-slate-900"
-                    : "text-slate-600 hover:bg-slate-50"
+                    ? "bg-black/5 font-semibold text-slate-900"
+                    : "text-slate-600 hover:bg-black/5"
                 }`}
               >
                 {localeLabels[locale]}

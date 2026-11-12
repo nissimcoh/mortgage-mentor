@@ -123,7 +123,7 @@ export default function SavedScenarioComparison({ scenarios, locale, labels }: {
       <p className="mt-5 text-sm leading-7 text-slate-600">{labels.snapshotNote}</p>
 
       <section aria-labelledby={`${id}-verdict`} className="mt-8">
-        <h2 id={`${id}-verdict`} className="text-xl font-bold">{labels.verdictTitle}</h2>
+        <h2 id={`${id}-verdict`} className="text-2xl font-semibold tracking-tight">{labels.verdictTitle}</h2>
         <div className={`mt-4 grid gap-4 ${selected.length === 3 ? "lg:grid-cols-3" : "sm:grid-cols-2"}`}>
           {selected.map((item, index) => {
             const badges = badgesFor(item);
@@ -169,7 +169,7 @@ export default function SavedScenarioComparison({ scenarios, locale, labels }: {
 
       {chartsLoading ? (
         <section aria-busy="true" className="mt-6">
-          <h2 className="text-xl font-bold">{labels.chartsTitle}</h2>
+          <h2 className="text-2xl font-semibold tracking-tight">{labels.chartsTitle}</h2>
           <p role="status" className="mt-2 text-sm leading-6 text-slate-600">{labels.chartsLoading}</p>
           <div aria-hidden="true" className="glass-panel mt-4 h-72 animate-pulse" />
         </section>

@@ -88,13 +88,13 @@ function FieldError({ id, message }: { id: string; message: string | null }) {
   );
 }
 
-const labelClass = "mb-1 block text-sm font-medium text-slate-700";
+const labelClass = "mb-1.5 block text-[13px] font-medium text-slate-600";
 const fieldClass =
-  "w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-slate-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400";
+  "w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-[17px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400";
 const unitClass =
   "pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-sm text-slate-400";
 const actionClass =
-  "rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-600 transition hover:bg-slate-100 sm:py-1.5";
+  "rounded-full bg-black/[.055] px-3.5 py-2 text-xs font-medium text-slate-700 transition-colors hover:bg-black/[.09] sm:py-1.5";
 
 function resetFrequencyLabel(
   labels: CalculatorLabels,
@@ -354,7 +354,7 @@ export default function MortgageTrackCard({
   return (
     <div className="glass-track p-4 sm:p-5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-bold text-slate-900">
+        <h3 className="text-base font-semibold tracking-tight text-slate-900">
           {labels.trackLabel} {index + 1}
         </h3>
         <div className="flex gap-2">
@@ -405,7 +405,7 @@ export default function MortgageTrackCard({
               <button
                 type="button"
                 onClick={() => onChange("forecastCurveId", "")}
-                className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs text-amber-800 transition hover:bg-amber-100"
+                className="rounded-full border border-amber-300 bg-white px-3 py-1.5 text-xs text-amber-800 transition hover:bg-amber-100"
               >
                 {labels.useLatestCurveButton}
               </button>
@@ -419,7 +419,7 @@ export default function MortgageTrackCard({
               <button
                 type="button"
                 onClick={() => onChange("makamSnapshotId", "")}
-                className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs text-amber-800 transition hover:bg-amber-100"
+                className="rounded-full border border-amber-300 bg-white px-3 py-1.5 text-xs text-amber-800 transition hover:bg-amber-100"
               >
                 {labels.useLatestMakamButton}
               </button>
@@ -475,7 +475,7 @@ export default function MortgageTrackCard({
           </p>
 
           {isVariableLinked && <p className="mt-2 text-xs font-medium text-amber-800">{labels.variableLinkedCalibrationNote}</p>}
-          <details className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-2">
+          <details className="mt-3 rounded-xl border border-black/[.07] bg-white px-3.5 py-2.5">
             <summary className="cursor-pointer text-xs font-medium text-slate-600">
               {labels.advancedTitle}
             </summary>

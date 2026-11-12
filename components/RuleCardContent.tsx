@@ -25,13 +25,22 @@ export function RuleMeter({ fill, mark }: { fill: number; mark?: number }) {
 }
 
 /** Card body shared by the home strip and the learn page; the caller owns the link. */
-export default function RuleCardContent({ rule }: { rule: Rule }) {
+export default function RuleCardContent({ rule, size = "regular" }: { rule: Rule; size?: "regular" | "large" }) {
   const meter = RULE_METERS[rule.termId];
+  if (size === "large") {
+    return (
+      <span className="flex w-full flex-col">
+        <span className="text-6xl font-semibold leading-none tracking-tight text-accent sm:text-7xl"><bdi>{rule.value}</bdi></span>
+        <span className="mb-6 mt-4 flex-1 text-[15px] leading-6 text-slate-600">{rule.label}</span>
+        {meter && <RuleMeter {...meter} />}
+      </span>
+    );
+  }
   return (
     <span className="flex w-full flex-col gap-3">
       <span className="flex items-center gap-4">
-        <span className="min-w-12 text-2xl font-bold tracking-tight text-accent sm:text-3xl"><bdi>{rule.value}</bdi></span>
-        <span className="text-sm leading-6 text-slate-700">{rule.label}</span>
+        <span className="min-w-12 text-3xl font-semibold tracking-tight text-accent"><bdi>{rule.value}</bdi></span>
+        <span className="text-sm leading-6 text-slate-600">{rule.label}</span>
       </span>
       {meter && <RuleMeter {...meter} />}
     </span>

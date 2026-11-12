@@ -17,8 +17,8 @@ interface AppShellProps {
 /**
  * Every locale page renders through this shell: a sticky top header
  * (desktop nav + language switcher + sign-in/account menu) and, on mobile
- * only, a fixed bottom tab bar. The content wrapper's bottom padding (5rem
- * plus the iOS home-indicator inset, which the bar itself also grows by)
+ * only, a floating bottom tab bar. The content wrapper's bottom padding (5rem
+ * plus the iOS home-indicator inset, which the bar is also lifted by)
  * keeps the bar from ever covering the last bit of page content on mobile;
  * it's removed on desktop where the bottom bar doesn't render at all.
  */
@@ -31,7 +31,7 @@ export default function AppShell({
   return (
     <>
       <AppHeader locale={locale} labels={nav} accountMenu={accountMenu} />
-      <div className="flex-1 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">{children}<SiteFooter locale={locale} /></div>
+      <div className="flex-1 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">{children}<SiteFooter locale={locale} nav={nav} /></div>
       <BottomNav locale={locale} labels={nav} />
     </>
   );

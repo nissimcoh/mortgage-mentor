@@ -1,23 +1,23 @@
 import type { Dictionary } from "@/app/[locale]/dictionaries";
+import MarketHeading from "./MarketHeading";
 
-export default function MarketSnapshotSkeleton({ labels }: { labels: Dictionary["market"] }) {
+export default function MarketSnapshotSkeleton({ labels, eyebrow }: { labels: Dictionary["market"]; eyebrow?: string }) {
   return (
     <div aria-busy="true">
-      <h2 className="text-xl font-bold tracking-tight sm:text-2xl">{labels.title}</h2>
-      <p className="mb-5 mt-1 max-w-3xl text-sm leading-6 text-slate-600">{labels.subtitle}</p>
-      <p role="status" className="mb-4 text-sm text-slate-500">{labels.loading}</p>
+      <MarketHeading labels={labels} eyebrow={eyebrow} />
+      <p role="status" className="sr-only">{labels.loading}</p>
       <div aria-hidden="true" className="motion-safe:animate-pulse">
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           {[0, 1, 2, 3].map((tile) => (
-            <div key={tile} className="glass-panel min-h-32 p-4 sm:p-5">
-              <div className="h-3 w-24 rounded bg-slate-200" />
-              <div className="mt-4 h-8 w-20 rounded bg-slate-200" />
-              <div className="mt-4 h-3 w-3/4 rounded bg-slate-100" />
+            <div key={tile} className="glass-panel min-h-44 p-5 sm:min-h-56 sm:p-7">
+              <div className="h-3 w-24 rounded-full bg-slate-200" />
+              <div className="mt-5 h-10 w-28 rounded-xl bg-slate-200 sm:h-14" />
+              <div className="mt-6 h-3 w-3/4 rounded-full bg-slate-100" />
             </div>
           ))}
         </div>
-        <div className="mt-3 h-4 w-48 rounded bg-slate-200" />
-        <div className="glass-track mt-4 h-11" />
+        <div className="mt-4 h-4 w-48 rounded-full bg-slate-200" />
+        <div className="glass-track mt-4 h-12" />
       </div>
     </div>
   );

@@ -215,7 +215,7 @@ export default function ScenarioActionsMenu({
                   type="button"
                   onClick={() => setDropdownView("menu")}
                   disabled={pending === "deleting"}
-                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400"
+                  className="rounded-full bg-black/[.055] px-3 py-1.5 text-xs text-slate-600 transition hover:bg-black/[.09] disabled:cursor-not-allowed disabled:text-slate-400"
                 >
                   {labels.deleteConfirmCancel}
                 </button>
@@ -268,14 +268,14 @@ export default function ScenarioActionsMenu({
                 type="button"
                 onClick={() => setRenameOpen(false)}
                 disabled={pending === "renaming"}
-                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400"
+                className="rounded-full bg-black/[.055] px-3 py-1.5 text-sm text-slate-700 transition hover:bg-black/[.09] disabled:cursor-not-allowed disabled:text-slate-400"
               >
                 {labels.renameCancelButton}
               </button>
               <button
                 type="submit"
                 disabled={pending === "renaming"}
-                className="rounded-lg bg-accent px-4 py-1.5 text-sm font-medium text-accent-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-full bg-accent px-4 py-1.5 text-sm font-medium text-accent-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 transition-colors hover:bg-accent-strong"
               >
                 {pending === "renaming"
                   ? labels.renamingAction

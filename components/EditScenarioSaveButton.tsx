@@ -199,7 +199,7 @@ export default function EditScenarioSaveButton({
         ref={triggerRef}
         type="button"
         onClick={handleOpen}
-        className="min-h-11 rounded-xl bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition hover:opacity-90"
+        className="min-h-11 rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition hover:opacity-90 transition-colors hover:bg-accent-strong"
       >
         {buttonLabel}
       </button>
@@ -253,7 +253,7 @@ export default function EditScenarioSaveButton({
                     type="button"
                     onClick={handleUpdateOriginal}
                     disabled={busy}
-                    className="rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-full bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 transition-colors hover:bg-accent-strong"
                   >
                     {pending === "updating"
                       ? labels.updatingButton
@@ -263,7 +263,7 @@ export default function EditScenarioSaveButton({
                     type="button"
                     onClick={handleSaveAsNewClick}
                     disabled={busy}
-                    className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400"
+                    className="rounded-full bg-black/[.055] px-4 py-2.5 text-sm text-slate-700 transition hover:bg-black/[.09] disabled:cursor-not-allowed disabled:text-slate-400"
                   >
                     {labels.saveAsNewButton}
                   </button>
@@ -289,14 +289,14 @@ export default function EditScenarioSaveButton({
                     type="button"
                     onClick={() => setView("choose")}
                     disabled={busy}
-                    className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400"
+                    className="rounded-full bg-black/[.055] px-3 py-1.5 text-sm text-slate-700 transition hover:bg-black/[.09] disabled:cursor-not-allowed disabled:text-slate-400"
                   >
                     {labels.backButton}
                   </button>
                   <button
                     type="submit"
                     disabled={busy}
-                    className="rounded-lg bg-accent px-4 py-1.5 text-sm font-medium text-accent-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-full bg-accent px-4 py-1.5 text-sm font-medium text-accent-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 transition-colors hover:bg-accent-strong"
                   >
                     {pending === "savingNew"
                       ? labels.savingAsNewButton

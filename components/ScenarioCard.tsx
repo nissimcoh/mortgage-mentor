@@ -46,23 +46,23 @@ export default function ScenarioCard({
   });
 
   return (
-    <div className="relative glass-panel rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div className="glass-panel lift relative">
       <div className="absolute end-2 top-2 z-10">
         <ScenarioActionsMenu id={id} currentName={name} labels={labels} />
       </div>
 
       <Link
         href={`/${locale}/saved/${id}`}
-        className="block rounded-2xl p-4 pe-14 transition hover:bg-slate-50"
+        className="block rounded-3xl p-5 pe-14 sm:p-6 sm:pe-14"
       >
-        <h3 className="break-words text-base font-bold text-slate-900">{name}</h3>
+        <h3 className="break-words text-lg font-semibold tracking-tight text-slate-900">{name}</h3>
 
         {resultSnapshot ? (
           <>
             <p className="mt-2 text-xs text-slate-500">
               {labels.cardAmountLabel}
             </p>
-            <p className="text-2xl font-bold tracking-tight text-slate-900 tabular-nums">
+            <p className="text-3xl font-semibold tracking-tight text-slate-900 tabular-nums">
               {currencyFormat.format(resultSnapshot.totalPrincipal)}
             </p>
             <p className="mt-1 text-sm text-slate-600">

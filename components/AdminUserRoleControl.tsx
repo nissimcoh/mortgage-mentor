@@ -47,7 +47,7 @@ export default function AdminUserRoleControl({ id, email, role, locale }: {
         </select>
       </label>
       <button type="button" onClick={save} disabled={pending || selected === role || saved}
-        className="rounded-lg bg-accent px-3 py-2 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-50">
+        className="rounded-full bg-accent px-3 py-2 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-50 transition-colors hover:bg-accent-strong">
         {pending ? text.savingRole : text.saveRole}
       </button>
       {error && <p role="alert" className="max-w-56 text-xs leading-5 text-red-700">{text.roleErrors[error]}</p>}

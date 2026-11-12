@@ -32,7 +32,7 @@ export default async function AdminPage({ params }: { params: Promise<{ locale: 
     return (
       <main className="mx-auto max-w-2xl px-6 py-10 text-slate-900">
         <Link href={`/${locale}`} className="text-sm text-slate-600">{dict.calculator.backToHome}</Link>
-        <h1 className="mt-3 text-2xl font-bold">{dict.adminPage.notAuthorizedTitle}</h1>
+        <h1 className="mt-4 text-3xl font-semibold tracking-tight">{dict.adminPage.notAuthorizedTitle}</h1>
         <p className="mt-2 leading-7 text-slate-600">{dict.adminPage.notAuthorizedBody}</p>
       </main>
     );
@@ -49,7 +49,7 @@ export default async function AdminPage({ params }: { params: Promise<{ locale: 
   return (
     <main className="mx-auto w-full max-w-7xl px-6 py-10 text-slate-900">
       <Link href={`/${locale}`} className="text-sm text-slate-600">{dict.calculator.backToHome}</Link>
-      <h1 className="mt-3 text-3xl font-bold">{text.title}</h1>
+      <h1 className="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl">{text.title}</h1>
       <p className="mt-2 mb-6 text-sm leading-6 text-slate-600">{text.intro}</p>
       {users === null ? (
         <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{text.loadError}</p>

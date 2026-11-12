@@ -163,7 +163,7 @@ const AmortizationSchedule = memo(function AmortizationSchedule({
 
   return (
     <section className="mt-8">
-      <h2 className="mb-3 text-2xl font-bold tracking-tight">{title}</h2>
+      <h2 className="mb-4 text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h2>
       {labels.scheduleIntro.map((paragraph) => (
         <p key={paragraph} className="mb-2 text-sm leading-6 text-slate-600">
           {paragraph}

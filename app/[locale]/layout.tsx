@@ -3,12 +3,18 @@ import { Heebo } from "next/font/google";
 import { notFound } from "next/navigation";
 import { getDirection, isValidLocale, locales } from "@/lib/i18n/config";
 import AppShell from "@/components/AppShell";
+import { SITE_URL } from "@/lib/site";
 import { getDictionary } from "./dictionaries";
 import "../globals.css";
 
+// Apple devices render the system face (see --font-stack in globals.css) and
+// never request this file; without a preload they don't pay for it either.
+// Everywhere else Heebo swaps in over a metric-adjusted fallback.
 const heebo = Heebo({
   variable: "--font-heebo",
   subsets: ["hebrew", "latin"],
+  display: "swap",
+  preload: false,
 });
 
 export async function generateStaticParams() {
@@ -20,7 +26,7 @@ export async function generateStaticParams() {
 // makes env(safe-area-inset-*) resolve to real values instead of 0 — both
 // the header's top padding and BottomNav's bottom padding depend on it.
 export const viewport: Viewport = {
-  themeColor: "#f6f4ee",
+  themeColor: "#fafafc",
   colorScheme: "light",
   viewportFit: "cover",
 };
@@ -34,10 +40,22 @@ export async function generateMetadata({
   if (!isValidLocale(locale)) notFound();
 
   const dict = await getDictionary(locale);
+  const image = { url: `/og/${locale}.png`, width: 1200, height: 630, alt: dict.metadata.title };
   return {
+    metadataBase: new URL(SITE_URL),
     title: dict.metadata.title,
     description: dict.metadata.description,
     applicationName: dict.metadata.applicationName,
+    // Link previews in WhatsApp, iMessage, Slack and social networks.
+    openGraph: {
+      type: "website",
+      siteName: "MortgageMentor",
+      locale: locale === "he" ? "he_IL" : "en_US",
+      title: dict.metadata.title,
+      description: dict.metadata.description,
+      images: [image],
+    },
+    twitter: { card: "summary_large_image", title: dict.metadata.title, description: dict.metadata.description, images: [image] },
     appleWebApp: {
       title: dict.metadata.applicationName,
       capable: false,

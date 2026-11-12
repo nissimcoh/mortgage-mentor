@@ -35,17 +35,17 @@ export default async function ComparePage({ params }: { params: Promise<{ locale
 
   return (
     <main className="bg-transparent text-slate-900">
-      <section className="mx-auto max-w-6xl px-6 pt-10 pb-16 sm:pt-12">
-        <Link href={`/${locale}/saved`} className="text-sm text-slate-500 hover:text-slate-800">{labels.back}</Link>
-        <h1 className="mt-3 text-3xl font-bold tracking-tight">{labels.title}</h1>
-        <p className="mt-3 text-base leading-7 text-slate-600">{labels.intro}</p>
+      <section className="mx-auto max-w-6xl px-4 pt-8 pb-16 sm:px-6 sm:pt-14">
+        <Link href={`/${locale}/saved`} className="inline-flex items-center gap-1 text-sm text-slate-500 transition-colors hover:text-slate-900">{labels.back}</Link>
+        <h1 className="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl">{labels.title}</h1>
+        <p className="mt-3 max-w-3xl text-lg leading-8 text-slate-500">{labels.intro}</p>
         {error ? <p role="alert" className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{labels.loadError}</p> : (
           <>
             {scenarios.length < 2 ? (
               <div className="glass-panel mt-6 p-6 text-center">
                 <h2 className="text-xl font-semibold">{labels.emptyTitle}</h2>
                 <p className="mt-2 text-sm text-slate-600">{labels.emptyBody}</p>
-                <Link href={`/${locale}/calculator`} className="mt-5 inline-block rounded-xl bg-accent px-5 py-3 text-sm font-medium text-white">{labels.calculator}</Link>
+                <Link href={`/${locale}/calculator`} className="mt-5 inline-block rounded-full bg-accent px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-accent-strong">{labels.calculator}</Link>
               </div>
             ) : <SavedScenarioComparison scenarios={scenarios} locale={locale} labels={labels} />}
             {hasInvalid && <p role="status" className="mt-6 text-sm leading-6 text-slate-500">{labels.invalid}</p>}

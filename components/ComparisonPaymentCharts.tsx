@@ -62,7 +62,7 @@ export default function ComparisonPaymentCharts({ scenarios, locale, labels }: {
 
   return (
     <section aria-labelledby={`${id}-title`} className="mt-6">
-      <h2 id={`${id}-title`} className="text-xl font-bold">{labels.chartsTitle}</h2>
+      <h2 id={`${id}-title`} className="text-2xl font-semibold tracking-tight">{labels.chartsTitle}</h2>
       <p className="mt-2 text-sm leading-6 text-slate-600">{labels.chartsHelp}</p>
       <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm" aria-label={labels.chartLegend}>
         {/* Mixes without a series are explained in the page's closing notes. */}

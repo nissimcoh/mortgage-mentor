@@ -30,7 +30,7 @@ export default function ExportScheduleCsvButton({ schedule, rowBases, labels, ti
   }
   return <div className="mt-4">
     <button type="button" onClick={download} disabled={disabled || schedule.length === 0}
-      className="min-h-11 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium disabled:opacity-50">{labels.csvButton}</button>
+      className="min-h-11 rounded-full bg-black/[.055] px-4 py-2 text-sm font-medium disabled:opacity-50 transition-colors hover:bg-black/[.09]">{labels.csvButton}</button>
     <p className="mt-1 text-xs leading-5 text-slate-500">{labels.csvHelp}</p>
     {failed && <p role="alert" className="mt-1 text-sm text-red-700">{labels.csvError}</p>}
   </div>;

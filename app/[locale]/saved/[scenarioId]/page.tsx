@@ -63,7 +63,7 @@ function StatusMessage({
         >
           {backLabel}
         </Link>
-        <h1 className="mt-3 mb-2 text-2xl font-bold tracking-tight">
+        <h1 className="mt-4 mb-2 text-3xl font-semibold tracking-tight sm:text-4xl">
           {title}
         </h1>
         <p className="mt-1 text-base leading-7 text-slate-600">{body}</p>
@@ -381,7 +381,7 @@ export default async function ScenarioDetailPage({
           {dict.scenarioDetailPage.backToSavedLabel}
         </Link>
 
-        <h1 className="mt-3 mb-1 break-words text-2xl font-bold tracking-tight sm:text-3xl">
+        <h1 className="mt-4 mb-2 break-words text-3xl font-semibold tracking-tight sm:text-5xl">
           {row.name}
         </h1>
         <p className="mb-6 text-sm text-slate-500">
@@ -415,7 +415,7 @@ export default async function ScenarioDetailPage({
 
         <Link
           href={editHref}
-          className="mt-3 inline-block rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground transition hover:opacity-90"
+          className="mt-3 inline-block rounded-full bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground transition hover:opacity-90 transition-colors hover:bg-accent-strong"
         >
           {dict.scenarioDetailPage.editInCalculatorButton}
         </Link>
@@ -462,7 +462,7 @@ export default async function ScenarioDetailPage({
           {dict.scenarioDetailPage.snapshotNote}
         </p>
 
-        <h2 className="mt-8 mb-3 text-xl font-bold tracking-tight">
+        <h2 className="mt-10 mb-4 text-2xl font-semibold tracking-tight">
           {dict.calculator.perTrackResultsTitle}
         </h2>
         <div className="grid gap-3 sm:grid-cols-2">

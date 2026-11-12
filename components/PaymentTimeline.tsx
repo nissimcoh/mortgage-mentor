@@ -43,7 +43,7 @@ const PaymentTimeline = memo(function PaymentTimeline({ schedule, tracks, locale
   return (
     <section aria-labelledby={`${id}-title`} className="mt-6 overflow-hidden glass-panel rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id={`${id}-title`} className="text-xl font-bold tracking-tight text-slate-900">{labels.timelineTitle}</h2>
+        <h2 id={`${id}-title`} className="text-2xl font-semibold tracking-tight text-slate-900">{labels.timelineTitle}</h2>
         <span className="rounded-full bg-accent-soft px-3 py-1 text-sm font-medium text-accent">
           {labels.timelineMonth} {entry.month} / {schedule.length}
         </span>

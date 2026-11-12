@@ -6,6 +6,7 @@ import type { Locale } from "@/lib/i18n/config";
 // Type-only import: erased at compile time, keeps the server-only
 // dictionary module out of the client bundle.
 import type { Dictionary } from "@/app/[locale]/dictionaries";
+import Icon, { type IconName } from "./Icon";
 
 type NavLabels = Dictionary["nav"];
 
@@ -18,11 +19,11 @@ interface BottomNavProps {
 export default function BottomNav({ locale, labels }: BottomNavProps) {
   const pathname = usePathname();
 
-  const items = [
-    { href: `/${locale}`, label: labels.home, glyph: "⌂" },
-    { href: `/${locale}/calculator`, label: labels.calculator, glyph: "₪" },
-    { href: `/${locale}/learn`, label: labels.bottomNavLearn, glyph: "✎" },
-    { href: `/${locale}/saved`, label: labels.saved, glyph: "☆" },
+  const items: { href: string; label: string; icon: IconName }[] = [
+    { href: `/${locale}`, label: labels.home, icon: "home" },
+    { href: `/${locale}/calculator`, label: labels.calculator, icon: "calculator" },
+    { href: `/${locale}/learn`, label: labels.bottomNavLearn, icon: "book" },
+    { href: `/${locale}/saved`, label: labels.saved, icon: "bookmark" },
   ];
 
   function isActive(href: string): boolean {
@@ -33,21 +34,25 @@ export default function BottomNav({ locale, labels }: BottomNavProps) {
   const activeIndex = items.findIndex((item) => isActive(item.href));
 
   return (
-    // The glass surface includes the iOS home-indicator safe area.
+    // A floating capsule above the iOS home indicator. AppShell reserves the
+    // matching space at the end of the page so it never covers content.
     <nav
       aria-label={labels.ariaLabel}
-      className="glass-nav fixed inset-x-0 bottom-0 z-40 rounded-t-3xl md:hidden"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      className="tab-bar fixed inset-x-3 z-40 mx-auto max-w-md md:hidden"
+      style={{ bottom: "calc(0.5rem + env(safe-area-inset-bottom))" }}
     >
-      <div className="relative mx-auto flex max-w-6xl">
+      <div className="relative flex p-1">
         {/* One highlight that slides to the active tab instead of each tab
             toggling its own background. */}
         <span
           aria-hidden="true"
-          className={`pointer-events-none absolute inset-y-1.5 px-3 transition-[inset-inline-start,opacity] duration-300 ease-out ${activeIndex < 0 ? "opacity-0" : ""}`}
-          style={{ width: `${100 / items.length}%`, insetInlineStart: `${(Math.max(0, activeIndex) * 100) / items.length}%` }}
+          className={`pointer-events-none absolute inset-y-1 transition-[inset-inline-start,opacity] duration-300 ease-out ${activeIndex < 0 ? "opacity-0" : ""}`}
+          style={{
+            width: `calc((100% - 0.5rem) / ${items.length})`,
+            insetInlineStart: `calc(0.25rem + (100% - 0.5rem) * ${Math.max(0, activeIndex)} / ${items.length})`,
+          }}
         >
-          <span className="glass-active block h-full rounded-2xl" />
+          <span className="block h-full rounded-full bg-black/[.06]" />
         </span>
         {items.map((item) => {
           const active = isActive(item.href);
@@ -56,18 +61,12 @@ export default function BottomNav({ locale, labels }: BottomNavProps) {
               key={item.href}
               href={item.href}
               aria-current={active ? "page" : undefined}
-              className="relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2.5 transition-transform active:scale-95"
+              className={`relative flex min-h-[52px] flex-1 flex-col items-center justify-center gap-0.5 rounded-full text-[10.5px] transition-[color,transform] duration-200 active:scale-95 ${
+                active ? "font-semibold text-accent" : "font-medium text-slate-500"
+              }`}
             >
-              <span
-                className={`flex flex-col items-center gap-0.5 px-4 py-1 text-xs transition-colors duration-300 ${
-                  active ? "font-medium text-accent" : "text-slate-500"
-                }`}
-              >
-                <span aria-hidden className={`text-lg leading-none transition-transform duration-300 ${active ? "-translate-y-0.5 scale-110" : ""}`}>
-                  {item.glyph}
-                </span>
-                {item.label}
-              </span>
+              <Icon name={item.icon} size={22} strokeWidth={active ? 1.9 : 1.6} />
+              {item.label}
             </Link>
           );
         })}

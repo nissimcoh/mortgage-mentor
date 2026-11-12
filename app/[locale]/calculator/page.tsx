@@ -15,6 +15,7 @@ import {
 } from "@/lib/scenarios/edit-context";
 import { createClient } from "@/lib/supabase/server";
 import MortgageCalculator from "@/components/MortgageCalculator";
+import { pageAlternates } from "@/lib/site";
 import { getDictionary } from "../dictionaries";
 
 /**
@@ -74,6 +75,7 @@ export async function generateMetadata({
   return {
     title: `${dict.calculator.title} | MortgageMentor`,
     description: dict.calculator.subtitle,
+    alternates: pageAlternates(locale, "/calculator"),
   };
 }
 
@@ -127,19 +129,19 @@ export default async function CalculatorPage({
 
   return (
     <main className="bg-transparent text-slate-900">
-      <section className="mx-auto max-w-6xl px-6 pt-10 pb-14 sm:pt-12">
+      <section className="mx-auto max-w-6xl px-4 pt-8 pb-14 sm:px-6 sm:pt-14">
         <Link
           href={`/${locale}`}
-          className="text-sm text-slate-500 transition hover:text-slate-800"
+          className="inline-flex items-center gap-1 text-sm text-slate-500 transition-colors hover:text-slate-900"
         >
           {t.backToHome}
         </Link>
 
-        <h1 className="mt-3 mb-2 text-3xl font-bold tracking-tight sm:text-4xl">
+        <h1 className="mt-4 mb-3 text-4xl font-semibold tracking-tight sm:text-6xl">
           {t.title}
         </h1>
-        <p className="mb-1.5 text-lg leading-8 text-slate-600">{t.subtitle}</p>
-        <p className="mb-6 text-sm leading-6 text-slate-500">
+        <p className="mb-2 max-w-3xl text-lg leading-8 text-slate-500 sm:text-xl">{t.subtitle}</p>
+        <p className="mb-8 max-w-3xl text-sm leading-6 text-slate-500">
           {t.repaymentMethodsHelp}
         </p>
 
