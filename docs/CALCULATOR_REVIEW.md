@@ -149,3 +149,32 @@ project as part of the authorized test. No pre-existing scenario was modified.
 No database/schema migration, database move, auth configuration change or
 production deployment was performed. Browser evidence remains under ignored
 `output/playwright/`; it includes auth-session context and must not be committed.
+
+## Usability pass — November 12, 2026
+
+No calculation, parsing, URL or save logic changed; `calculate()` is the old
+submit path extracted so an example can reuse it.
+
+- **Live feedback.** Each complete track shows its first payment at today's
+  rate as it is typed, and a bar that stays at the bottom of the screen shows
+  their sum next to the Calculate button. The figures come from the same engine
+  call as the result (`currentCombinedFirstPayment` of a one-track scenario),
+  deferred with `useDeferredValue`. Calculate is still what produces the full
+  result, pins curves and updates the URL.
+- **Mix overview.** The form header shows the entered total, a bar split by
+  track in the chart colors, and the fixed-rate share against the one-third
+  rule (`lib/mortgage/mix-overview.ts`). It counts fixed unlinked and fixed
+  CPI-linked tracks as fixed. It is a reading aid that links to the glossary
+  entry, not a compliance check.
+- **Examples.** An empty form offers two example mixes
+  (`lib/mortgage/example-mixes.ts`). They are labelled as illustrations whose
+  rates are not a bank offer, until the first edit. The prime track is priced
+  as a margin under the current prime rate.
+- **Layout.** On phones a track's amount and type take a full row and method
+  and term share one; the page header is shorter and the repayment-method
+  explanation moved into the field help, so the form starts on the first
+  screen. Results gain jump links to the summary, chart, tracks and schedule.
+- **Fix.** `AnimatedNumber` no longer stalls at 0 when React re-runs its effect
+  (development StrictMode), and resumes from the figure on screen when the
+  value changes mid-count.
+

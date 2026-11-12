@@ -10,8 +10,8 @@ const canAnimate = () =>
 const subscribeToNothing = () => () => {};
 
 /**
- * Counts from the previous value to `value`; a figure that first appears in
- * the browser (after pressing Calculate) counts up from 0.
+ * Counts from the figure currently on screen to `value`; a figure that first
+ * appears in the browser (after pressing Calculate) counts up from 0.
  *
  * A figure that arrives in the server's HTML (a shared calculator link) is
  * shown as is: the server snapshot below is `false`, so hydration renders the
@@ -27,17 +27,24 @@ export default function AnimatedNumber({ value, format, duration = 700 }: {
 }) {
   const animate = useSyncExternalStore(subscribeToNothing, canAnimate, () => false);
   const [shown, setShown] = useState(animate ? 0 : value);
-  const fromRef = useRef(animate ? 0 : value);
+  // The figure on screen, kept outside state so an interrupted run (a new
+  // value mid-count, or React re-running the effect in development) resumes
+  // from where it stopped instead of jumping or stalling.
+  const shownRef = useRef(shown);
 
   useEffect(() => {
     if (!animate) return;
-    const from = fromRef.current;
-    fromRef.current = value;
+    const from = shownRef.current;
     if (from === value) return;
-    const start = performance.now();
+    // Timed from the first frame's own timestamp, so it never depends on
+    // two clocks agreeing.
+    let start: number | undefined;
     let frame = requestAnimationFrame(function tick(now) {
-      const progress = Math.min(1, (now - start) / duration);
-      setShown(from + (value - from) * (1 - (1 - progress) ** 3));
+      start ??= now;
+      const progress = Math.min(1, Math.max(0, (now - start) / duration));
+      const next = progress >= 1 ? value : from + (value - from) * (1 - (1 - progress) ** 3);
+      shownRef.current = next;
+      setShown(next);
       if (progress < 1) frame = requestAnimationFrame(tick);
     });
     return () => cancelAnimationFrame(frame);

@@ -649,7 +649,11 @@
       "boiRate": "Bank of Israel rate (3% in this example)",
       "primeMargin": "Fixed 1.5-point margin",
       "primeCaption": "Prime = Bank of Israel rate + 1.5 percentage points. Here: 3% + 1.5 = 4.5%."
-    }
+    },
+    "topicsTitle": "Six questions before you start",
+    "topicsIntro": "The ideas the calculator is built on, in brief.",
+    "ctaTitle": "Now try it on your own numbers.",
+    "glossaryJump": "Go to the glossary"
   },
   "savedPage": {
     "intro": "Your saved scenarios, sorted by most recently updated.",
@@ -991,6 +995,24 @@
     "csvHelp": "Exports the selected schedule for Excel. Amounts are in ILS; annual rates are in percent. Each row retains its entered-terms or estimated label.",
     "csvError": "Could not download the schedule. Please try again.",
     "csvEstimated": "Estimated",
-    "mixCompositionTitle": "Mix composition"
+    "mixCompositionTitle": "Mix composition",
+    "mixTotalShort": "Total mortgage",
+    "mixBarLabel": "How the amount is split between tracks",
+    "fixedShareOk": "{share} at a fixed rate · meets the one-third rule",
+    "fixedShareLow": "{share} at a fixed rate · the rule requires at least a third",
+    "fixedShareLinkLabel": "About this rule",
+    "trackShareOfMix": "{share} of the mix",
+    "trackLivePayment": "First payment",
+    "liveFirstPayment": "First monthly payment",
+    "liveHint": "Enter an amount, term and rate for each track",
+    "examplesTitle": "No offer yet? Start from an example",
+    "exampleMix": "A three-track mix",
+    "exampleSingle": "One fixed-rate track",
+    "exampleNote": "This is an illustration. The rates are not a bank offer – replace them with the figures you received.",
+    "resultsNavLabel": "Jump between parts of the result",
+    "navSummary": "Summary",
+    "navTimeline": "Payments over time",
+    "navTracks": "By track",
+    "navSchedule": "Schedule"
   }
 }

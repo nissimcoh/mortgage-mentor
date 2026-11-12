@@ -129,21 +129,20 @@ export default async function CalculatorPage({
 
   return (
     <main className="bg-transparent text-slate-900">
-      <section className="mx-auto max-w-6xl px-4 pt-8 pb-14 sm:px-6 sm:pt-14">
+      <section className="mx-auto max-w-6xl px-4 pt-5 pb-14 sm:px-6 sm:pt-14">
         <Link
           href={`/${locale}`}
-          className="inline-flex items-center gap-1 text-sm text-slate-500 transition-colors hover:text-slate-900"
+          className="hidden items-center gap-1 text-sm text-slate-500 transition-colors hover:text-slate-900 sm:inline-flex"
         >
           {t.backToHome}
         </Link>
 
-        <h1 className="mt-4 mb-3 text-4xl font-semibold tracking-tight sm:text-6xl">
+        <h1 className="mt-3 mb-2 text-3xl font-semibold tracking-tight sm:mt-4 sm:mb-3 sm:text-6xl">
           {t.title}
         </h1>
-        <p className="mb-2 max-w-3xl text-lg leading-8 text-slate-500 sm:text-xl">{t.subtitle}</p>
-        <p className="mb-8 max-w-3xl text-sm leading-6 text-slate-500">
-          {t.repaymentMethodsHelp}
-        </p>
+        {/* Kept short so the form starts on the first screen; the longer
+            explanation of repayment methods lives in the form's field help. */}
+        <p className="mb-5 max-w-3xl text-base leading-7 text-slate-500 sm:mb-8 sm:text-xl sm:leading-8">{t.subtitle}</p>
 
         {/* This route already awaits searchParams and renders dynamically.
             Keep its form in the initial page instead of an empty streamed

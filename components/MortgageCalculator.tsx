@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import Link from "next/link";
 import { draftSource, draftValues, forgetCalculatorDraft, parseCalculatorDraft, readDraftSnapshot, rememberCalculatorDraft, subscribeDraft } from "@/lib/forms/calculator-draft";
 import type { ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -43,6 +44,7 @@ import {
   MAX_TRACKS,
   MIN_TRACKS,
   parseAllTrackDrafts,
+  parseTrackDraft,
   pinCalculatedDrafts,
   parseTracksFromQuery,
   resolveForecastCurve,
@@ -67,6 +69,10 @@ import PaymentTimeline from "./PaymentTimeline";
 import AnimatedNumber from "./AnimatedNumber";
 import MixCompositionBar from "./MixCompositionBar";
 import { TRACK_COLORS } from "@/lib/ui/track-colors";
+import { summarizeMix } from "@/lib/mortgage/mix-overview";
+import { buildExampleMix, type ExampleMixKind } from "@/lib/mortgage/example-mixes";
+import { roundMoney } from "@/lib/mortgage/amortization";
+import Icon from "./Icon";
 import ScheduleSelector from "./ScheduleSelector";
 import ExportMortgagePdfButton from "./ExportMortgagePdfButton";
 import { scheduleBasisForMonth } from "@/lib/mortgage/schedule-certainty";
@@ -242,11 +248,11 @@ export default function MortgageCalculator({
     setEditState({ context: null, unavailable: false });
   }
 
-  const market: MarketContextForParsing = {
+  const market: MarketContextForParsing = useMemo(() => ({
     boiRatePercent: marketData.boiRatePercent,
     curves: marketData.curves,
     makamSnapshots: marketData.makamSnapshots,
-  };
+  }), [marketData]);
 
   // Initialize once from the URL (indexed multi-track format, or the legacy
   // single-track params from old shared links). A fully valid URL restores
@@ -274,8 +280,11 @@ export default function MortgageCalculator({
   function rememberDraft(next: TrackDraft[], nextSource = source) {
     setDraftStorageFailed(!rememberCalculatorDraft(draftScope, nextSource, next));
   }
+  // True from loading an example until the visitor edits a field.
+  const [exampleLoaded, setExampleLoaded] = useState(false);
   function changeDrafts(next: TrackDraft[]) {
     setDrafts(next);
+    setExampleLoaded(false);
     rememberDraft(next);
   }
   const [submitted, setSubmitted] = useState<SubmittedScenario | null>(
@@ -523,21 +532,15 @@ export default function MortgageCalculator({
     syncQuery(next);
   }
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    const inputs = parseAllTrackDrafts(drafts, market);
+  /** Calculates `source` and shows the result; false when it does not parse. */
+  function calculate(source: TrackDraft[]): boolean {
+    const inputs = parseAllTrackDrafts(source, market);
     const summary = inputs ? tryCalculateScenario(inputs) : null;
-    if (!inputs || !summary) {
-      setSubmitted(null);
-      setHasError(true);
-      setInvalidSubmitCount(count => count + 1);
-      return;
-    }
+    if (!inputs || !summary) return false;
 
     // Stamp the curve/anchor each variable-style track actually used, so
     // the URL pins them and a shared link reproduces this calculation.
-    const stamped = pinCalculatedDrafts(drafts, inputs);
+    const stamped = pinCalculatedDrafts(source, inputs);
 
     justSubmittedRef.current = true;
     setDrafts(stamped);
@@ -546,9 +549,53 @@ export default function MortgageCalculator({
     setHasError(false);
     setSelectedScheduleId(COMBINED_SCHEDULE_ID);
     syncQuery(stamped);
+    return true;
+  }
+
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (calculate(drafts)) return;
+    setSubmitted(null);
+    setHasError(true);
+    setInvalidSubmitCount(count => count + 1);
+  }
+
+  /** One tap to a full worked example for a visitor with no offer yet. */
+  function loadExample(kind: ExampleMixKind) {
+    const example = buildExampleMix(kind, Math.round((marketData.boiRatePercent + 1.5) * 100) / 100);
+    // Without a usable forecast curve a linked track cannot be calculated:
+    // still fill the form so the visitor can see and adjust it.
+    if (!calculate(example)) {
+      setDrafts(example);
+      setSubmitted(null);
+      setSubmittedDrafts(null);
+      syncQuery(example);
+    }
+    setExampleLoaded(true);
   }
 
   const enteredTotal = sumEnteredTrackAmounts(drafts);
+  const mix = summarizeMix(drafts);
+  const shareFormat = useMemo(() => new Intl.NumberFormat(intlLocale, { style: "percent", maximumFractionDigits: 0 }), [intlLocale]);
+  // Live feedback while typing: each complete track's first payment at
+  // today's rate, and their sum once every track is complete. Deferred so a
+  // slow device keeps typing smooth; Calculate still produces the full result.
+  const deferredDrafts = useDeferredValue(drafts);
+  const live = useMemo(() => {
+    const perTrack = deferredDrafts.map((draft) => {
+      const input = parseTrackDraft(draft, market);
+      const summary = input ? tryCalculateScenario([input]) : null;
+      return summary ? summary.currentCombinedFirstPayment : null;
+    });
+    const complete = perTrack.every((payment): payment is number => payment !== null);
+    return {
+      perTrack: Object.fromEntries(deferredDrafts.map((draft, index) => [draft.id, perTrack[index]])) as Record<string, number | null>,
+      total: complete ? roundMoney(perTrack.reduce<number>((sum, payment) => sum + (payment ?? 0), 0)) : null,
+    };
+  }, [deferredDrafts, market]);
+  const formIsBlank = drafts.length === 1 && drafts[0].amount === "" && drafts[0].ratePercent === "" &&
+    drafts[0].currentRatePercent === "" && drafts[0].years === "";
+  const showExamples = formIsBlank && submitted === null && !editState.context;
   const resultsAreStale = submittedDrafts !== null &&
     JSON.stringify(drafts) !== JSON.stringify(submittedDrafts);
 
@@ -564,6 +611,7 @@ export default function MortgageCalculator({
 
   function clearDraft() {
     const blank = [createTrackDraft()];
+    setExampleLoaded(false);
     setDrafts(blank);
     setSubmitted(null);
     setSubmittedDrafts(null);
@@ -816,62 +864,115 @@ export default function MortgageCalculator({
         noValidate
         className="glass-form glass-panel p-4 sm:p-7"
       >
-        <div className="mb-5 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 border-b border-slate-100 pb-4 text-sm text-slate-600">
-          <span>
-            {labels.tracksCountLabel}:{" "}
-            <strong className="text-slate-900">
-              {numberFormat.format(drafts.length)}
-            </strong>
-          </span>
-          <span>
-            {labels.totalAmountLabel}:{" "}
-            <strong className="text-slate-900">
-              {wholeCurrencyFormat.format(enteredTotal)}
-            </strong>
-          </span>
+        {/* Live overview of the mix as it is typed: total, split by track,
+            and the fixed-rate share against the one-third rule. */}
+        <div className="mb-5 border-b border-slate-100 pb-5">
+          <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+            <div>
+              <p className="text-[13px] text-slate-500">{labels.mixTotalShort}</p>
+              <p className="text-3xl font-semibold leading-tight tracking-tight tabular-nums text-slate-900 sm:text-4xl">
+                <span className="sr-only">{labels.totalAmountLabel}: </span>
+                <strong className="font-semibold"><bdi>{wholeCurrencyFormat.format(enteredTotal)}</bdi></strong>
+              </p>
+            </div>
+            <p className="text-[13px] text-slate-500">
+              {labels.tracksCountLabel}:{" "}
+              <strong className="font-semibold text-slate-900">{numberFormat.format(drafts.length)}</strong>
+            </p>
+          </div>
+          {mix.total > 0 && (
+            <>
+              <div role="img" aria-label={labels.mixBarLabel} className="mt-4 flex h-2.5 gap-[2px] overflow-hidden rounded-full bg-slate-100">
+                {drafts.map((draft, index) => mix.shares[index] > 0 && (
+                  <span key={draft.id} className="h-full transition-[width] duration-300 ease-out"
+                    style={{ width: `${mix.shares[index] * 100}%`, backgroundColor: TRACK_COLORS[index] }} />
+                ))}
+              </div>
+              <Link href={`/${locale}/learn#term-reg-fixed-share`} prefetch={false} title={labels.fixedShareLinkLabel}
+                className={`mt-3 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${mix.meetsFixedThird ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-900"}`}>
+                <span aria-hidden="true">{mix.meetsFixedThird ? "●" : "◐"}</span>
+                {(mix.meetsFixedThird ? labels.fixedShareOk : labels.fixedShareLow).replace("{share}", shareFormat.format(mix.fixedShare))}
+                <Icon name="chevron" size={11} strokeWidth={2.4} className="rtl:-scale-x-100" />
+              </Link>
+            </>
+          )}
         </div>
+
+        {showExamples && (
+          <div className="mb-5 rounded-2xl bg-accent-soft/60 p-4">
+            <p className="text-sm font-medium text-slate-900">{labels.examplesTitle}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button type="button" onClick={() => loadExample("threeTracks")} className="min-h-10 rounded-full bg-white px-4 text-sm font-medium text-accent shadow-sm transition-colors hover:bg-slate-50">{labels.exampleMix}</button>
+              <button type="button" onClick={() => loadExample("singleFixed")} className="min-h-10 rounded-full bg-white px-4 text-sm font-medium text-accent shadow-sm transition-colors hover:bg-slate-50">{labels.exampleSingle}</button>
+            </div>
+          </div>
+        )}
+        {exampleLoaded && (
+          <p role="status" className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">{labels.exampleNote}</p>
+        )}
 
         <div className="flex flex-col gap-3">
-          {drafts.map((draft, index) => (
-            <MortgageTrackCard
-              key={draft.id}
-              index={index}
-              draft={draft}
-              labels={labels}
-              market={marketInfoForDraft(draft)}
-              fieldErrors={hasError ? validateTrackDraft(draft) : {}}
-              canRemove={drafts.length > MIN_TRACKS}
-              canDuplicate={drafts.length < MAX_TRACKS}
-              onChange={(field, value) => updateTrack(draft.id, field, value)}
-              onAmountBlur={() => handleAmountBlur(draft.id)}
-              onRemove={() => removeTrack(draft.id)}
-              onDuplicate={() => duplicateTrack(draft.id)}
-            />
-          ))}
+          {drafts.map((draft, index) => {
+            const livePayment = live.perTrack[draft.id] ?? null;
+            return (
+              <MortgageTrackCard
+                key={draft.id}
+                index={index}
+                draft={draft}
+                labels={labels}
+                market={marketInfoForDraft(draft)}
+                fieldErrors={hasError ? validateTrackDraft(draft) : {}}
+                color={TRACK_COLORS[index]}
+                shareLabel={mix.shares[index] > 0 && drafts.length > 1 ? labels.trackShareOfMix.replace("{share}", shareFormat.format(mix.shares[index])) : null}
+                livePaymentLabel={livePayment === null ? null : wholeCurrencyFormat.format(Math.round(livePayment))}
+                canRemove={drafts.length > MIN_TRACKS}
+                canDuplicate={drafts.length < MAX_TRACKS}
+                onChange={(field, value) => updateTrack(draft.id, field, value)}
+                onAmountBlur={() => handleAmountBlur(draft.id)}
+                onRemove={() => removeTrack(draft.id)}
+                onDuplicate={() => duplicateTrack(draft.id)}
+              />
+            );
+          })}
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-3">
+        {drafts.length < MAX_TRACKS && (
+          <button
+            type="button"
+            onClick={addTrack}
+            className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 text-sm font-medium text-slate-700 transition-colors hover:border-slate-400 hover:bg-slate-50"
+          >
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+            {labels.addTrack}
+          </button>
+        )}
+
+        {/* Stays at the bottom of the screen while the form is in view, so
+            the running payment and Calculate are always within reach. */}
+        <div className="calc-bar">
+          <div className="min-w-0">
+            <p className="text-[11px] leading-4 text-slate-500 sm:text-xs">{live.total === null ? labels.liveHint : labels.liveFirstPayment}</p>
+            {live.total !== null && (
+              <output className="block text-xl font-semibold leading-tight tracking-tight tabular-nums text-slate-900 sm:text-2xl">
+                <bdi>{wholeCurrencyFormat.format(Math.round(live.total))}</bdi>
+              </output>
+            )}
+          </div>
           <button
             type="submit"
-            className="glass-button min-h-12 px-8 text-[17px] font-medium text-white"
+            className="glass-button min-h-12 shrink-0 px-6 text-base font-medium text-white sm:px-8 sm:text-[17px]"
           >
             {labels.calculateButton}
           </button>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2">
           <button type="button" onClick={clearDraft} className="min-h-11 rounded-full bg-black/[.055] px-4 py-2 text-sm text-slate-700 transition-colors hover:bg-black/[.09]">{labels.draftClear}</button>
-          {drafts.length < MAX_TRACKS && (
-            <button
-              type="button"
-              onClick={addTrack}
-              className="rounded-full bg-black/[.055] px-5 py-2.5 text-sm text-slate-700 transition hover:bg-black/[.09]"
-            >
-              {labels.addTrack}
-            </button>
-          )}
           {submitted && (
             <button
               type="button"
               onClick={scrollToResults}
-              className="rounded-full bg-black/[.055] px-5 py-2.5 text-sm text-slate-700 transition hover:bg-black/[.09]"
+              className="min-h-11 rounded-full bg-black/[.055] px-4 py-2 text-sm text-slate-700 transition hover:bg-black/[.09]"
             >
               {labels.viewResultsButton} <span aria-hidden>↓</span>
             </button>
@@ -883,6 +984,7 @@ export default function MortgageCalculator({
           <summary className="cursor-pointer text-sm font-medium text-slate-700">
             {labels.fieldHelpTitle}
           </summary>
+          <p className="mt-3 text-sm leading-6 text-slate-600">{labels.repaymentMethodsHelp}</p>
           <dl className="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
             {fieldExplanations.map((item) => (
               <div key={item.term}>
@@ -911,6 +1013,16 @@ export default function MortgageCalculator({
             <h2 className="mb-4 text-2xl font-semibold tracking-tight sm:text-3xl">
               {labels.combinedResultsTitle}
             </h2>
+            <nav aria-label={labels.resultsNavLabel} className="-mx-1 mb-5 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
+              {[
+                { id: "results", label: labels.navSummary },
+                { id: "results-timeline", label: labels.navTimeline },
+                ...(showPerTrackSection ? [{ id: "results-tracks", label: labels.navTracks }] : []),
+                { id: "results-schedule", label: labels.navSchedule },
+              ].map((item) => (
+                <a key={item.id} href={`#${item.id}`} className="glass-secondary shrink-0 px-3.5 py-1.5 text-sm text-slate-700">{item.label}</a>
+              ))}
+            </nav>
 
             {resultsAreStale && (
               <p role="status" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
@@ -1069,16 +1181,18 @@ export default function MortgageCalculator({
             </p>
           </section>
 
-          <PaymentTimeline
-            key={timelineKey}
-            schedule={submitted.summary.combinedSchedule}
-            tracks={submitted.inputs}
-            locale={locale}
-            labels={labels}
-          />
+          <div id="results-timeline" className="scroll-mt-20">
+            <PaymentTimeline
+              key={timelineKey}
+              schedule={submitted.summary.combinedSchedule}
+              tracks={submitted.inputs}
+              locale={locale}
+              labels={labels}
+            />
+          </div>
 
           {showPerTrackSection && (
-            <section className="mt-6">
+            <section id="results-tracks" className="mt-10 scroll-mt-20">
               <h2 className="mb-4 text-2xl font-semibold tracking-tight sm:text-3xl">
                 {labels.perTrackResultsTitle}
               </h2>
@@ -1311,6 +1425,7 @@ export default function MortgageCalculator({
 
           {/* The schedule is always visible right after the results — there
               is no meaningful content below it, so nothing is collapsed. */}
+          <div id="results-schedule" className="scroll-mt-20">
           <AmortizationSchedule
             // Remount on a new calculation or view switch so scroll resets.
             key={`${selectedScheduleId}-${submitted.summary.numberOfPayments}-${submitted.summary.monthlyPayment}-${submitted.summary.totalInterest}`}
@@ -1328,6 +1443,7 @@ export default function MortgageCalculator({
             selector={scheduleSelector}
             exportDisabled={resultsAreStale}
           />
+          </div>
         </>
       )}
 

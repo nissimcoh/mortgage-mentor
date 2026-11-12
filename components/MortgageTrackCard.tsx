@@ -51,6 +51,12 @@ interface MortgageTrackCardProps {
   /** Empty ({}) before any submit attempt; populated only for fields that
    * are actually wrong, and only once the user has tried to calculate. */
   fieldErrors: TrackFieldErrors;
+  /** This track's color in the mix bar and the result charts. */
+  color: string;
+  /** Formatted share of the whole mix, or null until an amount is entered. */
+  shareLabel: string | null;
+  /** Formatted first payment for this track alone, or null until it is complete. */
+  livePaymentLabel: string | null;
   canRemove: boolean;
   canDuplicate: boolean;
   onChange: (field: keyof Omit<TrackDraft, "id">, value: string) => void;
@@ -93,6 +99,7 @@ const fieldClass =
   "w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-[17px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400";
 const unitClass =
   "pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-sm text-slate-400";
+const wideOnPhone = "col-span-2 sm:col-span-1";
 const actionClass =
   "rounded-full bg-black/[.055] px-3.5 py-2 text-xs font-medium text-slate-700 transition-colors hover:bg-black/[.09] sm:py-1.5";
 
@@ -125,6 +132,9 @@ export default function MortgageTrackCard({
   labels,
   market,
   fieldErrors,
+  color,
+  shareLabel,
+  livePaymentLabel,
   canRemove,
   canDuplicate,
   onChange,
@@ -353,11 +363,19 @@ export default function MortgageTrackCard({
 
   return (
     <div className="glass-track p-4 sm:p-5">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-base font-semibold tracking-tight text-slate-900">
+      <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+        <h3 className="flex items-center gap-2 text-base font-semibold tracking-tight text-slate-900">
+          {/* Same color this track has in the mix bar and the result charts. */}
+          <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
           {labels.trackLabel} {index + 1}
         </h3>
-        <div className="flex gap-2">
+        {shareLabel && <span className="rounded-full bg-black/[.05] px-2 py-0.5 text-xs tabular-nums text-slate-600">{shareLabel}</span>}
+        {livePaymentLabel && (
+          <span className="text-xs text-slate-500">
+            {labels.trackLivePayment} <bdi className="font-semibold tabular-nums text-slate-900">{livePaymentLabel}</bdi>
+          </span>
+        )}
+        <div className="ms-auto flex gap-2">
           {canDuplicate && (
             <button type="button" onClick={onDuplicate} className={actionClass}>
               {labels.duplicateTrack}
@@ -374,24 +392,26 @@ export default function MortgageTrackCard({
       {isBondReset ? (
         // Required interaction order: amount → type → rate → frequency → term.
         <div className="flex flex-col gap-3">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {amountField}
-            {typeField}
-            {rateField}
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+            <div className={wideOnPhone}>{amountField}</div>
+            <div className={wideOnPhone}>{typeField}</div>
+            <div className={wideOnPhone}>{rateField}</div>
           </div>
           {frequencyField}
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
             {termField}
             {methodField}
           </div>
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[1.15fr_1.5fr_1fr_1fr_0.85fr]">
-          {amountField}
-          {typeField}
+        // Phones: amount and type take a full row each, method and term
+        // share one, so a track fits on one screen.
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-[1.15fr_1.5fr_1fr_1fr_0.85fr]">
+          <div className={wideOnPhone}>{amountField}</div>
+          <div className={wideOnPhone}>{typeField}</div>
           {methodField}
           {termField}
-          {rateField}
+          <div className={wideOnPhone}>{rateField}</div>
         </div>
       )}
 
