@@ -19,6 +19,12 @@ vi.mock("@/components/MarketSnapshotCards", () => ({
     <div data-testid="resolved-market">{snapshot.checked}:{curve.id}</div>,
 }));
 
+vi.mock("@/components/home/MarketStrip", () => ({
+  MarketStripSkeleton: () => <div data-testid="strip-placeholder" />,
+  default: ({ snapshot, curve }: { snapshot: { checked: string }; curve: { id: string } }) =>
+    <div data-testid="resolved-strip">{snapshot.checked}:{curve.id}</div>,
+}));
+
 function deferred<T>() {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>((done) => { resolve = done; });
@@ -53,6 +59,8 @@ it.each(["he", "en"] as const)("streams the %s home and calculator link while of
     expect(html).toContain(dict.market.loading);
     expect(html).toContain('aria-busy="true"');
     expect(html).not.toContain("resolved-market");
+    expect(html).toContain("strip-placeholder");
+    expect(html).not.toContain("resolved-strip");
 
     // The snapshot alone must not expose incomplete forecast data.
     snapshot.resolve({ checked: "actual-source-time" });
@@ -61,6 +69,7 @@ it.each(["he", "en"] as const)("streams the %s home and calculator link while of
     forecast.resolve({ curves: [{ id: "verified-curve" }] });
     await finished;
     expect(html).toContain("resolved-market");
+    expect(html).toContain("resolved-strip");
     expect(html).toContain("actual-source-time");
     expect(html).toContain("verified-curve");
     expect(errors).toEqual([]);

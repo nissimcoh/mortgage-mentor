@@ -218,3 +218,43 @@ more HTML and 8 KB more JavaScript, compressed.
 Validation: 785 offline tests, TypeScript, ESLint, production build and all 27
 route smoke checks pass. Signed-in pages were restyled but not viewed with a
 signed-in account in this pass.
+
+## Market data review — November 15, 2026
+
+A check of the official feeds and how the app uses them. All four sources were
+live and current on the day (`npm run check:data`): Bank of Israel rate 3.25%,
+CPI for September 2026, the October 2026 forecast curve (published November 2)
+and the October 2026 Makam anchor. Three defects were found and fixed:
+
+- **Wrong "effective from" date for the Bank of Israel rate.** The date is the
+  start of the newest run of identical daily values, but only 60 days were
+  requested. With the rate unchanged since September 3, the site showed
+  September 17, the first day of the window, and the date moved forward daily.
+  The same date is stored with saved scenarios and is part of the signature the
+  comparison page uses to tell whether prime tracks share market data, so two
+  mixes saved on different days could look like they used different data. The
+  request now covers 2,000 days (about 115 KB, once a day).
+- **A false "may be out of date" warning for the first visitor after a quiet
+  day.** On per-request pages (the calculator) the Data Cache returns an
+  expired entry at once and refreshes it in the background, so that visitor
+  received yesterday's snapshot, which the app then flagged as stale.
+  `dailyServerCache` now joins that refresh for up to four seconds and falls
+  back to the previous value only if the source fails or is slow. Prerendered
+  pages already waited for the refresh.
+- **Invisible status dots on the home market cards.** The dot had no size
+  because it was an inline element, so a stale or fallback figure showed no
+  marker on its tile (the banner above the cards still appeared).
+
+Also updated: the dated fallback values for the rate and the CPI (verified
+against the sources that day), and the list of rate-decision dates, which had
+run out on September 1 and so hid the "next decision" line. The list now runs
+to April 2028, copied from the Bank of Israel's published schedules. The
+fallback forecast curve (June 2026) and Makam anchor (June 2026) were left as
+they are: they are used only when the live source and the cache both fail, are
+labelled with their date, and several tests pin them.
+
+The home page shows the four headline figures again directly under the hero,
+in a small strip that reads the same snapshot as the full cards further down.
+
+Validation: 803 offline tests, TypeScript, ESLint, production build and all 27
+route smoke checks pass.

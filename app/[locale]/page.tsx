@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Suspense } from "react";
+import { cache, Suspense } from "react";
 import { notFound } from "next/navigation";
 import { isValidLocale, type Locale } from "@/lib/i18n/config";
 import { getMarketSnapshot } from "@/lib/market-data/get-market-snapshot";
 import { getMortgageForecastData } from "@/lib/market-data/sources/boi-mortgage-forecast";
 import HeroSimulator from "@/components/home/HeroSimulator";
 import HomeFreshness from "@/components/home/HomeFreshness";
+import MarketStrip, { MarketStripSkeleton } from "@/components/home/MarketStrip";
 import MortgageStory from "@/components/home/MortgageStory";
 import Icon, { type IconName } from "@/components/Icon";
 import MarketSnapshotCards from "@/components/MarketSnapshotCards";
@@ -27,20 +28,27 @@ import { getDictionary, type Dictionary } from "./dictionaries";
 export const revalidate = 300;
 const REVALIDATE_SECONDS = 300;
 
+/** One read of the official sources per render, shared by the strip under the
+ * hero and the full cards further down, so both show the same snapshot. */
+const loadHomeMarket = cache(() => Promise.all([getMarketSnapshot(), getMortgageForecastData()]));
+
 async function HomeMarketData({ locale, labels, eyebrow }: { locale: Locale; labels: Dictionary["market"]; eyebrow: string }) {
   // Rendered when the page is (re)built, at most every REVALIDATE_SECONDS,
   // not per request. The sources themselves are cached for a day, so a
   // rebuild is cheap; it re-evaluates freshness and which curve is active.
   // HomeFreshness covers the gap when a visitor receives an older copy.
-  const [snapshot, forecast] = await Promise.all([
-    getMarketSnapshot(), getMortgageForecastData(),
-  ]);
+  const [snapshot, forecast] = await loadHomeMarket();
   return (
     <>
       <MarketSnapshotCards snapshot={snapshot} curve={forecast.curves[0]} labels={labels} locale={locale} eyebrow={eyebrow} />
       <HomeFreshness renderedAt={snapshot.fetchedAt} maxAgeSeconds={REVALIDATE_SECONDS} />
     </>
   );
+}
+
+async function HomeMarketStrip({ locale, dict }: { locale: Locale; dict: Dictionary }) {
+  const [snapshot, forecast] = await loadHomeMarket();
+  return <MarketStrip snapshot={snapshot} curve={forecast.curves[0]} labels={dict.market} home={dict.home} locale={locale} />;
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
@@ -111,6 +119,9 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
             <Link href={`/${locale}/learn`} className="group inline-flex items-center gap-1 text-[17px] font-medium text-accent hover:underline hover:underline-offset-4">{t.heroLearnCta}<Chevron /></Link>
           </div>
           <p className="mm-reveal mx-auto mt-6 max-w-lg text-xs leading-5 text-slate-500" style={revealDelay(0.2)}>{t.heroTrustNote}</p>
+          <Suspense fallback={<MarketStripSkeleton />}>
+            <HomeMarketStrip locale={locale} dict={dict} />
+          </Suspense>
         </div>
         <div className="mm-reveal mx-auto max-w-6xl px-3 pb-14 sm:px-8 sm:pb-24" style={revealDelay(0.25)}>
           <HeroSimulator locale={locale} labels={t} />

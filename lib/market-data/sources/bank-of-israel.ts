@@ -13,10 +13,16 @@ import { dailyServerCache } from "../daily-server-cache";
 import { fetchCurrent } from "./fetch-current";
 import type { FetchedBoiRate } from "../derive";
 
-// Daily series; ~60 observations comfortably cover the current value run
-// so the effective date (start of the run) can be derived.
+// Daily series, one observation per calendar day. The effective date is the
+// start of the newest run of identical values, so the window must reach back
+// past the last rate change: with a short window an unchanged rate reports
+// the window's first day instead, a date that then moves forward every day.
+// 2,000 days (about five and a half years, ~115 KB once a day) is longer
+// than any unchanged stretch in the series so far (the longest was under
+// four years, 2015-2018).
+export const BOI_RATE_HISTORY_DAYS = 2000;
 export const BOI_RATE_SERIES_URL =
-  "https://edge.boi.gov.il/FusionEdgeServer/sdmx/v2/data/dataflow/BOI.STATISTICS/BR/1.0/MNT_RIB_BOI_D.D.RIB_BOI?lastNObservations=60&format=csv";
+  `https://edge.boi.gov.il/FusionEdgeServer/sdmx/v2/data/dataflow/BOI.STATISTICS/BR/1.0/MNT_RIB_BOI_D.D.RIB_BOI?lastNObservations=${BOI_RATE_HISTORY_DAYS}&format=csv`;
 
 export const BOI_RATE_SERIES_CODE = "MNT_RIB_BOI_D";
 

@@ -6,7 +6,7 @@ import {
   selectNextDecisionDate,
   validateMarketSnapshot,
 } from "../derive";
-import { parseBoiRateCsv } from "../sources/bank-of-israel";
+import { BOI_RATE_HISTORY_DAYS, BOI_RATE_SERIES_URL, parseBoiRateCsv } from "../sources/bank-of-israel";
 import { parseCbsCpiResponse } from "../sources/cbs";
 import {
   FALLBACK_BOI_RATE,
@@ -121,6 +121,13 @@ describe("BOI SDMX CSV parsing", () => {
       effectiveDate: "2026-07-02",
       lastObservationDate: "2026-07-03",
     });
+  });
+
+  it("asks for enough history to reach the last change of a long-unchanged rate", () => {
+    // With a 60-day window a rate unchanged since 2026-09-03 was reported on
+    // 2026-11-15 as effective from 2026-09-17, the first day of the window.
+    expect(BOI_RATE_HISTORY_DAYS).toBeGreaterThanOrEqual(1500);
+    expect(BOI_RATE_SERIES_URL).toContain(`lastNObservations=${BOI_RATE_HISTORY_DAYS}&`);
   });
 
   it("rejects empty or malformed CSV", () => {

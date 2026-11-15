@@ -9,34 +9,53 @@
  * values are re-verified against the official sources.
  */
 
-/** The date these values were last verified by a human. */
-export const FALLBACK_VERIFIED_AT = "2026-07-06";
+/** The date these values were last verified against the official sources. */
+export const FALLBACK_VERIFIED_AT = "2026-11-15";
 
 export const FALLBACK_BOI_RATE = {
-  ratePercent: 3.5,
-  /** Decision of 2026-07-06 (the verification date). */
-  effectiveDate: "2026-07-06",
+  ratePercent: 3.25,
+  /** Decision of 2026-09-01, in effect from 2026-09-03. */
+  effectiveDate: "2026-09-03",
 } as const;
 
 /**
- * Published schedule of upcoming Bank of Israel interest decisions.
- * There is no machine-readable feed for this yet, so keep the next known
- * dates here (Israel time).
+ * Published schedule of Bank of Israel interest decisions, announced at
+ * 16:00 Israel time. There is no machine-readable feed, so the dates are
+ * copied from the official pages (read 2026-11-15):
+ * https://www.boi.org.il/roles/monetary-policy/interest-rate-dates/
+ * https://www.boi.org.il/bank-of-israel/2027-2028-interest-rate-dates/
+ * The Bank may move a date with advance notice. Extend the list when the
+ * next schedule is published; once every date has passed, the "next
+ * decision" line is simply not shown.
  */
 export const FALLBACK_DECISION_DATES: readonly string[] = [
   "2026-09-01T16:00:00+03:00",
+  "2026-10-21T16:00:00+03:00",
+  "2026-11-23T16:00:00+02:00",
+  "2027-01-04T16:00:00+02:00",
+  "2027-02-22T16:00:00+02:00",
+  "2027-04-05T16:00:00+03:00",
+  "2027-05-24T16:00:00+03:00",
+  "2027-07-05T16:00:00+03:00",
+  "2027-08-18T16:00:00+03:00",
+  "2027-09-27T16:00:00+03:00",
+  "2027-11-22T16:00:00+02:00",
+  "2028-01-03T16:00:00+02:00",
+  "2028-02-21T16:00:00+02:00",
+  "2028-04-03T16:00:00+03:00",
 ];
 
 export const FALLBACK_CPI = {
   referenceYear: 2026,
-  referenceMonth: 5, // May 2026
-  monthlyChangePercent: -0.3,
-  indexValue: 104.8,
+  referenceMonth: 9, // September 2026
+  monthlyChangePercent: -0.5,
+  indexValue: 105.3,
 } as const;
 
 /**
  * Bank of Israel Research Department staff forecast. Published as a
- * document (no machine-readable series identified yet).
+ * document (no machine-readable series identified yet). Not shown anywhere
+ * in the app and not re-verified on 2026-11-15.
  */
 export const FALLBACK_INFLATION_FORECAST = {
   percent: 1.8,

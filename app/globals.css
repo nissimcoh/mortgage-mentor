@@ -402,6 +402,9 @@ details[open]::details-content { block-size: auto; }
   backdrop-filter: blur(6px);
   animation: mm-fade-in .2s ease-out;
 }
+/* The dialog frames the search field and the caret shows where typing goes;
+   the global focus ring would draw a second, square box inside the dialog. */
+.command-palette input[type="search"]:focus-visible { outline: none; }
 .kbd {
   display: inline-flex;
   min-width: 1.35rem;

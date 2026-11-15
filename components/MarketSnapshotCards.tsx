@@ -25,7 +25,7 @@ function StatusDot({ live, stale, fallback, labels }: {
 }) {
   const ok = live && !stale;
   const text = !live ? fallback : stale ? labels.statusStale : labels.statusLive;
-  return <span title={text} className={`h-2 w-2 shrink-0 rounded-full ${ok ? "bg-emerald-500" : "bg-amber-500"}`}><span className="sr-only">{text}</span></span>;
+  return <span title={text} className={`block h-2 w-2 shrink-0 rounded-full ${ok ? "bg-emerald-500" : "bg-amber-500"}`}><span className="sr-only">{text}</span></span>;
 }
 
 /**

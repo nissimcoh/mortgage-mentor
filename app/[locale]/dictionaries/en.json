@@ -226,6 +226,11 @@
       }
     ],
     "marketEyebrow": "Real data",
+    "stripCpi": "CPI change, {month}",
+    "stripExpected": "Expected inflation, 1 yr",
+    "stripSource": "Data from the Bank of Israel and the Central Bureau of Statistics.",
+    "stripMore": "Sources and dates",
+    "stripCheck": "Some figures may be out of date",
     "rulesEyebrow": "The rules",
     "finalTitle": "Your numbers are waiting.",
     "finalBody": "Start without signing up. Save only if you want to."
