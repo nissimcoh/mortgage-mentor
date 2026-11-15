@@ -17,10 +17,10 @@ A bilingual (Hebrew/English) Israeli mortgage-mix calculator built on official B
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-Auth%20%2B%20Postgres-3ecf8e?logo=supabase&logoColor=white)
 ![Tailwind CSS 4](https://img.shields.io/badge/Tailwind_CSS-4-06b6d4?logo=tailwindcss&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-760%2B%20passing-0f6e68?logo=vitest&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-800%2B%20passing-0f6e68?logo=vitest&logoColor=white)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-<img src="docs/images/home-he.jpg" alt="MortgageMentor home page in Hebrew: hero, live Bank of Israel market data and the main Bank of Israel mortgage rules" width="900" />
+<img src="docs/images/home-he.jpg" alt="MortgageMentor home page in Hebrew: the headline, a strip with the Bank of Israel rate, prime, CPI change and expected inflation, and a live loan simulator with sliders for amount, term and rate" width="900" />
 
 </div>
 
@@ -52,11 +52,19 @@ MortgageMentor answers that question with the same inputs banks are required to 
 
 ## Features
 
+### Home page
+- **Live loan simulator:** three sliders (amount, term, rate) update the monthly payment, the total interest and an interest-versus-principal chart as you drag. One link carries the numbers into the calculator.
+- **"Thirty years. One scroll.":** a pinned scroll section that walks a ₪1,000,000 loan through its life, showing when the payment stops being mostly interest.
+- **Live market data:** the Bank of Israel rate, prime, the latest CPI change and expected inflation in a small strip under the headline, and as full cards with sources, dates and the next rate decision further down.
+
 ### Calculator
-- **Six track types:** fixed unlinked (קל״צ), prime, variable unlinked anchored to government bonds (2 to 10-year resets), variable unlinked anchored to the annual Makam, fixed CPI-linked, and variable CPI-linked (5-year reset).
+- **Up to five tracks in a mix, six track types:** fixed unlinked (קל״צ), prime, variable unlinked anchored to government bonds (2 to 10-year resets), variable unlinked anchored to the annual Makam, fixed CPI-linked, and variable CPI-linked (5-year reset).
 - **Spitzer and equal-principal** repayment, nominal or effective annual rate input.
+- **Live feedback while you type:** each complete track shows its first payment, and a bar that stays on screen shows the running total next to Calculate.
+- **Mix overview:** the total, the split between tracks and the fixed-rate share, checked against the Bank of Israel one-third rule.
+- **Example mixes:** an empty form offers two starting points, clearly labelled as illustrations.
 - **Three forecast modes per track:** the official BOI forecast (default), a constant current rate, or a stress test that adds a parallel shift to rates and/or inflation.
-- **Combined results:** first payment, forecast maximum payment and when it happens, total paid, financing cost, overall forecast rate and a mix-composition bar.
+- **Combined results:** first payment, forecast maximum payment and when it happens, total paid, financing cost, overall forecast rate and a mix-composition bar, with jump links between the result sections.
 - **Stability index:** an educational 0–100 score of how predictable the mix is, shown for the whole mix and for each track.
 - **Payments-over-time chart** with a keyboard-accessible month slider and milestone markers (rate resets, track end dates).
 - **Full amortization schedule**, combined or per track. Each month is labelled as contractual, rate-forecast, index-forecast or both.
@@ -66,16 +74,21 @@ MortgageMentor answers that question with the same inputs banks are required to 
 
 ### Saved scenarios and comparison
 - **Google sign-in** (Supabase Auth) to save, rename, duplicate, edit and delete scenarios.
+- **Scenario cards** that lead with the first payment and the loan amount, with stability, peak payment and track count below.
 - **Optimistic concurrency** on edit: saving over a scenario changed in another tab is detected, never silently overwritten.
 - **Side-by-side comparison** of 2–3 saved scenarios with payment charts reconstructed from each scenario's pinned historical market data.
 
 ### Learning centre
+- **Six short topic cards** that cover the ideas the calculator is built on, before any vocabulary.
 - **44-term illustrated glossary** in plain language, grouped by topic, with search, category filters and worked examples.
 - **Bank of Israel rules at a glance:** LTV limits, payment-to-income ratio, minimum fixed-rate share, maximum term, and more.
 
 ### Platform
 - **Hebrew-first, fully RTL**, with a complete English version and a language switch that keeps your inputs.
-- **Mobile-first** layout with a bottom tab bar, safe-area support and Home Screen icons.
+- **One calm design system** on every page: solid cards, pill buttons, line icons and a slim translucent header. Apple devices use the system font and never download a web font.
+- **Site search** in the header over pages and glossary terms (<kbd>⌘K</kbd>, <kbd>Ctrl K</kbd> or <kbd>/</kbd>).
+- **Mobile-first** layout with a floating bottom tab bar, safe-area support, Home Screen icons and a web manifest.
+- **Search-engine ready:** sitemap, robots rules, canonical and hreflang links, structured data and share images in both languages.
 - **Accessibility:** keyboard navigation, focus management in dialogs, reduced-motion and reduced-transparency support, and an accessibility statement.
 - **Role-based admin area** (owner / administrator / user) with aggregate usage metadata only, never other users' financial data.
 - Privacy policy, terms of use and accessibility statement in both languages.
@@ -84,35 +97,77 @@ MortgageMentor answers that question with the same inputs banks are required to 
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/images/calculator-en.jpg" alt="Calculator with a three-track mix: fixed unlinked, prime and fixed CPI-linked" /></td>
-    <td width="50%"><img src="docs/images/results-en.jpg" alt="Combined results with stability index, mix composition and the payments-over-time chart" /></td>
+    <td width="50%" valign="top"><img src="docs/images/home-story-he.jpg" alt="Dark scroll section on the Hebrew home page: year 15 of a 30-year loan, with the remaining balance chart and the interest and principal split of the payment" /></td>
+    <td width="50%" valign="top"><img src="docs/images/home-market-he.jpg" alt="Market data cards on the Hebrew home page: Bank of Israel rate, prime rate, monthly CPI change and expected inflation, each with its source date" /></td>
   </tr>
   <tr>
-    <td align="center"><sub><b>Build a mix:</b> each track has its own type, term, rate and forecast mode</sub></td>
+    <td align="center"><sub><b>Thirty years, one scroll:</b> how a loan shifts from interest to principal</sub></td>
+    <td align="center"><sub><b>Live market data</b> from the Bank of Israel and the Central Bureau of Statistics</sub></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <td width="50%" valign="top"><img src="docs/images/calculator-en.jpg" alt="Calculator with a three-track mix: fixed unlinked, prime and fixed CPI-linked, each showing its first payment, with the running total next to the Calculate button" /></td>
+    <td width="50%" valign="top"><img src="docs/images/results-en.jpg" alt="Combined results: first monthly payment, stability index, mix composition, key totals and the payments-over-time chart" /></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>Build a mix:</b> every track shows its first payment as you type</sub></td>
     <td align="center"><sub><b>See the outcome:</b> first and peak payment, total cost, stability, month-by-month chart</sub></td>
   </tr>
 </table>
 
 <table>
   <tr>
-    <td width="46%"><img src="docs/images/saved-he.jpg" alt="Saved scenarios page in Hebrew: three saved mixes with loan amount, first payment and stability" /></td>
-    <td width="54%"><img src="docs/images/compare-table-he.jpg" alt="Saved-mix comparison table in Hebrew: payments, total cost and rate exposure side by side, with the leader in each row marked" /></td>
+    <td><img src="docs/images/tracks-en.jpg" alt="Per-track breakdown: amount, term, rate, first and maximum payment, totals and a stability index for each of the three tracks" /></td>
   </tr>
   <tr>
-    <td align="center"><sub><b>Saved scenarios:</b> every mix you save, with its key figures</sub></td>
-    <td align="center"><sub><b>Compare:</b> two or three saved mixes side by side, best value per row marked</sub></td>
+    <td align="center"><sub><b>Per-track breakdown:</b> what each track costs and how stable it is</sub></td>
   </tr>
 </table>
 
 <table>
   <tr>
-    <td width="56%"><img src="docs/images/learn-he.jpg" alt="Learning centre in Hebrew: Bank of Israel rules and the searchable mortgage glossary" /></td>
-    <td width="22%"><img src="docs/images/mobile-home-he.jpg" alt="Hebrew home page on a phone" /></td>
-    <td width="22%"><img src="docs/images/mobile-results-he.jpg" alt="Hebrew calculator results on a phone" /></td>
+    <td width="42%" valign="top"><img src="docs/images/saved-he.jpg" alt="Saved scenarios page in Hebrew: four saved mixes, each with its first payment, loan amount, stability score, peak payment and track count" /></td>
+    <td width="58%" valign="top"><img src="docs/images/compare-he.jpg" alt="Comparison page in Hebrew: three saved mixes selected, a bottom-line card for each with first payment, peak payment and total cost, and a short list of what stands out" /></td>
   </tr>
   <tr>
-    <td align="center"><sub><b>Learning centre</b> (Hebrew)</sub></td>
-    <td align="center" colspan="2"><sub><b>Mobile</b>, right-to-left</sub></td>
+    <td align="center"><sub><b>Saved scenarios:</b> every mix you save, with its key figures</sub></td>
+    <td align="center"><sub><b>Compare:</b> two or three saved mixes, the bottom line for each and what stands out</sub></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <td width="50%" valign="top"><img src="docs/images/compare-charts-he.jpg" alt="Comparison charts in Hebrew: forecast monthly payment and cumulative payments for three mixes over 30 years, with a month slider" /></td>
+    <td width="50%" valign="top"><img src="docs/images/compare-table-he.jpg" alt="Comparison table in Hebrew: loan amount, term, first and peak payment, total cost and rate exposure for three mixes, with the best value in each row marked" /></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>Payments over time</b> for the mixes on screen, from each mix's pinned market data</sub></td>
+    <td align="center"><sub><b>Side by side:</b> best value per row marked</sub></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <td width="50%" valign="top"><img src="docs/images/learn-he.jpg" alt="Learning centre in Hebrew: the page headline and six short topic cards" /></td>
+    <td width="50%" valign="top"><img src="docs/images/search-he.jpg" alt="Header search in Hebrew: results for the word prime, mixing glossary terms and pages" /></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>Learning centre:</b> six questions to start with, then the rules and the glossary</sub></td>
+    <td align="center"><sub><b>Search</b> over pages and glossary terms</sub></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <td width="25%"><img src="docs/images/mobile-home-he.jpg" alt="Hebrew home page on a phone" /></td>
+    <td width="25%"><img src="docs/images/mobile-simulator-he.jpg" alt="Loan simulator on a phone: three sliders and the monthly payment" /></td>
+    <td width="25%"><img src="docs/images/mobile-calculator-he.jpg" alt="Hebrew calculator on a phone, with the running total and Calculate button above the tab bar" /></td>
+    <td width="25%"><img src="docs/images/mobile-results-he.jpg" alt="Hebrew calculator results on a phone" /></td>
+  </tr>
+  <tr>
+    <td align="center" colspan="4"><sub><b>Mobile</b>, right-to-left, with the floating tab bar</sub></td>
   </tr>
 </table>
 
@@ -145,7 +200,7 @@ All market data is fetched **server-side** from official public sources. It is v
 | Directive 451 forecast curves: nominal and real zero yields (1–360 months) and expected CPI index | Bank of Israel workbooks, joined with the official publication schedule. A curve becomes active on the next Israeli banking day. |
 | 12-month Makam anchor | Bank of Israel SDMX SECDWH series |
 
-Each card and track shows its source date, and stale or fallback data gets a visible warning.
+Each card and track shows its source date, and stale or fallback data gets a visible warning. Dates of upcoming rate decisions have no machine-readable feed, so they are kept in [`lib/market-data/fallback-snapshot.ts`](lib/market-data/fallback-snapshot.ts), copied from the Bank of Israel's published schedule.
 
 ## Architecture
 
@@ -156,6 +211,8 @@ flowchart LR
         ENG1["Mortgage engine<br/>(pure TypeScript)"]
         UI --> ENG1
     end
+
+    CDN["Vercel CDN<br/>home page, rebuilt at most<br/>every 5 minutes"]
 
     subgraph Vercel["Next.js 16 on Vercel (syd1)"]
         PX["proxy.ts<br/>locale routing + session refresh<br/>(local JWT check)"]
@@ -178,6 +235,8 @@ flowchart LR
         DB[("Postgres + RLS<br/>mortgage_scenarios · user_roles")]
     end
 
+    UI -- "home page" --> CDN
+    CDN -. "background rebuild" .-> RSC
     UI -- navigation --> PX --> RSC
     UI -- server action --> SA
     CACHE -- "refresh at most daily" --> BOI
@@ -193,8 +252,8 @@ Key design decisions:
 - **Inputs are the source of truth.** `input_payload` reproduces a scenario exactly. `result_snapshot` is a small historical cache for fast list rendering. `market_references` records which curve and Makam snapshot produced it.
 - **Pinned history.** Shared links and saved scenarios reference curve IDs (for example `2026-09-calendar`). The server resolves them against the full workbook history, and an unknown ID is reported, never silently replaced. Most requests need only the operative curve, so they read a small cache entry with the newest curves. The ~1 MB full history is read only for an older pinned curve.
 - **Compute next to the data.** Functions run in Sydney (`syd1`, set in [`vercel.json`](vercel.json)), the same region as the Supabase database, so each auth or database call is a local hop. The proxy verifies the session JWT locally (`getClaims`) instead of calling the auth server on every request. Pages and server actions still call `getUser()` before touching data.
-- **Streaming home page.** The hero and navigation render immediately. Market cards stream in behind a Suspense boundary, so a cold data cache never blocks the page.
-- **Light client bundle.** Calculator state updates the URL through the native History API, with no server round trip per calculation. The Supabase SDK and the print report load on demand.
+- **Home page from the CDN.** The home page never reads the database, so it is prerendered and served close to the visitor, not rendered per request in Sydney. Vercel rebuilds it in the background at most every five minutes, and a small client check refreshes the route if a visitor receives an older copy. From Israel this measured about 250 ms to first byte against 560 to 740 ms for per-request pages (see [`docs/PERFORMANCE_REVIEW.md`](docs/PERFORMANCE_REVIEW.md)).
+- **Light client bundle.** Calculator state updates the URL through the native History API, with no server round trip per calculation. The Supabase SDK, the print report and the search index load on demand. The home simulator reuses the calculator's own engine primitives.
 - **Work proportional to what is shown.** Saved scenarios are paginated (24 per page). The comparison page reconstructs monthly payment series only for the mixes on screen, and fetches others when they are selected.
 
 ## Getting started
@@ -251,7 +310,7 @@ Open [http://localhost:3000](http://localhost:3000). It redirects to the Hebrew 
 
 ## Testing and quality
 
-- **750+ unit, component and regression tests** with [Vitest](https://vitest.dev). They run offline: network sources are replaced by real in-memory workbooks and recorded responses.
+- **800+ unit, component and regression tests** with [Vitest](https://vitest.dev). They run offline: network sources are replaced by real in-memory workbooks and recorded responses.
 - **Bank calibration:** every forecast product is compared month by month against Bank Leumi's public calculator. Government-bond tracks match exactly, and Makam and CPI-linked tracks are within ₪0.01 per month. See [`docs/CALIBRATION_TODO.md`](docs/CALIBRATION_TODO.md).
 - **Database tests** for migrations, RLS policies and role management in [`supabase/`](supabase/).
 - **Route smoke tests** against a real production build, including the iOS Home Screen icon.
@@ -277,8 +336,11 @@ app/
     saved/                  Saved scenarios and scenario detail
     admin/                  Role-based administration
     auth/callback/          OAuth code exchange
+    search-index/           Static search index for the header search
     dictionaries/           he.json (source of truth) and en.json
+  sitemap.ts · robots.ts · manifest.ts
 components/                 React components (client and server)
+  home/                     Home simulator, scroll story, market strip, freshness check
 lib/
   mortgage/                 Pure calculation engine: amortization, forecasts, stability
   market-data/              Official source adapters, parsing, daily cache, fallbacks
