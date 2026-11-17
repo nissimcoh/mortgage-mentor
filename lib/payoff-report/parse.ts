@@ -171,7 +171,7 @@ function readVariable(
 ): PayoffVariableRate | null {
   if (value === null || value === undefined) return null;
   const variable = reader.record(value, path);
-  return {
+  const read: PayoffVariableRate = {
     marginPercent: reader.number(variable.marginPercent, `${path}.marginPercent`),
     anchorText: reader.text(variable.anchorText, `${path}.anchorText`),
     resetFrequencyMonths: reader.number(
@@ -184,6 +184,8 @@ function readVariable(
       `${path}.originalRatePercent`,
     ),
   };
+  // Readers that cannot output null send an all-empty object instead.
+  return Object.values(read).every((field) => field === null) ? null : read;
 }
 
 function readTrack(
