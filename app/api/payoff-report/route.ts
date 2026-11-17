@@ -1,4 +1,5 @@
 import { extractPayoffReport } from "@/lib/payoff-report/extract";
+import { isQuotaClaim, readQuotaLimits } from "@/lib/payoff-report/quota";
 import { MAX_PAYOFF_PDF_BYTES, readPayoffUpload } from "@/lib/payoff-report/upload";
 import { createClient } from "@/lib/supabase/server";
 
@@ -8,6 +9,9 @@ import { createClient } from "@/lib/supabase/server";
  * The file is read in memory, sent to the model and dropped; nothing is
  * stored and its contents are never logged. Clients send several files as
  * parallel requests, so one unreadable file does not fail the others.
+ *
+ * Each read is claimed against daily per-user and site-wide limits first
+ * (see quota.ts); without a successful claim the model is never called.
  *
  * Responses: { ok: true, file, issues } or { ok: false, error }.
  */
@@ -42,6 +46,21 @@ export async function POST(request: Request) {
   if (!upload.ok) {
     return failure(upload.error, upload.error === "too-large" ? 413 : upload.error === "not-pdf" ? 415 : 400);
   }
+
+  // Claimed only for a valid PDF, right before the paid call. Any failure
+  // to check (e.g. the migration not applied yet) blocks the read.
+  const limits = readQuotaLimits(process.env);
+  const { data: claim, error: claimError } = await supabase.rpc("claim_payoff_report_read", {
+    user_limit: limits.user,
+    site_limit: limits.site,
+  });
+  if (claimError || !isQuotaClaim(claim)) {
+    console.error("payoff-report quota check failed", claimError?.code ?? "unexpected-answer");
+    return failure("unavailable", 503);
+  }
+  if (claim === "unauthenticated") return failure("unauthenticated", 401);
+  if (claim === "user-limit") return failure("quota", 429);
+  if (claim === "site-limit") return failure("site-quota", 429);
 
   const result = await extractPayoffReport({
     pdf: upload.pdf,

@@ -253,7 +253,7 @@ export default function PayoffReportUpload({
                 {item.status === "error" && (
                   <span className="flex items-center gap-3 text-red-700">
                     {labels.statusError}: {errorText(item.error)}
-                    {item.error !== "not-pdf" && item.error !== "too-large" && item.error !== "empty" && (
+                    {!["not-pdf", "too-large", "empty", "quota", "site-quota"].includes(item.error) && (
                       <button type="button" className="underline" onClick={() => void startReading(item.id, item.source)}>
                         {labels.retry}
                       </button>

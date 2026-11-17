@@ -1052,7 +1052,9 @@
       "truncated": "The report is too long to read automatically.",
       "refused": "This file can't be read.",
       "unreadable": "No loan figures were found in this file.",
-      "generic": "Something went wrong. Please try again."
+      "generic": "Something went wrong. Please try again.",
+      "quota": "You've reached today's limit for reading reports. Try again tomorrow.",
+      "site-quota": "Report reading is at capacity today. Try again tomorrow."
     },
     "summaryHeading": "Summary",
     "summaryActiveTracks": "Active tracks",
