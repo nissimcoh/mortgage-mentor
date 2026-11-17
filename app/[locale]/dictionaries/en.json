@@ -694,7 +694,13 @@
     "paginationLabel": "Saved scenarios pages",
     "newerPage": "Newer",
     "olderPage": "Older",
-    "pageStatus": "Page {page} of {pages}"
+    "pageStatus": "Page {page} of {pages}",
+    "myMortgageTitle": "My current mortgage",
+    "myMortgageOpen": "A simulation from today on, and a comparison with your saved mixes",
+    "myMortgageAddBody": "Upload your bank's balance report, then compare any mix against it",
+    "myMortgageAdd": "Add",
+    "myMortgageBalance": "Balance to settle",
+    "myMortgagePayment": "Monthly payment"
   },
   "scenarioDetailPage": {
     "backToSavedLabel": "Back to saved scenarios",
@@ -1123,7 +1129,7 @@
     "confirmBlocked": "{count} fields still need filling in.",
     "confirmWaiting": "Waiting for the reading to finish.",
     "confirmedTitle": "Figures confirmed",
-    "confirmedBody": "The simulation from today on is below.",
+    "confirmedBody": "Check the simulation below and save the mortgage to your profile.",
     "editAgain": "Back to editing",
     "forecastHeading": "Your mortgage from today on",
     "forecastIntro": "A simulation of every active track from today's balance to the end. A variable rate moves on the reset date in the report to the expected anchor plus your margin.",
@@ -1152,6 +1158,16 @@
       "curveExtended": "The term runs past the Bank of Israel forecast (30 years); its last values were extended."
     },
     "forecastCurve": "Forecast curve: {curve}",
-    "forecastDisclaimer": "A simulation only: not advice and not a bank commitment. Actual rates and CPI will differ from the forecast."
+    "forecastDisclaimer": "A simulation only: not advice and not a bank commitment. Actual rates and CPI will differ from the forecast.",
+    "savedTitle": "Your saved mortgage",
+    "savedUpdated": "Updated {date}",
+    "replaceFromReports": "Update from new reports",
+    "deleteSaved": "Delete",
+    "deleteConfirm": "Click again to delete",
+    "cancelReplace": "Back to the saved mortgage",
+    "saveButton": "Save as my mortgage",
+    "saveReplaceButton": "Update my saved mortgage",
+    "saving": "Saving…",
+    "saveError": "Saving didn't work. Try again in a moment."
   }
 }

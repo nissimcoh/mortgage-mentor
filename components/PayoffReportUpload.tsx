@@ -31,8 +31,6 @@ type Labels = Dictionary["payoffPage"];
 
 const MAX_FILES = 10;
 const MAX_BYTES = 4 * 1024 * 1024;
-/** Read by the simulation step; one browser tab, cleared with the tab. */
-const CONFIRMED_STORAGE_KEY = "mortgage-mentor:payoff-confirmed:v1";
 
 type Upload =
   | { id: string; name: string; status: "reading" }
@@ -69,18 +67,28 @@ export default function PayoffReportUpload({
   labels,
   market,
   calculatorLabels,
+  onSave,
+  hasSaved,
 }: {
   locale: Locale;
   labels: Labels;
   market: ExistingMortgageMarket;
   calculatorLabels: Dictionary["calculator"];
+  /** Saves the confirmed loans to the profile; resolves to an error code or null. */
+  onSave: (loans: PayoffLoan[]) => Promise<string | null>;
+  /** Whether saving replaces an already-saved mortgage. */
+  hasSaved: boolean;
 }) {
   const [uploads, setUploads] = useState<Upload[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   // The loans as confirmed; any edit or upload clears it.
   const [confirmed, setConfirmedLoans] = useState<PayoffLoan[] | null>(null);
-  const clearConfirmation = () => setConfirmedLoans(null);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | { error: string }>("idle");
+  const clearConfirmation = () => {
+    setConfirmedLoans(null);
+    setSaveState("idle");
+  };
   const inputRef = useRef<HTMLInputElement>(null);
   const nextId = useRef(0);
 
@@ -159,16 +167,14 @@ export default function PayoffReportUpload({
   }
 
   function confirm() {
-    try {
-      sessionStorage.setItem(
-        CONFIRMED_STORAGE_KEY,
-        JSON.stringify({ confirmedAt: new Date().toISOString(), loans: combined.loans.map((entry) => entry.loan) }),
-      );
-    } catch {
-      // Storage can be unavailable (private mode, quotas); the confirmation
-      // itself still stands for this page view.
-    }
     setConfirmedLoans(combined.loans.map((entry) => entry.loan));
+  }
+
+  async function save() {
+    if (!confirmed) return;
+    setSaveState("saving");
+    const error = await onSave(confirmed);
+    setSaveState(error === null ? "idle" : { error });
   }
 
   function onDrop(event: DragEvent<HTMLDivElement>) {
@@ -299,9 +305,19 @@ export default function PayoffReportUpload({
               </p>
             )}
             {confirmed ? (
-              <button type="button" onClick={() => clearConfirmation()} className="glass-secondary inline-flex min-h-11 items-center px-5 text-sm font-medium">
-                {labels.editAgain}
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button type="button" onClick={() => clearConfirmation()} className="glass-secondary inline-flex min-h-11 items-center px-5 text-sm font-medium">
+                  {labels.editAgain}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void save()}
+                  disabled={saveState === "saving"}
+                  className="glass-button inline-flex min-h-11 items-center px-6 text-[15px] font-medium"
+                >
+                  {saveState === "saving" ? labels.saving : hasSaved ? labels.saveReplaceButton : labels.saveButton}
+                </button>
+              </div>
             ) : (
               <button
                 type="button"
@@ -313,6 +329,11 @@ export default function PayoffReportUpload({
               </button>
             )}
           </div>
+          {typeof saveState === "object" && (
+            <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {saveState.error === "unauthenticated" ? labels.errors.unauthenticated : labels.saveError}
+            </p>
+          )}
           {confirmed && (
             <ExistingMortgageForecast
               loans={confirmed}

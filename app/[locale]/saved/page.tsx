@@ -4,6 +4,8 @@ import { notFound, redirect } from "next/navigation";
 import { isValidLocale } from "@/lib/i18n/config";
 import { isValidResultSnapshot } from "@/lib/scenarios/payload";
 import { createClient } from "@/lib/supabase/server";
+import { combinePayoffFiles, formatMoney } from "@/lib/payoff-report";
+import { loadMyMortgage } from "@/lib/payoff-report/load-saved";
 import Icon from "@/components/Icon";
 import ScenarioCard from "@/components/ScenarioCard";
 import { getDictionary } from "../dictionaries";
@@ -46,7 +48,8 @@ export default async function SavedPage({
     redirect(`/${locale}/signin?next=${encodeURIComponent(`/${locale}/saved`)}`);
   }
 
-  const dict = await getDictionary(locale);
+  const [dict, myMortgage] = await Promise.all([getDictionary(locale), loadMyMortgage(user.id)]);
+  const myTotals = myMortgage ? combinePayoffFiles([{ fileName: "", loans: myMortgage.loans }]).totals : null;
 
   // RLS's "select own scenarios" policy is the real ownership boundary;
   // this .eq("user_id", ...) is the normal, expected app-level filter on
@@ -92,6 +95,33 @@ export default async function SavedPage({
         <p className="mb-8 text-lg leading-8 text-slate-500">
           {dict.savedPage.intro}
         </p>
+
+        {/* The user's current mortgage, the baseline every saved mix is weighed against. */}
+        <Link
+          href={`/${locale}/my-mortgage`}
+          className="glass-hero lift mb-8 flex flex-wrap items-center gap-x-6 gap-y-3 px-6 py-5"
+        >
+          <span className="min-w-0 flex-1">
+            <span className="block text-lg font-semibold tracking-tight">{dict.savedPage.myMortgageTitle}</span>
+            <span className="mt-1 block text-sm text-slate-500">
+              {myTotals ? dict.savedPage.myMortgageOpen : dict.savedPage.myMortgageAddBody}
+            </span>
+          </span>
+          {myTotals ? (
+            <dl className="flex gap-6">
+              <div>
+                <dt className="text-xs text-slate-500">{dict.savedPage.myMortgageBalance}</dt>
+                <dd className="mt-0.5 text-xl font-semibold tabular-nums"><bdi>{formatMoney(myTotals.totalToSettle, locale)}</bdi></dd>
+              </div>
+              <div>
+                <dt className="text-xs text-slate-500">{dict.savedPage.myMortgagePayment}</dt>
+                <dd className="mt-0.5 text-xl font-semibold tabular-nums"><bdi>{formatMoney(myTotals.monthlyPayment, locale)}</bdi></dd>
+              </div>
+            </dl>
+          ) : (
+            <span className="glass-button inline-flex min-h-11 items-center px-5 text-sm font-medium">{dict.savedPage.myMortgageAdd}</span>
+          )}
+        </Link>
 
         {!error && total > 0 && (
           <div className="mb-6 flex flex-wrap gap-2">

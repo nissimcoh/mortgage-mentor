@@ -694,7 +694,13 @@
     "paginationLabel": "עמודי התרחישים השמורים",
     "newerPage": "חדשים יותר",
     "olderPage": "ישנים יותר",
-    "pageStatus": "עמוד {page} מתוך {pages}"
+    "pageStatus": "עמוד {page} מתוך {pages}",
+    "myMortgageTitle": "המשכנתא הקיימת שלי",
+    "myMortgageOpen": "סימולציה מהיום והלאה, והשוואה לתמהילים ששמרתם",
+    "myMortgageAddBody": "מעלים דוח יתרות לסילוק מהבנק, ואז אפשר להשוות אליה כל תמהיל",
+    "myMortgageAdd": "הוספה",
+    "myMortgageBalance": "יתרה לסילוק",
+    "myMortgagePayment": "החזר חודשי"
   },
   "scenarioDetailPage": {
     "backToSavedLabel": "חזרה לתמהילים שמורים",
@@ -1123,7 +1129,7 @@
     "confirmBlocked": "נשארו {count} שדות להשלמה.",
     "confirmWaiting": "ממתינים לסיום הקריאה.",
     "confirmedTitle": "הנתונים אושרו",
-    "confirmedBody": "הסימולציה של המשכנתא מהיום והלאה מופיעה למטה.",
+    "confirmedBody": "אפשר לבדוק את הסימולציה למטה ולשמור את המשכנתא בפרופיל.",
     "editAgain": "חזרה לעריכה",
     "forecastHeading": "המשכנתא מהיום והלאה",
     "forecastIntro": "סימולציה של כל המסלולים הפעילים מהיתרה של היום ועד הסוף. ריבית משתנה עוברת בתאריך השינוי שבדוח לעוגן הצפוי ועוד המרווח שלכם.",
@@ -1152,6 +1158,16 @@
       "curveExtended": "התקופה ארוכה מתחזית בנק ישראל (30 שנה), והערכים האחרונים שלה הוארכו."
     },
     "forecastCurve": "עקום התחזית: {curve}",
-    "forecastDisclaimer": "סימולציה בלבד, לא ייעוץ ולא התחייבות של הבנק. הריבית והמדד בפועל יהיו שונים מהתחזית."
+    "forecastDisclaimer": "סימולציה בלבד, לא ייעוץ ולא התחייבות של הבנק. הריבית והמדד בפועל יהיו שונים מהתחזית.",
+    "savedTitle": "המשכנתא השמורה שלך",
+    "savedUpdated": "עודכנה ב־{date}",
+    "replaceFromReports": "עדכון מדוחות חדשים",
+    "deleteSaved": "מחיקה",
+    "deleteConfirm": "ללחוץ שוב למחיקה",
+    "cancelReplace": "חזרה למשכנתא השמורה",
+    "saveButton": "שמירה כמשכנתא שלי",
+    "saveReplaceButton": "עדכון המשכנתא השמורה",
+    "saving": "שומר…",
+    "saveError": "השמירה לא הצליחה. נסו שוב בעוד רגע."
   }
 }
