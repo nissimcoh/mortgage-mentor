@@ -7,6 +7,7 @@ import { getCalculatorRateSnapshot } from "@/lib/market-data/get-market-snapshot
 import { getMortgageForecastData } from "@/lib/market-data/sources/boi-mortgage-forecast";
 import type { ExistingMortgageMarket } from "@/lib/payoff-report";
 import { loadMyMortgage } from "@/lib/payoff-report/load-saved";
+import { COMPARISON_COLUMNS, loadComparisonScenarios } from "@/lib/scenarios/load-comparison";
 import { createClient } from "@/lib/supabase/server";
 import { getDictionary } from "../dictionaries";
 
@@ -45,12 +46,21 @@ export default async function MyMortgagePage({
 
   // The same official sources as the calculator; both degrade to dated
   // fallbacks and never throw. Only the latest curve reaches the client.
-  const [dict, rateSnapshot, forecastData, saved] = await Promise.all([
+  // Saved mixes for the refinance comparison: same session and RLS boundary
+  // as /compare, without payment series (fetched when a mix is selected).
+  const mixesQuery = supabase
+    .from("mortgage_scenarios")
+    .select(COMPARISON_COLUMNS)
+    .eq("user_id", user.id)
+    .order("updated_at", { ascending: false });
+  const [dict, rateSnapshot, forecastData, saved, mixRows] = await Promise.all([
     getDictionary(locale),
     getCalculatorRateSnapshot(),
     getMortgageForecastData(),
     loadMyMortgage(user.id),
+    mixesQuery,
   ]);
+  const mixes = mixRows.error ? [] : await loadComparisonScenarios(mixRows.data ?? [], []);
   const curve = forecastData.curves[0];
   const market: ExistingMortgageMarket = {
     boiRatePercent: rateSnapshot.boiRate.ratePercent,
@@ -79,6 +89,8 @@ export default async function MyMortgagePage({
           calculatorLabels={dict.calculator}
           market={market}
           initialSaved={saved}
+          mixes={mixes}
+          comparisonLabels={dict.savedComparison}
         />
       </section>
     </main>

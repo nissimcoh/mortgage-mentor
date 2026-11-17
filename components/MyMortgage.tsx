@@ -11,6 +11,7 @@ import {
   type SavedMyMortgage,
 } from "@/lib/payoff-report";
 import { formatDateOnly } from "@/lib/forms/dates";
+import type { ComparisonScenario } from "@/lib/scenarios/comparison";
 import ExistingMortgageForecast from "./ExistingMortgageForecast";
 import PayoffReportUpload from "./PayoffReportUpload";
 
@@ -27,12 +28,17 @@ export default function MyMortgage({
   calculatorLabels,
   market,
   initialSaved,
+  mixes,
+  comparisonLabels,
 }: {
   locale: Locale;
   labels: Labels;
   calculatorLabels: Dictionary["calculator"];
   market: ExistingMortgageMarket;
   initialSaved: SavedMyMortgage | null;
+  /** The user's saved mixes, without payment series (loaded on selection). */
+  mixes: ComparisonScenario[];
+  comparisonLabels: Dictionary["savedComparison"];
 }) {
   const [saved, setSaved] = useState(initialSaved);
   const [replacing, setReplacing] = useState(initialSaved === null);
@@ -97,6 +103,7 @@ export default function MyMortgage({
           labels={labels}
           calculatorLabels={calculatorLabels}
           locale={locale}
+          comparison={{ mixes, labels: comparisonLabels }}
         />
       </div>
     );

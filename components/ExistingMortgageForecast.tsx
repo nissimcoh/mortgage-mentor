@@ -3,7 +3,9 @@
 import { useMemo, useState } from "react";
 import type { Dictionary } from "@/app/[locale]/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
+import type { ComparisonScenario } from "@/lib/scenarios/comparison";
 import {
+  combinePayoffFiles,
   existingCombinedBases,
   existingTrackBasis,
   fillTemplate,
@@ -16,6 +18,7 @@ import {
 
 import AmortizationSchedule from "./AmortizationSchedule";
 import PaymentTimeline from "./PaymentTimeline";
+import RefinanceComparison from "./RefinanceComparison";
 import ScheduleSelector from "./ScheduleSelector";
 
 type Labels = Dictionary["payoffPage"];
@@ -41,16 +44,25 @@ export default function ExistingMortgageForecast({
   labels,
   calculatorLabels,
   locale,
+  comparison,
 }: {
   loans: PayoffLoan[];
   market: ExistingMortgageMarket;
   labels: Labels;
   calculatorLabels: Dictionary["calculator"];
   locale: Locale;
+  /** Saved mixes to weigh against; omitted where comparing is not offered. */
+  comparison?: { mixes: ComparisonScenario[]; labels: Dictionary["savedComparison"] };
 }) {
   const [mode, setMode] = useState<ExistingForecastMode>("official");
   const [scheduleId, setScheduleId] = useState(COMBINED);
   const simulation = useMemo(() => simulateExistingMortgage(loans, market, mode), [loans, market, mode]);
+  // Saved mixes carry official forecasts, so the comparison always uses one too.
+  const officialSimulation = useMemo(
+    () => (mode === "official" ? simulation : simulateExistingMortgage(loans, market, "official")),
+    [mode, simulation, loans, market],
+  );
+  const reportTotals = useMemo(() => combinePayoffFiles([{ fileName: "", loans }]).totals, [loans]);
   const { totals } = simulation;
   const money = (value: number) => formatMoney(value, locale);
 
@@ -84,7 +96,8 @@ export default function ExistingMortgageForecast({
   ];
 
   return (
-    <section aria-labelledby="existing-forecast-heading" className="glass-panel px-5 py-6 sm:px-6">
+    <>
+    <section aria-labelledby="existing-forecast-heading" className="glass-panel mb-6 px-5 py-6 sm:px-6">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
         <h2 id="existing-forecast-heading" className="text-xl font-semibold tracking-tight">
           {labels.forecastHeading}
@@ -196,5 +209,17 @@ export default function ExistingMortgageForecast({
         </>
       )}
     </section>
+    {comparison && (
+      <RefinanceComparison
+        simulation={officialSimulation}
+        balanceToSettle={reportTotals.totalToSettle}
+        fees={reportTotals.fees}
+        mixes={comparison.mixes}
+        labels={labels}
+        comparisonLabels={comparison.labels}
+        locale={locale}
+      />
+    )}
+    </>
   );
 }

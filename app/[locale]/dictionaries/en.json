@@ -1168,6 +1168,23 @@
     "saveButton": "Save as my mortgage",
     "saveReplaceButton": "Update my saved mortgage",
     "saving": "Saving…",
-    "saveError": "Saving didn't work. Try again in a moment."
+    "saveError": "Saving didn't work. Try again in a moment.",
+    "compareHeading": "Compare with a new mix",
+    "compareIntro": "What refinancing today into one of your saved mixes would look like: the current mortgage continues as simulated, and the new mix also pays the early-repayment fees from the report.",
+    "compareChoose": "Mix to compare",
+    "compareNone": "No saved mixes yet. Build a mix on the balance to settle in the calculator and save it.",
+    "compareNoneCta": "Open the calculator",
+    "compareCurrent": "Current mortgage",
+    "compareRowFirst": "First payment",
+    "compareRowHighest": "Highest payment",
+    "compareRowTotal": "Total payments",
+    "compareRowFees": "Early-repayment fees",
+    "compareRowTotalWithFees": "Total including fees",
+    "compareRowYears": "Term (years)",
+    "compareSaving": "On the forecast, refinancing costs about {amount} less by the end.",
+    "compareExtra": "On the forecast, refinancing costs about {amount} more by the end.",
+    "compareBreakEven": "The early-repayment fees are recovered after about {years} years.",
+    "comparePrincipalMismatch": "The mix borrows {mix}, while the balance to settle is {current}. The comparison is accurate when the two are close; you can build a mix on {current} in the calculator.",
+    "compareNote": "A forecast comparison only, not advice. The saved mix was calculated on the forecast of the day it was saved, the current mortgage on today's. Refinancing also has costs not shown here, such as appraisal, insurance and registration."
   }
 }
