@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  inferLinkage,
   missingLoanFields,
   missingTrackFields,
+  prepareForConfirm,
   suggestAnchorSeries,
   withSuggestedAnchors,
 } from "../confirm";
@@ -76,5 +78,33 @@ describe("withSuggestedAnchors", () => {
 
     original.loans[0].tracks[1].variable!.anchorSeries = "other";
     expect(withSuggestedAnchors(original).loans[0].tracks[1].variable?.anchorSeries).toBe("other");
+  });
+});
+
+describe("inferLinkage and prepareForConfirm", () => {
+  it("treats a track with no sign of linkage as unlinked", () => {
+    const track = file().loans[0].tracks[0]; // unlinked fixed, no base index
+    expect(inferLinkage({ ...track, linkage: "unknown" }).linkage).toBe("unlinked");
+  });
+
+  it("leaves it unknown when the report shows linkage", () => {
+    const linked = file().loans[0].tracks[1]; // base index 100.5, indexation 2,400
+    expect(inferLinkage({ ...linked, linkage: "unknown" }).linkage).toBe("unknown");
+    const indexed = { ...linked, linkage: "unknown" as const, cpiBaseIndex: null };
+    expect(inferLinkage(indexed).linkage).toBe("unknown");
+  });
+
+  it("infers linkage before suggesting an anchor", () => {
+    const original = file();
+    const variable = original.loans[0].tracks[1];
+    original.loans[0].tracks[1] = {
+      ...variable,
+      linkage: "unknown",
+      cpiBaseIndex: null,
+      balance: { ...variable.balance, indexation: null },
+    };
+    const prepared = prepareForConfirm(original).loans[0].tracks[1];
+    expect(prepared.linkage).toBe("unlinked");
+    expect(prepared.variable?.anchorSeries).toBe("governmentBondUnlinked");
   });
 });

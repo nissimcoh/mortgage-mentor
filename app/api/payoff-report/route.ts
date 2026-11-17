@@ -55,5 +55,12 @@ export async function POST(request: Request) {
     console.error("payoff-report extraction failed", result.error, result.status ?? "");
     return failure(result.error, result.error === "busy" ? 503 : 502);
   }
+  // Sizes and token counts only, to watch the cost per report.
+  console.info("payoff-report read", {
+    model: result.model,
+    pages: `${result.usage.pagesSent ?? "?"}/${result.usage.totalPages ?? "?"}`,
+    inputTokens: result.usage.inputTokens,
+    outputTokens: result.usage.outputTokens,
+  });
   return Response.json({ ok: true, file: result.file, issues: result.issues });
 }

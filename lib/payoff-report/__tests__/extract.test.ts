@@ -1,3 +1,4 @@
+import { PDFDocument, StandardFonts } from "pdf-lib";
 import { describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_PAYOFF_REPORT_MODEL,
@@ -104,7 +105,13 @@ describe("extractPayoffReport", () => {
     expect(result.file).toEqual(direct.file);
     expect(result.issues).toEqual([]);
     expect(result.model).toBe(DEFAULT_PAYOFF_REPORT_MODEL);
-    expect(result.usage).toEqual({ inputTokens: 34000, outputTokens: 500 });
+    // Not a parseable PDF, so nothing was trimmed and page counts are unknown.
+    expect(result.usage).toEqual({
+      inputTokens: 34000,
+      outputTokens: 500,
+      totalPages: null,
+      pagesSent: null,
+    });
 
     const [, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
     expect((init.headers as Record<string, string>)["x-api-key"]).toBe("test-key");
@@ -154,5 +161,51 @@ describe("extractPayoffReport", () => {
   it("reports answers with nothing usable", async () => {
     expect(await run(answer("not json"))).toEqual({ ok: false, error: "unreadable" });
     expect(await run(answer('{"loans": []}'))).toEqual({ ok: false, error: "unreadable" });
+  });
+});
+
+describe("page trimming", () => {
+  const dataText = "Principal 279,093.54 Interest 103.26 Fees 672.85 Total 279,869.65 Pay 1,951.19";
+
+  async function reportPdf() {
+    const pdf = await PDFDocument.create();
+    const font = await pdf.embedFont(StandardFonts.Helvetica);
+    for (const text of ["Questions and answers", dataText, "Notice form"]) {
+      pdf.addPage().drawText(text, { x: 20, y: 700, size: 9, font });
+    }
+    return pdf.save();
+  }
+
+  async function sentPageCount(fetchImpl: ReturnType<typeof vi.fn>, call: number) {
+    const [, init] = fetchImpl.mock.calls[call] as unknown as [string, RequestInit];
+    const data = JSON.parse(init.body as string).messages[0].content[0].source.data;
+    return (await PDFDocument.load(Buffer.from(data, "base64"))).getPageCount();
+  }
+
+  it("sends only the pages with figures", async () => {
+    const fetchImpl = answer(JSON.stringify(asModelOutput(fictionalTwoLoanFile())));
+    const result = await extractPayoffReport({ pdf: await reportPdf(), fileName: "r.pdf", apiKey: "k", fetchImpl });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(await sentPageCount(fetchImpl, 0)).toBe(1);
+    expect(result.ok && result.usage).toMatchObject({ totalPages: 3, pagesSent: 1 });
+  });
+
+  it("reads the whole file once more when the trimmed one held nothing", async () => {
+    const empty = { stop_reason: "end_turn", content: [{ type: "text", text: '{"loans": []}' }], usage: { input_tokens: 3000, output_tokens: 20 } };
+    const full = { stop_reason: "end_turn", content: [{ type: "text", text: JSON.stringify(asModelOutput(fictionalTwoLoanFile())) }], usage: { input_tokens: 9000, output_tokens: 500 } };
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(empty)))
+      .mockResolvedValueOnce(new Response(JSON.stringify(full)));
+    const result = await extractPayoffReport({ pdf: await reportPdf(), fileName: "r.pdf", apiKey: "k", fetchImpl });
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(await sentPageCount(fetchImpl, 1)).toBe(3);
+    expect(result.ok && result.usage).toEqual({ inputTokens: 12000, outputTokens: 520, totalPages: 3, pagesSent: 3 });
+  });
+
+  it("can be turned off", async () => {
+    const fetchImpl = answer(JSON.stringify(asModelOutput(fictionalTwoLoanFile())));
+    await extractPayoffReport({ pdf: await reportPdf(), fileName: "r.pdf", apiKey: "k", fetchImpl, trimPages: false });
+    expect(await sentPageCount(fetchImpl, 0)).toBe(3);
   });
 });

@@ -1097,8 +1097,8 @@
         "balloon": "בלון"
       },
       "anchorSeries": {
-        "governmentBondUnlinked": "אג״ח ממשלתיות לא צמודות, 5 שנים",
-        "governmentBondLinked": "אג״ח ממשלתיות צמודות, 5 שנים",
+        "governmentBondUnlinked": "אג״ח ממשלתיות לא צמודות (לפי תקופת השינוי)",
+        "governmentBondLinked": "אג״ח ממשלתיות צמודות (לפי תקופת השינוי)",
         "makam": "מק״מ לשנה",
         "other": "אחר"
       }

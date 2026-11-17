@@ -31,8 +31,8 @@ export type PayoffTrackStatus = "active" | "closed";
  * print only "עוגן", so the user chooses this on the confirm screen.
  */
 export type PayoffAnchorSeries =
-  | "governmentBondUnlinked" // אג"ח ממשלתיות לא צמודות (5 שנים)
-  | "governmentBondLinked" // אג"ח ממשלתיות צמודות (5 שנים)
+  | "governmentBondUnlinked" // אג"ח ממשלתיות לא צמודות, לתקופת השינוי
+  | "governmentBondLinked" // אג"ח ממשלתיות צמודות, לתקופת השינוי
   | "makam" // מק"מ לשנה
   | "other";
 

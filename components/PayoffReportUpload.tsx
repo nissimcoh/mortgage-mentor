@@ -12,8 +12,8 @@ import {
   missingLoanFields,
   parseNumberInput,
   suggestAnchorSeries,
+  prepareForConfirm,
   updateTrackInFile,
-  withSuggestedAnchors,
   type CombinedLoan,
   type PayoffAnchorSeries,
   type PayoffCheck,
@@ -90,7 +90,7 @@ export default function PayoffReportUpload({ locale, labels }: { locale: Locale;
             id,
             name: source.name,
             status: "done",
-            file: withSuggestedAnchors(result.file),
+            file: prepareForConfirm(result.file),
             hadIssues: result.issues.length > 0,
           }
         : { id, name: source.name, status: "error", error: result.error, source },

@@ -54,8 +54,8 @@ export function missingLoanFields(loan: PayoffLoan): PayoffMissingField[] {
 
 /**
  * A starting suggestion for the anchor, from how Israeli variable tracks are
- * built: five-year resets follow the five-year government bond yield of the
- * same linkage, one-year unlinked resets follow the one-year Makam. Shown as
+ * built: resets of two years or more follow the government bond yield of the
+ * same linkage for that period, one-year unlinked resets follow the Makam. Shown as
  * a suggestion; the user can change it.
  */
 export function suggestAnchorSeries(track: PayoffTrack): PayoffAnchorSeries | null {
@@ -84,4 +84,25 @@ export function withSuggestedAnchors(file: PayoffReportFile): PayoffReportFile {
       }),
     })),
   };
+}
+
+/**
+ * A track whose linkage was not read is treated as unlinked when the report
+ * shows no sign of linkage on it: no CPI base index and no linkage amount.
+ * Reports leave the linkage cell blank for unlinked tracks; a CPI-linked
+ * track always carries a base index or accrued linkage. The user can change it.
+ */
+export function inferLinkage(track: PayoffTrack): PayoffTrack {
+  if (track.linkage !== "unknown") return track;
+  const linkageSeen =
+    track.cpiBaseIndex !== null || (track.balance.indexation !== null && track.balance.indexation !== 0);
+  return linkageSeen ? track : { ...track, linkage: "unlinked" };
+}
+
+/** What the confirm screen starts from: inferred linkage, then anchor suggestions. */
+export function prepareForConfirm(file: PayoffReportFile): PayoffReportFile {
+  return withSuggestedAnchors({
+    ...file,
+    loans: file.loans.map((loan) => ({ ...loan, tracks: loan.tracks.map(inferLinkage) })),
+  });
 }

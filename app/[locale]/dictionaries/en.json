@@ -1097,8 +1097,8 @@
         "balloon": "Balloon"
       },
       "anchorSeries": {
-        "governmentBondUnlinked": "Unlinked government bonds, 5 years",
-        "governmentBondLinked": "CPI-linked government bonds, 5 years",
+        "governmentBondUnlinked": "Unlinked government bonds (term matches the reset period)",
+        "governmentBondLinked": "CPI-linked government bonds (term matches the reset period)",
         "makam": "One-year Makam",
         "other": "Other"
       }

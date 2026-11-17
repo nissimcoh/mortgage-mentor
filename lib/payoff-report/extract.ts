@@ -1,3 +1,4 @@
+import { trimPayoffPdf } from "./pages";
 import { parsePayoffReportFile, type PayoffParseIssue } from "./parse";
 import type { PayoffReportFile } from "./types";
 
@@ -115,8 +116,8 @@ Rules:
 - fees.capitalization is the capitalization fee (עמלת היוון) as printed, after any reduction. capitalizationRatePercent is the discount rate printed with it (ריבית להיוון).
 - loanLevelFees: fees printed only in the loan's total column and not under any track (for example a single operational fee per loan). Do not also put them on a track.
 - reportedTotals come from the loan's total column or row (סה"כ להלוואה).
-- balance.totalToSettle is the track's total to settle, including its fees, as printed.
-- linkage: "cpi" for צמוד מדד, "unlinked" for לא צמוד or שקלי (prime too), "foreignCurrency" for מט"ח.
+- balance.totalToSettle is the track's total to settle, including its fees, as printed. Linkage differentials on interest (הפרשי הצמדה על הריבית) go in balance.otherCharges.
+- linkage: "cpi" for צמוד מדד, "unlinked" for לא צמוד or שקלי (prime too), "foreignCurrency" for מט"ח. If the report has a linkage field (e.g. בסיס הצמדה, סוג הצמדה) and it is empty for a track, that track is not linked: use "unlinked". Use "unknown" only when the report has no linkage field at all.
 - rateType: "fixed" for קבועה, "variable" for משתנה with a reset schedule, "prime" for פריים.
 - repaymentMethod: "spitzer" for שפיצר, "equalPrincipal" for קרן שווה, "balloon" for בלון.
 - Ignore explanatory pages, blank forms and worked examples; they hold no loan figures.
@@ -127,6 +128,8 @@ export interface PayoffExtractionInput {
   fileName: string;
   apiKey: string;
   model?: string;
+  /** Drop boilerplate pages first (default). Off only for tests and comparisons. */
+  trimPages?: boolean;
   /** Injectable for tests. */
   fetchImpl?: typeof fetch;
   signal?: AbortSignal;
@@ -147,6 +150,9 @@ export type PayoffExtractionError =
 export interface PayoffExtractionUsage {
   inputTokens: number;
   outputTokens: number;
+  /** Pages in the uploaded file, and pages actually sent to the model. */
+  totalPages: number | null;
+  pagesSent: number | null;
 }
 
 export type PayoffExtractionResult =
@@ -191,12 +197,16 @@ interface MessagesResponse {
   usage?: { input_tokens?: number; output_tokens?: number };
 }
 
-export async function extractPayoffReport(
-  input: PayoffExtractionInput,
-): Promise<PayoffExtractionResult> {
-  const model = input.model || DEFAULT_PAYOFF_REPORT_MODEL;
-  const doFetch = input.fetchImpl ?? fetch;
+type AttemptResult =
+  | { ok: true; raw: unknown; inputTokens: number; outputTokens: number }
+  | { ok: false; error: PayoffExtractionError; status?: number };
 
+async function requestExtraction(
+  pdf: Uint8Array,
+  model: string,
+  input: PayoffExtractionInput,
+): Promise<AttemptResult> {
+  const doFetch = input.fetchImpl ?? fetch;
   let response: Response;
   try {
     response = await doFetch(API_URL, {
@@ -206,7 +216,7 @@ export async function extractPayoffReport(
         "x-api-key": input.apiKey,
         "anthropic-version": API_VERSION,
       },
-      body: JSON.stringify(buildPayoffExtractionRequest(input.pdf, model)),
+      body: JSON.stringify(buildPayoffExtractionRequest(pdf, model)),
       signal: input.signal,
     });
   } catch {
@@ -232,23 +242,53 @@ export async function extractPayoffReport(
     .filter((block) => block.type === "text" && typeof block.text === "string")
     .map((block) => block.text)
     .join("");
-  let raw: unknown;
   try {
-    raw = JSON.parse(text);
+    return {
+      ok: true,
+      raw: JSON.parse(text),
+      inputTokens: body.usage?.input_tokens ?? 0,
+      outputTokens: body.usage?.output_tokens ?? 0,
+    };
   } catch {
     return { ok: false, error: "unreadable" };
   }
+}
 
-  const parsed = parsePayoffReportFile(raw, input.fileName);
-  if (!parsed.ok) return { ok: false, error: "unreadable" };
+export async function extractPayoffReport(
+  input: PayoffExtractionInput,
+): Promise<PayoffExtractionResult> {
+  const model = input.model || DEFAULT_PAYOFF_REPORT_MODEL;
+  const trimmed =
+    input.trimPages === false
+      ? { pdf: input.pdf, totalPages: null, keptPages: null }
+      : await trimPayoffPdf(input.pdf);
+
+  let attempt = await requestExtraction(trimmed.pdf, model, input);
+  let parsed = attempt.ok ? parsePayoffReportFile(attempt.raw, input.fileName) : null;
+  let pagesSent = trimmed.keptPages?.length ?? trimmed.totalPages;
+  let inputTokens = attempt.ok ? attempt.inputTokens : 0;
+  let outputTokens = attempt.ok ? attempt.outputTokens : 0;
+
+  // If the trimmed document yielded nothing usable, the filter may have
+  // dropped a page that mattered: read the whole file once before giving up.
+  const unusable = attempt.ok ? !parsed?.ok : attempt.error === "unreadable";
+  if (unusable && trimmed.keptPages !== null) {
+    attempt = await requestExtraction(input.pdf, model, input);
+    parsed = attempt.ok ? parsePayoffReportFile(attempt.raw, input.fileName) : null;
+    pagesSent = trimmed.totalPages;
+    if (attempt.ok) {
+      inputTokens += attempt.inputTokens;
+      outputTokens += attempt.outputTokens;
+    }
+  }
+
+  if (!attempt.ok) return { ok: false, error: attempt.error, status: attempt.status };
+  if (!parsed?.ok) return { ok: false, error: "unreadable" };
   return {
     ok: true,
     file: parsed.file,
     issues: parsed.issues,
     model,
-    usage: {
-      inputTokens: body.usage?.input_tokens ?? 0,
-      outputTokens: body.usage?.output_tokens ?? 0,
-    },
+    usage: { inputTokens, outputTokens, totalPages: trimmed.totalPages, pagesSent },
   };
 }
