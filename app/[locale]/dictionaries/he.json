@@ -1123,7 +1123,35 @@
     "confirmBlocked": "נשארו {count} שדות להשלמה.",
     "confirmWaiting": "ממתינים לסיום הקריאה.",
     "confirmedTitle": "הנתונים אושרו",
-    "confirmedBody": "בשלב הבא נציג כאן סימולציה של המשכנתא הקיימת מהיום והלאה.",
-    "editAgain": "חזרה לעריכה"
+    "confirmedBody": "הסימולציה של המשכנתא מהיום והלאה מופיעה למטה.",
+    "editAgain": "חזרה לעריכה",
+    "forecastHeading": "המשכנתא מהיום והלאה",
+    "forecastIntro": "סימולציה של כל המסלולים הפעילים מהיתרה של היום ועד הסוף. ריבית משתנה עוברת בתאריך השינוי שבדוח לעוגן הצפוי ועוד המרווח שלכם.",
+    "forecastModeOfficial": "לפי תחזית בנק ישראל",
+    "forecastModeConstant": "בלי שינויי ריבית ומדד",
+    "forecastNextPayment": "ההחזר הבא",
+    "forecastMaxPayment": "ההחזר הגבוה ביותר",
+    "forecastMaxPaymentWhen": "ב־{month}",
+    "forecastTotalPayment": "סה״כ תשלומים עד הסוף",
+    "forecastTotalCost": "מתוכם ריבית והצמדה",
+    "forecastEnds": "סיום",
+    "forecastTracksHeading": "לפי מסלול",
+    "forecastTrackLine": "{label}: {count} תשלומים, עד {end}",
+    "forecastPaymentMismatch": "ההחזר המחושב ({computed}) שונה מההחזר שבדוח ({reported}). כדאי לבדוק את הריבית, היתרה ותאריך הסיום.",
+    "forecastKinds": {
+      "fixedUnlinked": "קבועה לא צמודה",
+      "fixedLinked": "קבועה צמודה",
+      "variableUnlinked": "משתנה לא צמודה",
+      "variableLinked": "משתנה צמודה",
+      "prime": "פריים",
+      "heldConstant": "ריבית נוכחית לאורך כל התקופה"
+    },
+    "forecastAssumptions": {
+      "rateHeldConstant": "לא ניתן לחזות את הריבית של המסלול הזה, ולכן הריבית הנוכחית נשמרת עד הסוף.",
+      "treatedAsSpitzer": "שיטת ההחזר חושבה כשפיצר.",
+      "curveExtended": "התקופה ארוכה מתחזית בנק ישראל (30 שנה), והערכים האחרונים שלה הוארכו."
+    },
+    "forecastCurve": "עקום התחזית: {curve}",
+    "forecastDisclaimer": "סימולציה בלבד, לא ייעוץ ולא התחייבות של הבנק. הריבית והמדד בפועל יהיו שונים מהתחזית."
   }
 }

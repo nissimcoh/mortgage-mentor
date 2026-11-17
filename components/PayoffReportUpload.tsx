@@ -15,13 +15,16 @@ import {
   prepareForConfirm,
   updateTrackInFile,
   type CombinedLoan,
+  type ExistingMortgageMarket,
   type PayoffAnchorSeries,
   type PayoffCheck,
   type PayoffConfirmField,
+  type PayoffLoan,
   type PayoffReportFile,
   type PayoffTrack,
   type PayoffVariableRate,
 } from "@/lib/payoff-report";
+import ExistingMortgageForecast from "./ExistingMortgageForecast";
 import Icon from "./Icon";
 
 type Labels = Dictionary["payoffPage"];
@@ -61,11 +64,21 @@ function isPdfName(file: File): boolean {
   return file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
 }
 
-export default function PayoffReportUpload({ locale, labels }: { locale: Locale; labels: Labels }) {
+export default function PayoffReportUpload({
+  locale,
+  labels,
+  market,
+}: {
+  locale: Locale;
+  labels: Labels;
+  market: ExistingMortgageMarket;
+}) {
   const [uploads, setUploads] = useState<Upload[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
-  const [confirmed, setConfirmed] = useState(false);
+  // The loans as confirmed; any edit or upload clears it.
+  const [confirmed, setConfirmedLoans] = useState<PayoffLoan[] | null>(null);
+  const clearConfirmation = () => setConfirmedLoans(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const nextId = useRef(0);
 
@@ -99,7 +112,7 @@ export default function PayoffReportUpload({ locale, labels }: { locale: Locale;
 
   function addFiles(list: FileList | null) {
     if (!list || list.length === 0) return;
-    setConfirmed(false);
+    clearConfirmation();
     const room = MAX_FILES - uploads.length;
     const accepted = Array.from(list).slice(0, Math.max(0, room));
     setNotice(
@@ -118,7 +131,7 @@ export default function PayoffReportUpload({ locale, labels }: { locale: Locale;
   }
 
   function removeUpload(id: string) {
-    setConfirmed(false);
+    clearConfirmation();
     setUploads((current) => current.filter((item) => item.id !== id));
   }
 
@@ -133,7 +146,7 @@ export default function PayoffReportUpload({ locale, labels }: { locale: Locale;
 
   function editTrack(entry: CombinedLoan, trackIndex: number, update: (track: PayoffTrack) => PayoffTrack) {
     const target = done[entry.fileIndex];
-    setConfirmed(false);
+    clearConfirmation();
     setUploads((current) =>
       current.map((item) =>
         item.id === target.id && item.status === "done"
@@ -153,7 +166,7 @@ export default function PayoffReportUpload({ locale, labels }: { locale: Locale;
       // Storage can be unavailable (private mode, quotas); the confirmation
       // itself still stands for this page view.
     }
-    setConfirmed(true);
+    setConfirmedLoans(combined.loans.map((entry) => entry.loan));
   }
 
   function onDrop(event: DragEvent<HTMLDivElement>) {
@@ -284,7 +297,7 @@ export default function PayoffReportUpload({ locale, labels }: { locale: Locale;
               </p>
             )}
             {confirmed ? (
-              <button type="button" onClick={() => setConfirmed(false)} className="glass-secondary inline-flex min-h-11 items-center px-5 text-sm font-medium">
+              <button type="button" onClick={() => clearConfirmation()} className="glass-secondary inline-flex min-h-11 items-center px-5 text-sm font-medium">
                 {labels.editAgain}
               </button>
             ) : (
@@ -298,6 +311,9 @@ export default function PayoffReportUpload({ locale, labels }: { locale: Locale;
               </button>
             )}
           </div>
+          {confirmed && (
+            <ExistingMortgageForecast loans={confirmed} market={market} labels={labels} locale={locale} />
+          )}
         </>
       )}
     </div>

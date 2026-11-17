@@ -1123,7 +1123,35 @@
     "confirmBlocked": "{count} fields still need filling in.",
     "confirmWaiting": "Waiting for the reading to finish.",
     "confirmedTitle": "Figures confirmed",
-    "confirmedBody": "Next, this page will show a simulation of your current mortgage from today on.",
-    "editAgain": "Back to editing"
+    "confirmedBody": "The simulation from today on is below.",
+    "editAgain": "Back to editing",
+    "forecastHeading": "Your mortgage from today on",
+    "forecastIntro": "A simulation of every active track from today's balance to the end. A variable rate moves on the reset date in the report to the expected anchor plus your margin.",
+    "forecastModeOfficial": "Bank of Israel forecast",
+    "forecastModeConstant": "No rate or CPI changes",
+    "forecastNextPayment": "Next payment",
+    "forecastMaxPayment": "Highest payment",
+    "forecastMaxPaymentWhen": "in {month}",
+    "forecastTotalPayment": "Total payments to the end",
+    "forecastTotalCost": "Of which interest and linkage",
+    "forecastEnds": "Ends",
+    "forecastTracksHeading": "By track",
+    "forecastTrackLine": "{label}: {count} payments, until {end}",
+    "forecastPaymentMismatch": "The computed payment ({computed}) differs from the report's ({reported}). Check the rate, balance and end date.",
+    "forecastKinds": {
+      "fixedUnlinked": "Fixed, not linked",
+      "fixedLinked": "Fixed, CPI-linked",
+      "variableUnlinked": "Variable, not linked",
+      "variableLinked": "Variable, CPI-linked",
+      "prime": "Prime",
+      "heldConstant": "Current rate held throughout"
+    },
+    "forecastAssumptions": {
+      "rateHeldConstant": "This track's rate can't be forecast, so its current rate is held to the end.",
+      "treatedAsSpitzer": "The repayment method was computed as Spitzer.",
+      "curveExtended": "The term runs past the Bank of Israel forecast (30 years); its last values were extended."
+    },
+    "forecastCurve": "Forecast curve: {curve}",
+    "forecastDisclaimer": "A simulation only: not advice and not a bank commitment. Actual rates and CPI will differ from the forecast."
   }
 }

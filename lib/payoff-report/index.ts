@@ -12,3 +12,4 @@ export * from "./checks";
 export * from "./combine";
 export * from "./confirm";
 export * from "./present";
+export * from "./simulate";

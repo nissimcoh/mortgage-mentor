@@ -3,6 +3,9 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import PayoffReportUpload from "@/components/PayoffReportUpload";
 import { isValidLocale } from "@/lib/i18n/config";
+import { getCalculatorRateSnapshot } from "@/lib/market-data/get-market-snapshot";
+import { getMortgageForecastData } from "@/lib/market-data/sources/boi-mortgage-forecast";
+import type { ExistingMortgageMarket } from "@/lib/payoff-report";
 import { createClient } from "@/lib/supabase/server";
 import { getDictionary } from "../dictionaries";
 
@@ -39,7 +42,21 @@ export default async function MyMortgagePage({
     redirect(`/${locale}/signin?next=${encodeURIComponent(`/${locale}/my-mortgage`)}`);
   }
 
-  const dict = await getDictionary(locale);
+  // The same official sources as the calculator; both degrade to dated
+  // fallbacks and never throw. Only the latest curve reaches the client.
+  const [dict, rateSnapshot, forecastData] = await Promise.all([
+    getDictionary(locale),
+    getCalculatorRateSnapshot(),
+    getMortgageForecastData(),
+  ]);
+  const curve = forecastData.curves[0];
+  const market: ExistingMortgageMarket = {
+    boiRatePercent: rateSnapshot.boiRate.ratePercent,
+    nominalZeroYieldsPercent: curve.nominalZeroYieldsPercent,
+    realZeroYieldsPercent: curve.realZeroYieldsPercent,
+    expectedCpiIndex: curve.expectedCpiIndex,
+    curveId: curve.id,
+  };
 
   return (
     <main className="bg-transparent text-slate-900">
@@ -54,7 +71,7 @@ export default async function MyMortgagePage({
           {dict.payoffPage.title}
         </h1>
         <p className="mb-8 text-lg leading-8 text-slate-500">{dict.payoffPage.intro}</p>
-        <PayoffReportUpload locale={locale} labels={dict.payoffPage} />
+        <PayoffReportUpload locale={locale} labels={dict.payoffPage} market={market} />
       </section>
     </main>
   );
