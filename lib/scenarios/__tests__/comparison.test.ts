@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createTrackDraft } from "../../mortgage/scenario-form";
-import { comparisonWarnings, resolveComparisonSelection, toComparisonScenario, type ComparisonRow } from "../comparison";
+import { comparisonWarnings, initialComparisonIds, resolveComparisonSelection, toComparisonScenario, type ComparisonRow } from "../comparison";
 
 function row(): ComparisonRow {
   return {
@@ -59,5 +59,18 @@ describe("saved scenario comparison", () => {
     const second = { ...first, id: "22222222-2222-4222-8222-222222222222" };
     expect(resolveComparisonSelection([first, second], [second.id, first.id, first.id, "other-user-id"]).map(item => item.id)).toEqual([second.id, first.id]);
     expect(resolveComparisonSelection([first], ["other-user-id"])).toEqual([]);
+  });
+});
+
+describe("initialComparisonIds", () => {
+  const ids = ["newest", "middle", "oldest"];
+  it("puts a requested mix first, next to the newest other one", () => {
+    expect(initialComparisonIds(ids, "oldest")).toEqual(["oldest", "newest"]);
+    expect(initialComparisonIds(ids, "newest")).toEqual(["newest", "middle"]);
+  });
+  it("ignores an id that is not the user's and falls back to the two newest", () => {
+    expect(initialComparisonIds(ids, "someone-elses")).toEqual(["newest", "middle"]);
+    expect(initialComparisonIds(ids, null)).toEqual(["newest", "middle"]);
+    expect(initialComparisonIds(["only"], "only")).toEqual(["only"]);
   });
 });

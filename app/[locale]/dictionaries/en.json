@@ -65,7 +65,7 @@
     "chartsMissingLead": "Not shown in the charts:",
     "notesTitle": "Comparison notes",
     "chartsLoading": "Loading the payment charts…",
-    "chartsHelp": "Each mix uses the same color in both charts and the table. Touch a chart or move the month slider to compare the same point in time.",
+    "chartsHelp": "Each mix keeps the same colour in both charts and the table. Hover over or tap a chart to compare at the same point in time.",
     "monthlyChartTitle": "Forecast monthly payment",
     "monthlyChartHelp": "Uses the saved forecast, which can differ from the table's first payment at saved current rates. Payments reach zero after the mix is fully repaid.",
     "cumulativeChartTitle": "Cumulative payments",
@@ -707,7 +707,8 @@
     "calculatedAtLabel": "Calculated",
     "editInCalculatorButton": "Edit in calculator",
     "snapshotNote": "This page shows a snapshot of the scenario as it was saved. Opening it in the calculator may recalculate using the app's current rates and market data.",
-    "notFoundTitle": "Scenario not found"
+    "notFoundTitle": "Scenario not found",
+    "compareButton": "Compare with another mix"
   },
   "editScenarioDialog": {
     "title": "Save changes",

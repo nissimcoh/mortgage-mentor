@@ -71,15 +71,6 @@ export default function ComparisonPaymentCharts({ scenarios, locale, labels }: {
           <span className="min-w-0 break-words">{index + 1}. {item.scenario.name}</span>
         </span>)}
       </div>
-      {available.length > 0 && <div className="glass-panel mt-4 px-4 py-3">
-        <label htmlFor={`${id}-month`} className="block text-sm font-medium">{labels.chartChooseMonth}: <bdi>{selectedText}</bdi></label>
-        <div dir="ltr" className="mt-2">
-          <input id={`${id}-month`} type="range" min="1" max={maxMonth} step="1" value={month}
-            onChange={event => setChosenMonth(Number(event.target.value))} aria-valuetext={`${selectedText}; ${valueText}`}
-            className="h-11 w-full cursor-pointer accent-accent" />
-          <div className="flex justify-between text-xs text-slate-500"><span>{labels.chartMonth} 1</span><span>{labels.chartMonth} {maxMonth}</span></div>
-        </div>
-      </div>}
       <div className="mt-4 grid gap-4 xl:grid-cols-2">
         {(["monthly", "cumulative"] as const).map(kind => {
           const title = kind === "monthly" ? labels.monthlyChartTitle : labels.cumulativeChartTitle;
@@ -87,14 +78,26 @@ export default function ComparisonPaymentCharts({ scenarios, locale, labels }: {
           return <section key={kind} aria-labelledby={`${id}-${kind}`} className="glass-panel min-w-0 p-4 sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 id={`${id}-${kind}`} className="text-base font-semibold">{title}</h3>
-              {available.length > 0 && <span className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600">{labels.chartMonth} {month}</span>}
+              {available.length > 0 && <span className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600"><bdi>{selectedText}</bdi></span>}
             </div>
             <p className="mt-1 text-xs leading-6 text-slate-500">{kind === "monthly" ? labels.monthlyChartHelp : labels.cumulativeChartHelp}</p>
             {available.length > 0 && <div dir="ltr" className="mt-3">
               {/* Keeps the viewBox aspect ratio: a stretched ("none") SVG
                   distorts the axis labels on wide screens. */}
-              <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} aria-hidden="true"
-                className="h-auto w-full touch-pan-y" onPointerDown={choosePoint} onPointerMove={event => {
+              {/* The chart itself picks the month: pointer or touch on the plot,
+                  arrow keys (12 months with Page Up/Down) once focused. */}
+              <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="slider" tabIndex={0}
+                aria-label={`${title}: ${labels.chartChooseMonth}`} aria-valuemin={1} aria-valuemax={maxMonth}
+                aria-valuenow={month} aria-valuetext={`${selectedText}; ${valueText}`}
+                className="h-auto w-full touch-pan-y cursor-crosshair rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                onKeyDown={event => {
+                  const step = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1, PageUp: 12, PageDown: -12 }[event.key];
+                  const next = event.key === "Home" ? 1 : event.key === "End" ? maxMonth : step === undefined ? null : month + step;
+                  if (next === null) return;
+                  event.preventDefault();
+                  setChosenMonth(Math.min(maxMonth, Math.max(1, next)));
+                }}
+                onPointerDown={choosePoint} onPointerMove={event => {
                   if (event.pointerType === "mouse" || event.buttons === 1) choosePoint(event);
                 }}>
                 {[0, .5, 1].map(fraction => <g key={fraction}>
