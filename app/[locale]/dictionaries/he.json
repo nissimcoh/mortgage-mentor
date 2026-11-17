@@ -1019,5 +1019,111 @@
     "navTimeline": "ההחזר לאורך זמן",
     "navTracks": "לפי מסלול",
     "navSchedule": "לוח סילוקין"
+  },
+  "payoffPage": {
+    "title": "המשכנתא הקיימת שלי",
+    "intro": "מעלים את דוח היתרות לסילוק מהבנק, בודקים שהנתונים נקראו נכון ומשלימים את מה שחסר.",
+    "dropTitle": "גררו לכאן את דוחות היתרות לסילוק (PDF)",
+    "dropHint": "אפשר כמה קבצים יחד, למשל דוח לכל הלוואה. עד 4MB לקובץ.",
+    "chooseFiles": "בחירת קבצים",
+    "privacyNote": "הקבצים נשלחים לקריאה אוטומטית אצל ספק בינה מלאכותית (Anthropic) ואינם נשמרים. כדאי לבדוק כל מספר מול הדוח.",
+    "filesHeading": "קבצים",
+    "statusReading": "קורא את הדוח…",
+    "statusDone": "נקרא",
+    "statusError": "לא נקרא",
+    "removeFile": "הסרת {file}",
+    "retry": "ניסיון חוזר",
+    "tooManyFiles": "אפשר להעלות עד {max} קבצים.",
+    "issuesNotice": "חלק מהערכים בקובץ לא היו תקינים והושארו ריקים.",
+    "errors": {
+      "unauthenticated": "צריך להתחבר מחדש.",
+      "unavailable": "קריאת דוחות אינה זמינה כרגע.",
+      "too-large": "הקובץ גדול מ־4MB.",
+      "not-pdf": "הקובץ אינו PDF.",
+      "empty": "הקובץ ריק.",
+      "busy": "השירות עמוס כרגע. נסו שוב בעוד דקה.",
+      "truncated": "הדוח ארוך מדי לקריאה אוטומטית.",
+      "refused": "לא ניתן לקרוא את הקובץ הזה.",
+      "unreadable": "לא נמצאו בקובץ נתוני הלוואה.",
+      "generic": "משהו השתבש. נסו שוב."
+    },
+    "summaryHeading": "סיכום",
+    "summaryActiveTracks": "מסלולים פעילים",
+    "summaryMonthly": "החזר חודשי",
+    "summaryToSettle": "יתרה לסילוק",
+    "summaryFees": "מתוכה עמלות פירעון מוקדם",
+    "summaryAsOf": "נכון ל־{date}",
+    "multipleDatesNotice": "הדוחות הופקו בתאריכים שונים ({dates}). לתמונה מדויקת כדאי להפיק את כולם באותו יום.",
+    "skippedDuplicate": "בקובץ {file} הלוואה {loan} כבר הופיעה, ולא נספרה פעמיים.",
+    "skippedOlder": "לקובץ {file} יש דוח חדש יותר להלוואה {loan}, ונעשה שימוש בחדש.",
+    "loanHeading": "הלוואה {number}",
+    "loanWithoutNumber": "הלוואה ללא מספר",
+    "loanFrom": "מתוך {file}",
+    "trackDefault": "מסלול {n}",
+    "closedTracks": "מסלולים סגורים ({count}): נפרעו או מוחזרו",
+    "closedTrackLine": "{label}: הסתיים ב־{date}",
+    "fields": {
+      "linkage": "הצמדה",
+      "rateType": "סוג ריבית",
+      "repaymentMethod": "שיטת החזר",
+      "annualRatePercent": "ריבית שנתית (%)",
+      "monthlyPayment": "החזר חודשי (₪)",
+      "endDate": "תאריך סיום",
+      "principal": "יתרת קרן (₪)",
+      "indexation": "הפרשי הצמדה (₪)",
+      "accruedInterest": "ריבית שנצברה (₪)",
+      "feesTotal": "עמלות פירעון (₪)",
+      "totalToSettle": "יתרה לסילוק (₪)",
+      "marginPercent": "מרווח מעל העוגן (%)",
+      "resetFrequencyMonths": "שינוי ריבית כל (חודשים)",
+      "nextResetDate": "שינוי הריבית הבא",
+      "anchorSeries": "העוגן"
+    },
+    "options": {
+      "choose": "לבחירה…",
+      "linkage": {
+        "unlinked": "לא צמוד",
+        "cpi": "צמוד מדד",
+        "foreignCurrency": "מט״ח"
+      },
+      "rateType": {
+        "fixed": "קבועה",
+        "variable": "משתנה",
+        "prime": "פריים"
+      },
+      "repaymentMethod": {
+        "spitzer": "שפיצר",
+        "equalPrincipal": "קרן שווה",
+        "balloon": "בלון"
+      },
+      "anchorSeries": {
+        "governmentBondUnlinked": "אג״ח ממשלתיות לא צמודות, 5 שנים",
+        "governmentBondLinked": "אג״ח ממשלתיות צמודות, 5 שנים",
+        "makam": "מק״מ לשנה",
+        "other": "אחר"
+      }
+    },
+    "anchorPrinted": "בדוח כתוב: {text}",
+    "anchorSuggested": "הוצע לפי ההצמדה ותדירות השינוי. אפשר לשנות.",
+    "missingField": "חסר, יש להשלים",
+    "checksHeading": "כדאי לבדוק",
+    "checks": {
+      "trackBalanceSum": "סכום רכיבי היתרה ({expected}) שונה מהיתרה לסילוק שנקראה ({actual}).",
+      "trackFeeSum": "סכום העמלות ({expected}) שונה מסה״כ העמלות שנקרא ({actual}).",
+      "loanMonthlyPaymentSum": "סכום ההחזרים של המסלולים ({expected}) שונה מההחזר הכולל של ההלוואה ({actual}).",
+      "loanFeesSum": "סכום העמלות של המסלולים ({expected}) שונה מסה״כ העמלות של ההלוואה ({actual}).",
+      "loanTotalToSettleSum": "סכום היתרות של המסלולים ({expected}) שונה מהיתרה לסילוק של ההלוואה ({actual}).",
+      "spitzerPayment": "לפי היתרה, הריבית ותאריך הסיום, ההחזר אמור להיות בערך {expected}, אבל נקרא {actual}. כדאי לבדוק את שלושתם מול הדוח.",
+      "noticeFeeRate": "עמלת אי־הודעה נקראה {actual}, ולפי 0.1% מהסכום היא הייתה {expected}. זה תקין אם נמסרה הודעה מוקדמת.",
+      "closedTrackHasBalance": "המסלול סומן כסגור, אבל נקראה לו יתרה ({actual}).",
+      "activeTrackPastEndDate": "המסלול פעיל, אבל תאריך הסיום שלו כבר עבר.",
+      "variableRateDetailsMissing": "לא נקראו פרטי שינוי הריבית."
+    },
+    "confirmButton": "אישור הנתונים",
+    "confirmBlocked": "נשארו {count} שדות להשלמה.",
+    "confirmWaiting": "ממתינים לסיום הקריאה.",
+    "confirmedTitle": "הנתונים אושרו",
+    "confirmedBody": "בשלב הבא נציג כאן סימולציה של המשכנתא הקיימת מהיום והלאה.",
+    "editAgain": "חזרה לעריכה"
   }
 }

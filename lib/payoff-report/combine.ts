@@ -9,6 +9,9 @@ import type { IsoDate, PayoffLoan, PayoffReportFile } from "./types";
  */
 
 export interface CombinedLoan {
+  /** Position of the source file and of the loan in it, for editing. */
+  fileIndex: number;
+  loanIndex: number;
   fileName: string;
   loan: PayoffLoan;
   checks: PayoffCheck[];
@@ -49,18 +52,20 @@ function round2(value: number): number {
 }
 
 export function combinePayoffFiles(files: readonly PayoffReportFile[]): CombinedPayoff {
-  const kept: { fileName: string; loan: PayoffLoan }[] = [];
+  type Kept = { fileIndex: number; loanIndex: number; fileName: string; loan: PayoffLoan };
+  const kept: Kept[] = [];
   const keptByNumber = new Map<string, number>();
   const skipped: SkippedLoan[] = [];
 
-  for (const file of files) {
-    for (const loan of file.loans) {
+  files.forEach((file, fileIndex) => {
+    file.loans.forEach((loan, loanIndex) => {
+      const entry: Kept = { fileIndex, loanIndex, fileName: file.fileName, loan };
       const key = normalizeLoanNumber(loan.loanNumber);
       const existingIndex = key === null ? undefined : keptByNumber.get(key);
       if (key === null || existingIndex === undefined) {
         if (key !== null) keptByNumber.set(key, kept.length);
-        kept.push({ fileName: file.fileName, loan });
-        continue;
+        kept.push(entry);
+        return;
       }
       const existing = kept[existingIndex];
       const existingDate = existing.loan.asOfDate ?? "";
@@ -72,7 +77,7 @@ export function combinePayoffFiles(files: readonly PayoffReportFile[]): Combined
           reason: "olderReport",
           keptFileName: file.fileName,
         });
-        kept[existingIndex] = { fileName: file.fileName, loan };
+        kept[existingIndex] = entry;
       } else {
         skipped.push({
           fileName: file.fileName,
@@ -81,8 +86,8 @@ export function combinePayoffFiles(files: readonly PayoffReportFile[]): Combined
           keptFileName: existing.fileName,
         });
       }
-    }
-  }
+    });
+  });
 
   const totals: CombinedPayoffTotals = {
     activeTrackCount: 0,
@@ -108,7 +113,7 @@ export function combinePayoffFiles(files: readonly PayoffReportFile[]): Combined
   ].sort();
 
   return {
-    loans: kept.map(({ fileName, loan }) => ({ fileName, loan, checks: checkPayoffLoan(loan) })),
+    loans: kept.map((entry) => ({ ...entry, checks: checkPayoffLoan(entry.loan) })),
     skipped,
     asOfDates,
     totals: {

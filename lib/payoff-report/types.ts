@@ -26,6 +26,16 @@ export type PayoffRepaymentMethod =
 /** A closed track was already repaid or refinanced and owes nothing. */
 export type PayoffTrackStatus = "active" | "closed";
 
+/**
+ * Which published series a variable track's anchor follows. Reports usually
+ * print only "עוגן", so the user chooses this on the confirm screen.
+ */
+export type PayoffAnchorSeries =
+  | "governmentBondUnlinked" // אג"ח ממשלתיות לא צמודות (5 שנים)
+  | "governmentBondLinked" // אג"ח ממשלתיות צמודות (5 שנים)
+  | "makam" // מק"מ לשנה
+  | "other";
+
 export interface PayoffVariableRate {
   /** Margin over the anchor, percent (e.g. 0.65 for "עוגן+0.65%"). */
   marginPercent: number | null;
@@ -35,6 +45,8 @@ export interface PayoffVariableRate {
   nextResetDate: IsoDate | null;
   /** Rate when the track was issued, percent, if the report shows it. */
   originalRatePercent: number | null;
+  /** Chosen or confirmed by the user; never read from the report. */
+  anchorSeries?: PayoffAnchorSeries | null;
 }
 
 /** Early-repayment fees for one track, in shekels. */

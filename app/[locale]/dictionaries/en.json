@@ -1019,5 +1019,111 @@
     "navTimeline": "Payments over time",
     "navTracks": "By track",
     "navSchedule": "Schedule"
+  },
+  "payoffPage": {
+    "title": "My current mortgage",
+    "intro": "Upload your bank's early-repayment balance report, check that the figures were read correctly and fill in anything missing.",
+    "dropTitle": "Drop your balance reports (PDF) here",
+    "dropHint": "Several files at once are fine, for example one report per loan. Up to 4 MB each.",
+    "chooseFiles": "Choose files",
+    "privacyNote": "Files are sent for automatic reading to an AI provider (Anthropic) and are not stored. Check every figure against the report.",
+    "filesHeading": "Files",
+    "statusReading": "Reading the report…",
+    "statusDone": "Read",
+    "statusError": "Not read",
+    "removeFile": "Remove {file}",
+    "retry": "Try again",
+    "tooManyFiles": "You can upload up to {max} files.",
+    "issuesNotice": "Some values in this file were not valid and were left blank.",
+    "errors": {
+      "unauthenticated": "Please sign in again.",
+      "unavailable": "Report reading is not available right now.",
+      "too-large": "The file is larger than 4 MB.",
+      "not-pdf": "The file is not a PDF.",
+      "empty": "The file is empty.",
+      "busy": "The service is busy. Try again in a minute.",
+      "truncated": "The report is too long to read automatically.",
+      "refused": "This file can't be read.",
+      "unreadable": "No loan figures were found in this file.",
+      "generic": "Something went wrong. Please try again."
+    },
+    "summaryHeading": "Summary",
+    "summaryActiveTracks": "Active tracks",
+    "summaryMonthly": "Monthly payment",
+    "summaryToSettle": "Balance to settle",
+    "summaryFees": "Of which early-repayment fees",
+    "summaryAsOf": "As of {date}",
+    "multipleDatesNotice": "The reports were issued on different dates ({dates}). For an accurate picture, issue them all on the same day.",
+    "skippedDuplicate": "In {file}, loan {loan} had already been uploaded and was not counted twice.",
+    "skippedOlder": "{file} has a newer report for loan {loan}; the newer one is used.",
+    "loanHeading": "Loan {number}",
+    "loanWithoutNumber": "Loan without a number",
+    "loanFrom": "From {file}",
+    "trackDefault": "Track {n}",
+    "closedTracks": "Closed tracks ({count}): repaid or refinanced",
+    "closedTrackLine": "{label}: ended {date}",
+    "fields": {
+      "linkage": "Linkage",
+      "rateType": "Rate type",
+      "repaymentMethod": "Repayment method",
+      "annualRatePercent": "Annual rate (%)",
+      "monthlyPayment": "Monthly payment (₪)",
+      "endDate": "End date",
+      "principal": "Principal balance (₪)",
+      "indexation": "CPI linkage (₪)",
+      "accruedInterest": "Accrued interest (₪)",
+      "feesTotal": "Early-repayment fees (₪)",
+      "totalToSettle": "Balance to settle (₪)",
+      "marginPercent": "Margin over anchor (%)",
+      "resetFrequencyMonths": "Rate resets every (months)",
+      "nextResetDate": "Next rate reset",
+      "anchorSeries": "Anchor"
+    },
+    "options": {
+      "choose": "Choose…",
+      "linkage": {
+        "unlinked": "Not linked",
+        "cpi": "CPI-linked",
+        "foreignCurrency": "Foreign currency"
+      },
+      "rateType": {
+        "fixed": "Fixed",
+        "variable": "Variable",
+        "prime": "Prime"
+      },
+      "repaymentMethod": {
+        "spitzer": "Spitzer",
+        "equalPrincipal": "Equal principal",
+        "balloon": "Balloon"
+      },
+      "anchorSeries": {
+        "governmentBondUnlinked": "Unlinked government bonds, 5 years",
+        "governmentBondLinked": "CPI-linked government bonds, 5 years",
+        "makam": "One-year Makam",
+        "other": "Other"
+      }
+    },
+    "anchorPrinted": "The report says: {text}",
+    "anchorSuggested": "Suggested from the linkage and reset period. You can change it.",
+    "missingField": "Missing, please fill in",
+    "checksHeading": "Worth checking",
+    "checks": {
+      "trackBalanceSum": "The balance components add up to {expected}, but the balance to settle reads {actual}.",
+      "trackFeeSum": "The fees add up to {expected}, but the fee total reads {actual}.",
+      "loanMonthlyPaymentSum": "The tracks' payments add up to {expected}, but the loan's payment reads {actual}.",
+      "loanFeesSum": "The tracks' fees add up to {expected}, but the loan's fee total reads {actual}.",
+      "loanTotalToSettleSum": "The tracks' balances add up to {expected}, but the loan's balance to settle reads {actual}.",
+      "spitzerPayment": "From the balance, rate and end date the payment should be about {expected}, but it reads {actual}. Check all three against the report.",
+      "noticeFeeRate": "The no-notice fee reads {actual}; at 0.1% of the amount it would be {expected}. That's fine if advance notice was given.",
+      "closedTrackHasBalance": "This track is marked closed but shows a balance ({actual}).",
+      "activeTrackPastEndDate": "This track is active but its end date has passed.",
+      "variableRateDetailsMissing": "The rate reset details were not read."
+    },
+    "confirmButton": "Confirm figures",
+    "confirmBlocked": "{count} fields still need filling in.",
+    "confirmWaiting": "Waiting for the reading to finish.",
+    "confirmedTitle": "Figures confirmed",
+    "confirmedBody": "Next, this page will show a simulation of your current mortgage from today on.",
+    "editAgain": "Back to editing"
   }
 }
