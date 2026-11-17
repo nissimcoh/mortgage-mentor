@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { isValidLocale } from "@/lib/i18n/config";
 import { createClient } from "@/lib/supabase/server";
 import { COMPARISON_COLUMNS, loadComparisonScenarios } from "@/lib/scenarios/load-comparison";
+import { initialComparisonIds } from "@/lib/scenarios/comparison";
 import SavedScenarioComparison from "@/components/SavedScenarioComparison";
 import { getDictionary } from "../dictionaries";
 
@@ -14,8 +15,9 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   return { title: `${dict.savedComparison.title} | MortgageMentor`, robots: { index: false, follow: false } };
 }
 
-export default async function ComparePage({ params }: { params: Promise<{ locale: string }> }) {
+export default async function ComparePage({ params, searchParams }: { params: Promise<{ locale: string }>; searchParams?: Promise<{ mix?: string | string[] }> }) {
   const { locale } = await params;
+  const { mix } = (await searchParams) ?? {};
   if (!isValidLocale(locale)) notFound();
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -30,7 +32,9 @@ export default async function ComparePage({ params }: { params: Promise<{ locale
     .select(COMPARISON_COLUMNS)
     .eq("user_id", user.id)
     .order("updated_at", { ascending: false });
-  const scenarios = error ? [] : await loadComparisonScenarios(rows ?? []);
+  // ?mix=<id> (from a mix's page) puts that mix first, next to the newest other one.
+  const initialIds = initialComparisonIds((rows ?? []).map(row => row.id), typeof mix === "string" ? mix : null);
+  const scenarios = error ? [] : await loadComparisonScenarios(rows ?? [], initialIds);
   const hasInvalid = !error && scenarios.length < (rows?.length ?? 0);
 
   return (
@@ -47,7 +51,7 @@ export default async function ComparePage({ params }: { params: Promise<{ locale
                 <p className="mt-2 text-base text-slate-500">{labels.emptyBody}</p>
                 <Link href={`/${locale}/calculator`} className="mt-5 inline-block rounded-full bg-accent px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-accent-strong">{labels.calculator}</Link>
               </div>
-            ) : <SavedScenarioComparison scenarios={scenarios} locale={locale} labels={labels} />}
+            ) : <SavedScenarioComparison scenarios={scenarios} locale={locale} labels={labels} initialIds={initialIds} />}
             {hasInvalid && <p role="status" className="mt-6 text-sm leading-6 text-slate-500">{labels.invalid}</p>}
           </>
         )}

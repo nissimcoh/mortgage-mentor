@@ -414,12 +414,20 @@ export default async function ScenarioDetailPage({
           </div>
         </div>
 
-        <Link
-          href={editHref}
-          className="glass-button mt-5 inline-flex min-h-11 items-center px-6 text-[15px] font-medium text-white"
-        >
-          {dict.scenarioDetailPage.editInCalculatorButton}
-        </Link>
+        <div className="mt-5 flex flex-wrap gap-2">
+          <Link
+            href={editHref}
+            className="glass-button inline-flex min-h-11 items-center px-6 text-[15px] font-medium text-white"
+          >
+            {dict.scenarioDetailPage.editInCalculatorButton}
+          </Link>
+          <Link
+            href={`/${locale}/compare?mix=${row.id}`}
+            className="glass-secondary inline-flex min-h-11 items-center px-6 text-[15px] font-medium"
+          >
+            {dict.scenarioDetailPage.compareButton}
+          </Link>
+        </div>
 
         <dl className="glass-panel mt-6 grid grid-cols-2 gap-x-6 gap-y-5 p-5 sm:grid-cols-4 sm:p-7">
           <div>

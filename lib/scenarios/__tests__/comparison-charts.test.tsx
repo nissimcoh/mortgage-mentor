@@ -15,14 +15,17 @@ const base: ComparisonScenario = {
 };
 const second = { ...base, id: "22222222-2222-4222-8222-222222222222", name: "Synthetic B", years: 20, payments: Array(240).fill(1000) };
 
-it.each(["he", "en"] as const)("renders both charts with one accessible shared month selector in %s", locale => {
+it.each(["he", "en"] as const)("renders both charts, each an accessible month selector, in %s", locale => {
   const labels = locale === "he" ? he.savedComparison : en.savedComparison;
   const html = renderToStaticMarkup(<SavedScenarioComparison scenarios={[base, second]} locale={locale} labels={labels} />);
   expect(html).toContain(labels.monthlyChartTitle);
   expect(html).toContain(labels.cumulativeChartTitle);
   expect((html.match(/<polyline /g) ?? []).length).toBe(4);
-  expect((html.match(/type="range"/g) ?? []).length).toBe(1);
-  expect(html).toContain('min="1" max="240" step="1"');
+  // No separate slider: each chart is the keyboard- and pointer-driven selector.
+  expect(html).not.toContain('type="range"');
+  expect((html.match(/role="slider"/g) ?? []).length).toBe(2);
+  expect((html.match(/tabindex="0"/g) ?? []).length).toBeGreaterThanOrEqual(2);
+  expect(html).toContain('aria-valuemin="1" aria-valuemax="240" aria-valuenow="1"');
   expect(html).toContain("aria-valuetext=");
   expect(html).toContain('stroke="#00897b"');
   expect(html).toContain('stroke="#6250d6" stroke-dasharray="8 4"');
@@ -49,16 +52,24 @@ it("names a mix without history once, after the results, with no invented line o
   expect(html).toContain(`/he/saved/${second.id}`);
   expect(html).not.toContain("amber");
   // A missing longer mix still defines the common time axis.
-  expect(html).toContain('max="240"');
+  expect(html).toContain('aria-valuemax="240"');
 });
 
 it("retains the summary table when neither historical chart can be reconstructed", () => {
   const html = renderToStaticMarkup(<SavedScenarioComparison scenarios={[{ ...base, payments: null }, { ...second, payments: null }]} locale="en" labels={en.savedComparison} />);
   expect(html).not.toContain("<polyline");
-  expect(html).not.toContain('type="range"');
+  expect(html).not.toContain('role="slider"');
   // No empty chart panels: the charts section is omitted entirely.
   expect(html).not.toContain(en.savedComparison.monthlyChartTitle);
   expect(html).toContain(en.savedComparison.chartUnavailable.replaceAll("'", "&#x27;"));
   expect(html).toContain(en.savedComparison.total);
   expect(html).toContain("240,000");
+});
+
+it("opens on the mixes it is asked for", () => {
+  const third = { ...base, id: "33333333-3333-4333-8333-333333333333", name: "Synthetic C" };
+  const html = renderToStaticMarkup(<SavedScenarioComparison scenarios={[base, second, third]} locale="en" labels={en.savedComparison} initialIds={[third.id, base.id]} />);
+  expect(html).toContain("1. Synthetic C");
+  expect(html).toContain("2. Synthetic A");
+  expect(html).not.toContain("Synthetic B</span>");
 });

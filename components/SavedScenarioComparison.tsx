@@ -46,13 +46,18 @@ function buildInsights(selected: ComparisonScenario[], labels: Labels, money: In
   return { highlights, insights, cheapest };
 }
 
-export default function SavedScenarioComparison({ scenarios, locale, labels }: {
+export default function SavedScenarioComparison({ scenarios, locale, labels, initialIds }: {
   scenarios: ComparisonScenario[];
   locale: Locale;
   labels: Labels;
+  /** Mixes selected on arrival; defaults to the first two. */
+  initialIds?: readonly string[];
 }) {
   const id = useId();
-  const [selectedIds, setSelectedIds] = useState(() => scenarios.slice(0, 2).map(item => item.id));
+  const [selectedIds, setSelectedIds] = useState(() => {
+    const valid = (initialIds ?? []).filter(id => scenarios.some(item => item.id === id));
+    return valid.length === 2 ? [...valid] : scenarios.slice(0, 2).map(item => item.id);
+  });
   // The server sends payment series only for the initial selection; others
   // are fetched once, the first time they are selected.
   const [fetched, setFetched] = useState<Record<string, number[] | null>>({});

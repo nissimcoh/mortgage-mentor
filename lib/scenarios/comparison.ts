@@ -74,6 +74,13 @@ export function toComparisonScenario(row: ComparisonRow): ComparisonScenario | n
 }
 
 /** Selection IDs are resolved only against the already ownership-scoped list. */
+/** The two mixes a comparison opens with: the requested one (if it is the
+ * user's) and the newest other, else simply the two newest. */
+export function initialComparisonIds(ids: readonly string[], requested: string | null): string[] {
+  if (requested === null || !ids.includes(requested)) return ids.slice(0, 2);
+  return [requested, ...ids.filter(id => id !== requested)].slice(0, 2);
+}
+
 export function resolveComparisonSelection(scenarios: ComparisonScenario[], ids: readonly string[]): ComparisonScenario[] {
   return [...new Set(ids)].slice(0, 3).flatMap(id => {
     const scenario = scenarios.find(item => item.id === id);

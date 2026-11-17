@@ -278,7 +278,16 @@ NEXT_PUBLIC_SUPABASE_URL=https://<your-project-ref>.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<your-publishable-key>
 ```
 
-Both values are browser-safe by design. **Never** add a service-role or secret key: the app does not use one, and Row Level Security is the enforcement boundary.
+Both values are browser-safe by design. **Never** add a Supabase service-role or secret key: the app does not use one, and Row Level Security is the enforcement boundary.
+
+Optional, for reading uploaded payoff reports (דוח יתרות לסילוק) with a Claude model:
+
+```bash
+ANTHROPIC_API_KEY=<your-anthropic-api-key>
+# PAYOFF_REPORT_MODEL=claude-sonnet-5-5   # optional override
+```
+
+This key is server-only: it has no `NEXT_PUBLIC_` prefix and is read only by `app/api/payoff-report/route.ts`. Without it the upload endpoint answers 503 and the rest of the site is unaffected. Set a monthly spend limit on the key in the Claude Console.
 
 Apply the database migrations:
 
