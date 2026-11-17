@@ -89,6 +89,7 @@ export default async function MyMortgagePage({
           calculatorLabels={dict.calculator}
           market={market}
           initialSaved={saved}
+          readingAvailable={Boolean(process.env.ANTHROPIC_API_KEY)}
           mixes={mixes}
           comparisonLabels={dict.savedComparison}
         />

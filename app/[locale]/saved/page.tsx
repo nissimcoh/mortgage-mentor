@@ -50,6 +50,9 @@ export default async function SavedPage({
 
   const [dict, myMortgage] = await Promise.all([getDictionary(locale), loadMyMortgage(user.id)]);
   const myTotals = myMortgage ? combinePayoffFiles([{ fileName: "", loans: myMortgage.loans }]).totals : null;
+  // Reading reports needs the server-side API key; without it, offer the
+  // card only to someone who already has a saved mortgage.
+  const showMyMortgage = myTotals !== null || Boolean(process.env.ANTHROPIC_API_KEY);
 
   // RLS's "select own scenarios" policy is the real ownership boundary;
   // this .eq("user_id", ...) is the normal, expected app-level filter on
@@ -97,7 +100,7 @@ export default async function SavedPage({
         </p>
 
         {/* The user's current mortgage, the baseline every saved mix is weighed against. */}
-        <Link
+        {showMyMortgage && <Link
           href={`/${locale}/my-mortgage`}
           className="glass-hero lift mb-8 flex flex-wrap items-center gap-x-6 gap-y-3 px-6 py-5"
         >
@@ -121,7 +124,7 @@ export default async function SavedPage({
           ) : (
             <span className="glass-button inline-flex min-h-11 items-center px-5 text-sm font-medium">{dict.savedPage.myMortgageAdd}</span>
           )}
-        </Link>
+        </Link>}
 
         {!error && total > 0 && (
           <div className="mb-6 flex flex-wrap gap-2">

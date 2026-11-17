@@ -30,6 +30,7 @@ export default function MyMortgage({
   initialSaved,
   mixes,
   comparisonLabels,
+  readingAvailable,
 }: {
   locale: Locale;
   labels: Labels;
@@ -39,6 +40,8 @@ export default function MyMortgage({
   /** The user's saved mixes, without payment series (loaded on selection). */
   mixes: ComparisonScenario[];
   comparisonLabels: Dictionary["savedComparison"];
+  /** Whether the server can read reports (its API key is configured). */
+  readingAvailable: boolean;
 }) {
   const [saved, setSaved] = useState(initialSaved);
   const [replacing, setReplacing] = useState(initialSaved === null);
@@ -78,13 +81,15 @@ export default function MyMortgage({
               {fillTemplate(labels.savedUpdated, { date: formatDateOnly(saved.updatedAt, locale) })}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setReplacing(true)}
-            className="glass-secondary inline-flex min-h-11 items-center px-5 text-sm font-medium"
-          >
-            {labels.replaceFromReports}
-          </button>
+          {readingAvailable && (
+            <button
+              type="button"
+              onClick={() => setReplacing(true)}
+              className="glass-secondary inline-flex min-h-11 items-center px-5 text-sm font-medium"
+            >
+              {labels.replaceFromReports}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => void remove()}
@@ -105,6 +110,15 @@ export default function MyMortgage({
           locale={locale}
           comparison={{ mixes, labels: comparisonLabels }}
         />
+      </div>
+    );
+  }
+
+  if (!readingAvailable) {
+    return (
+      <div className="glass-panel px-6 py-14 text-center">
+        <p className="text-xl font-semibold tracking-tight">{labels.unavailableTitle}</p>
+        <p className="mt-2 text-base text-slate-500">{labels.unavailableBody}</p>
       </div>
     );
   }

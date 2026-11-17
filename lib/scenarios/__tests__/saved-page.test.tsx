@@ -44,7 +44,15 @@ it("redirects a page past the end to the last page", async () => {
   await expect(render("9")).rejects.toThrow("redirect:/he/saved?page=2");
 });
 
+it("hides the current-mortgage card while reports can't be read and none is saved", async () => {
+  vi.stubEnv("ANTHROPIC_API_KEY", "");
+  const html = await render();
+  expect(html).not.toContain('href="/he/my-mortgage"');
+  vi.unstubAllEnvs();
+});
+
 it("offers to add the current mortgage, or shows it once saved", async () => {
+  vi.stubEnv("ANTHROPIC_API_KEY", "configured");
   let html = await render();
   expect(mocks.loadMyMortgage).toHaveBeenCalledWith("authenticated-owner");
   expect(html).toContain('href="/he/my-mortgage"');
@@ -65,4 +73,9 @@ it("offers to add the current mortgage, or shows it once saved", async () => {
   expect(html).toContain(he.savedPage.myMortgageBalance);
   expect(html).toContain("250,100");
   expect(html).not.toContain(he.savedPage.myMortgageAdd);
+
+  // A saved mortgage stays visible even if reading is switched off later.
+  vi.stubEnv("ANTHROPIC_API_KEY", "");
+  expect(await render()).toContain(he.savedPage.myMortgageBalance);
+  vi.unstubAllEnvs();
 });

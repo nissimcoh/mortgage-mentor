@@ -1186,6 +1186,8 @@
     "compareExtra": "On the forecast, refinancing costs about {amount} more by the end.",
     "compareBreakEven": "The early-repayment fees are recovered after about {years} years.",
     "comparePrincipalMismatch": "The mix borrows {mix}, while the balance to settle is {current}. The comparison is accurate when the two are close; you can build a mix on {current} in the calculator.",
-    "compareNote": "A forecast comparison only, not advice. The saved mix was calculated on the forecast of the day it was saved, the current mortgage on today's. Refinancing also has costs not shown here, such as appraisal, insurance and registration."
+    "compareNote": "A forecast comparison only, not advice. The saved mix was calculated on the forecast of the day it was saved, the current mortgage on today's. Refinancing also has costs not shown here, such as appraisal, insurance and registration.",
+    "unavailableTitle": "Report reading opens soon",
+    "unavailableBody": "Soon you'll be able to upload a balance report here and see your current mortgage from today on."
   }
 }
