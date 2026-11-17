@@ -71,7 +71,7 @@ export default async function MyMortgagePage({
           {dict.payoffPage.title}
         </h1>
         <p className="mb-8 text-lg leading-8 text-slate-500">{dict.payoffPage.intro}</p>
-        <PayoffReportUpload locale={locale} labels={dict.payoffPage} market={market} />
+        <PayoffReportUpload locale={locale} labels={dict.payoffPage} market={market} calculatorLabels={dict.calculator} />
       </section>
     </main>
   );

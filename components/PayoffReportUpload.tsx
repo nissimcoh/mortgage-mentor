@@ -68,10 +68,12 @@ export default function PayoffReportUpload({
   locale,
   labels,
   market,
+  calculatorLabels,
 }: {
   locale: Locale;
   labels: Labels;
   market: ExistingMortgageMarket;
+  calculatorLabels: Dictionary["calculator"];
 }) {
   const [uploads, setUploads] = useState<Upload[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
@@ -312,7 +314,13 @@ export default function PayoffReportUpload({
             )}
           </div>
           {confirmed && (
-            <ExistingMortgageForecast loans={confirmed} market={market} labels={labels} locale={locale} />
+            <ExistingMortgageForecast
+              loans={confirmed}
+              market={market}
+              labels={labels}
+              calculatorLabels={calculatorLabels}
+              locale={locale}
+            />
           )}
         </>
       )}

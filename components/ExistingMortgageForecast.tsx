@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import type { Dictionary } from "@/app/[locale]/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 import {
+  existingCombinedBases,
+  existingTrackBasis,
   fillTemplate,
   formatMoney,
   simulateExistingMortgage,
@@ -12,7 +14,12 @@ import {
   type PayoffLoan,
 } from "@/lib/payoff-report";
 
+import AmortizationSchedule from "./AmortizationSchedule";
+import PaymentTimeline from "./PaymentTimeline";
+import ScheduleSelector from "./ScheduleSelector";
+
 type Labels = Dictionary["payoffPage"];
+const COMBINED = "combined";
 
 /** A computed first payment this far off the report's suggests a misread. */
 const PAYMENT_MISMATCH_RATIO = 0.01;
@@ -24,21 +31,25 @@ function formatMonth(month: string | null): string {
 }
 
 /**
- * The confirmed loans simulated from today on: headline figures for the
- * whole mortgage and a line per track. Charts come next.
+ * The confirmed loans simulated from today on: headline figures, a line
+ * per track, the payment over time and the amortization schedule, reusing
+ * the calculator's own chart and table on the simulated schedule.
  */
 export default function ExistingMortgageForecast({
   loans,
   market,
   labels,
+  calculatorLabels,
   locale,
 }: {
   loans: PayoffLoan[];
   market: ExistingMortgageMarket;
   labels: Labels;
+  calculatorLabels: Dictionary["calculator"];
   locale: Locale;
 }) {
   const [mode, setMode] = useState<ExistingForecastMode>("official");
+  const [scheduleId, setScheduleId] = useState(COMBINED);
   const simulation = useMemo(() => simulateExistingMortgage(loans, market, mode), [loans, market, mode]);
   const { totals } = simulation;
   const money = (value: number) => formatMoney(value, locale);
@@ -55,6 +66,22 @@ export default function ExistingMortgageForecast({
     [labels.forecastEnds, formatMonth(totals.lastMonth), null],
   ];
   const assumptions = [...new Set(simulation.tracks.flatMap((track) => track.assumptions))];
+  const trackName = (track: (typeof simulation.tracks)[number]) =>
+    [loans[track.loanIndex].loanNumber, track.label].filter(Boolean).join(" · ");
+
+  const selectedTrack = simulation.tracks.find((track) => `${track.loanIndex}-${track.trackIndex}` === scheduleId) ?? null;
+  const schedule = selectedTrack ? selectedTrack.schedule : simulation.combinedSchedule;
+  const rowBases = useMemo(
+    () =>
+      selectedTrack
+        ? selectedTrack.schedule.map((entry) => existingTrackBasis(selectedTrack, entry.month))
+        : existingCombinedBases(simulation),
+    [selectedTrack, simulation],
+  );
+  const scheduleOptions = [
+    { id: COMBINED, label: calculatorLabels.combinedLabel },
+    ...simulation.tracks.map((track) => ({ id: `${track.loanIndex}-${track.trackIndex}`, label: trackName(track) })),
+  ];
 
   return (
     <section aria-labelledby="existing-forecast-heading" className="glass-panel px-5 py-6 sm:px-6">
@@ -104,7 +131,6 @@ export default function ExistingMortgageForecast({
             track.kind !== "fixedLinked" &&
             track.kind !== "variableLinked" &&
             Math.abs(computed - reported) > PAYMENT_MISMATCH_RATIO * reported;
-          const loan = loans[track.loanIndex];
           return (
             <li key={`${track.loanIndex}-${track.trackIndex}`} className="glass-track px-4 py-3">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -112,7 +138,7 @@ export default function ExistingMortgageForecast({
                   <span className="font-medium">{labels.forecastKinds[track.kind]}</span>
                   <span className="ms-2 text-slate-500" dir="auto">
                     {fillTemplate(labels.forecastTrackLine, {
-                      label: [loan.loanNumber, track.label].filter(Boolean).join(" · "),
+                      label: trackName(track),
                       count: track.numberOfPayments,
                       end: formatMonth(track.lastPaymentDate.slice(0, 7)),
                     })}
@@ -139,6 +165,36 @@ export default function ExistingMortgageForecast({
         </ul>
       )}
       <p className="mt-4 text-xs leading-5 text-slate-500">{labels.forecastDisclaimer}</p>
+
+      {simulation.combinedSchedule.length > 0 && (
+        <>
+          <PaymentTimeline
+            // Remount when the figures change so the marker starts at month 1.
+            key={`${mode}-${simulation.totals.totalPayment}`}
+            schedule={simulation.combinedSchedule}
+            tracks={[]}
+            locale={locale}
+            labels={calculatorLabels}
+          />
+          <div className="mt-6">
+            <AmortizationSchedule
+              key={`${mode}-${scheduleId}-${simulation.totals.totalPayment}`}
+              schedule={schedule}
+              rowBases={rowBases}
+              labels={calculatorLabels}
+              locale={locale}
+              title={selectedTrack ? `${calculatorLabels.scheduleTitle} — ${trackName(selectedTrack)}` : calculatorLabels.scheduleTitleCombined}
+              rateColumnHeader={selectedTrack ? calculatorLabels.rateHeader : calculatorLabels.weightedRateHeader}
+              notes={selectedTrack ? [] : [calculatorLabels.weightedRateNote]}
+              selector={
+                simulation.tracks.length > 1 ? (
+                  <ScheduleSelector options={scheduleOptions} selectedId={scheduleId} onSelect={setScheduleId} />
+                ) : undefined
+              }
+            />
+          </div>
+        </>
+      )}
     </section>
   );
 }

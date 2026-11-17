@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { prepareForConfirm } from "../confirm";
 import { parsePayoffReportFile } from "../parse";
-import { simulateExistingMortgage, type ExistingMortgageMarket } from "../simulate";
+import {
+  existingCombinedBases,
+  existingTrackBasis,
+  simulateExistingMortgage,
+  type ExistingMortgageMarket,
+} from "../simulate";
 import type { PayoffLoan } from "../types";
 import { fictionalTwoLoanFile } from "./fixtures";
 
@@ -140,5 +145,41 @@ describe("simulateExistingMortgage", () => {
     missing[0].tracks[0].annualRatePercent = null;
     const result = simulateExistingMortgage(missing, market);
     expect(result.skipped).toEqual([{ loanIndex: 0, trackIndex: 0, reason: "missingFields" }]);
+  });
+});
+
+describe("combined schedule and forecast basis", () => {
+  const simulation = simulateExistingMortgage(loans(), market);
+
+  it("mirrors the monthly totals in engine format", () => {
+    const { combinedSchedule, months } = simulation;
+    expect(combinedSchedule).toHaveLength(months.length);
+    expect(combinedSchedule[0]).toMatchObject({
+      month: 1,
+      payment: months[0].payment,
+      remainingBalance: months[0].balance,
+      openingBalance: simulation.totals.startBalance,
+    });
+    expect(combinedSchedule[1].openingBalance).toBe(months[0].balance);
+    // Weighted between the tracks' rates (3.1% to 6%).
+    expect(combinedSchedule[0].activeAnnualRatePercent).toBeGreaterThan(3.1);
+    expect(combinedSchedule[0].activeAnnualRatePercent).toBeLessThan(6);
+  });
+
+  it("marks which payments depend on a forecast", () => {
+    const [fixed, variable, prime] = [0, 1, 2].map((index) => simulation.tracks[index]);
+    expect(existingTrackBasis(fixed, 1)).toBe("contractual");
+    expect(existingTrackBasis(variable, 30)).toBe("index");
+    expect(existingTrackBasis(variable, 31)).toBe("rateAndIndex");
+    expect(existingTrackBasis(prime, 1)).toBe("rate");
+    const bases = existingCombinedBases(simulation);
+    expect(bases[0]).toBe("rateAndIndex");
+    // After the prime and linked tracks end, only the fixed track remains... until 2036.
+    expect(bases).toHaveLength(simulation.combinedSchedule.length);
+  });
+
+  it("calls nothing a forecast in constant mode", () => {
+    const constant = simulateExistingMortgage(loans(), market, "constant");
+    expect(existingCombinedBases(constant).every((basis) => basis === "contractual")).toBe(true);
   });
 });
