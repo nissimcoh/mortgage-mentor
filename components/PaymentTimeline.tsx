@@ -90,8 +90,28 @@ const PaymentTimeline = memo(function PaymentTimeline({ schedule, tracks, locale
           <line x1={x(index)} x2={x(index)} y1="12" y2="172" stroke="#64748b" strokeWidth="1" vectorEffect="non-scaling-stroke" />
         </svg>
         </div>
-        <div aria-hidden="true" className="pointer-events-none relative -mt-40 h-40 sm:-mt-48 sm:h-48">
-          <span className="absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-accent shadow transition-[left,top] duration-75"
+        <div className="pointer-events-none relative -mt-40 h-40 sm:-mt-48 sm:h-48">
+          {/* Milestone points: click (or Tab + Enter) to jump to that month. */}
+          {milestones.map(milestone => {
+            const at = Math.min(schedule.length, milestone.month) - 1;
+            const reset = milestone.events.some(event => event.kind === "reset");
+            const active = at === index;
+            const text = `${monthText(milestone.month)} — ${milestone.events.map(milestoneText).join("; ")}`;
+            return (
+              <button key={milestone.month} type="button" onClick={() => setSelectedIndex(at)}
+                aria-label={text} aria-pressed={active}
+                className="group pointer-events-auto absolute flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-accent"
+                style={{ left: `${(x(at) / 800) * 100}%`, top: `${(y(schedule[at].payment) / 184) * 100}%` }}>
+                <span aria-hidden="true" className={`block rounded-full border-2 border-white shadow transition-transform group-hover:scale-125 ${
+                  active ? "h-4 w-4" : "h-3 w-3"} ${reset ? "bg-amber-600" : "bg-emerald-700"}`} />
+                <span aria-hidden="true" dir="auto"
+                  className={`pointer-events-none absolute bottom-full z-10 mb-1 hidden w-max ${x(at) < 400 ? "left-0" : "right-0"} max-w-56 rounded-lg bg-slate-900 px-2 py-1 text-start text-xs leading-5 text-white shadow group-hover:block group-focus-visible:block`}>
+                  {text}
+                </span>
+              </button>
+            );
+          })}
+          <span aria-hidden="true" className="absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-accent shadow transition-[left,top] duration-75"
             style={{ left: `${(x(index) / 800) * 100}%`, top: `${(y(entry.payment) / 184) * 100}%` }} />
         </div>
         <label htmlFor={`${id}-month`} className="sr-only">{labels.timelineMonth}</label>

@@ -166,8 +166,12 @@ export default function PayoffReportUpload({
     );
   }
 
+  // Confirming closes the upload area and the track editors; the bar with
+  // "Edit figures" and "Save" stays, above the simulation.
+  const confirmBarRef = useRef<HTMLDivElement>(null);
   function confirm() {
     setConfirmedLoans(combined.loans.map((entry) => entry.loan));
+    requestAnimationFrame(() => confirmBarRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
 
   async function save() {
@@ -185,6 +189,7 @@ export default function PayoffReportUpload({
 
   return (
     <div className="space-y-6">
+      {!confirmed && (<>
       <div
         onDragOver={(event) => {
           event.preventDefault();
@@ -275,11 +280,12 @@ export default function PayoffReportUpload({
           </ul>
         </section>
       )}
+      </>)}
 
       {combined.loans.length > 0 && (
         <>
           <Summary labels={labels} locale={locale} combined={combined} />
-          {combined.loans.map((entry) => (
+          {!confirmed && combined.loans.map((entry) => (
             <LoanCard
               key={`${done[entry.fileIndex]?.id}-${entry.loanIndex}`}
               entry={entry}
@@ -289,7 +295,7 @@ export default function PayoffReportUpload({
             />
           ))}
 
-          <div className="glass-panel flex flex-wrap items-center gap-4 px-6 py-5">
+          <div ref={confirmBarRef} className="glass-panel flex scroll-mt-20 flex-wrap items-center gap-4 px-6 py-5">
             {confirmed ? (
               <div className="flex-1">
                 <p className="text-lg font-semibold text-accent">{labels.confirmedTitle}</p>
