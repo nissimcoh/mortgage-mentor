@@ -3,23 +3,30 @@
 import { memo, useId, useMemo, useState, type PointerEvent } from "react";
 import type { Dictionary } from "@/app/[locale]/dictionaries";
 import type { AmortizationEntry, MortgageTrackInput } from "@/lib/mortgage/types";
-import { buildMortgageMilestones } from "@/lib/mortgage/milestones";
+import { buildMortgageMilestones, type MortgageMilestone } from "@/lib/mortgage/milestones";
 import type { Locale } from "@/lib/i18n/config";
 
 /** Reads the actual monthly schedule; never resamples or recalculates payments. */
-const PaymentTimeline = memo(function PaymentTimeline({ schedule, tracks, locale, labels }: {
+const PaymentTimeline = memo(function PaymentTimeline({ schedule, tracks, locale, labels, milestones: givenMilestones, trackNames, monthLabels }: {
   schedule: AmortizationEntry[];
   tracks: MortgageTrackInput[];
   locale: Locale;
   labels: Dictionary["calculator"];
+  /** Markers computed elsewhere (an existing mortgage); default: from `tracks`. */
+  milestones?: MortgageMilestone[];
+  /** Names per milestone trackIndex; default "Track N". */
+  trackNames?: string[];
+  /** Calendar label per month (index month − 1); default "Month N". */
+  monthLabels?: string[];
 }) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const id = useId();
   // useId output contains characters that break url(#…) references.
   const washId = `${id.replace(/[^\w-]/g, "")}-wash`;
-  const milestones = useMemo(() => buildMortgageMilestones(tracks), [tracks]);
+  const milestones = useMemo(() => givenMilestones ?? buildMortgageMilestones(tracks), [givenMilestones, tracks]);
   const milestoneText = (event: (typeof milestones)[number]["events"][number]) =>
-    `${labels.trackLabel} ${event.trackIndex + 1}: ${event.kind === "reset" ? labels.milestoneReset : labels.milestoneEnd}`;
+    `${trackNames?.[event.trackIndex] ?? `${labels.trackLabel} ${event.trackIndex + 1}`}: ${event.kind === "reset" ? labels.milestoneReset : labels.milestoneEnd}`;
+  const monthText = (month: number) => monthLabels?.[month - 1] ?? `${labels.timelineMonth} ${month}`;
   const index = Math.min(selectedIndex, schedule.length - 1);
   const entry = schedule[index];
   const currency = useMemo(() => new Intl.NumberFormat(locale === "he" ? "he-IL" : "en-US", {
@@ -45,7 +52,7 @@ const PaymentTimeline = memo(function PaymentTimeline({ schedule, tracks, locale
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id={`${id}-title`} className="text-2xl font-semibold tracking-tight text-slate-900">{labels.timelineTitle}</h2>
         <span className="rounded-full bg-accent-soft px-3 py-1 text-sm font-medium text-accent">
-          {labels.timelineMonth} {entry.month} / {schedule.length}
+          {monthLabels ? monthText(entry.month) : <>{labels.timelineMonth} {entry.month} / {schedule.length}</>}
         </span>
       </div>
       <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">{labels.timelineHelp}</p>
@@ -90,7 +97,7 @@ const PaymentTimeline = memo(function PaymentTimeline({ schedule, tracks, locale
         <label htmlFor={`${id}-month`} className="sr-only">{labels.timelineMonth}</label>
         <input id={`${id}-month`} type="range" min="1" max={schedule.length} step="1" value={index + 1}
           onChange={event => setSelectedIndex(Number(event.target.value) - 1)}
-          aria-valuetext={`${labels.timelineMonth} ${entry.month}, ${labels.timelinePayment}: ${currency.format(entry.payment)}, ${labels.timelineBalance}: ${currency.format(entry.remainingBalance)}`}
+          aria-valuetext={`${monthText(entry.month)}, ${labels.timelinePayment}: ${currency.format(entry.payment)}, ${labels.timelineBalance}: ${currency.format(entry.remainingBalance)}`}
           className="h-8 w-full cursor-pointer accent-accent" />
         <div className="flex justify-between text-xs text-slate-500">
           <span>{labels.timelineStart}</span><span>{labels.timelineEnd}</span>
@@ -103,7 +110,7 @@ const PaymentTimeline = memo(function PaymentTimeline({ schedule, tracks, locale
         onChange={event => { if (event.target.value) setSelectedIndex(Number(event.target.value) - 1); }}>
         <option value="">{labels.milestoneChoose}</option>
         {milestones.map(milestone => <option key={milestone.month} value={milestone.month}>
-          {labels.timelineMonth} {milestone.month} — {milestone.events.map(milestoneText).join("; ")}
+          {monthText(milestone.month)} — {milestone.events.map(milestoneText).join("; ")}
         </option>)}
       </select>
       <div aria-live="polite" className="mt-2 text-sm text-slate-700">

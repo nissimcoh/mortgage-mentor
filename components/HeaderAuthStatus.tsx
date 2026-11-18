@@ -242,6 +242,14 @@ function AccountMenu({ user, locale, labels }: AccountMenuProps) {
           >
             {labels.savedScenarios}
           </Link>
+          <Link
+            role="menuitem"
+            href={`/${locale}/my-mortgage`}
+            onClick={() => setOpen(false)}
+            className="block rounded-xl px-3 py-2.5 text-sm text-slate-700 transition-colors hover:bg-black/5"
+          >
+            {labels.myMortgage}
+          </Link>
 
           {adminAccess === "loading" && <span role="menuitem" aria-disabled="true"
             className="block px-3 py-2.5 text-sm text-slate-500">

@@ -7,6 +7,7 @@ import type { ComparisonScenario } from "@/lib/scenarios/comparison";
 import {
   combinePayoffFiles,
   existingCombinedBases,
+  existingMilestones,
   existingTrackBasis,
   fillTemplate,
   formatMoney,
@@ -188,6 +189,9 @@ export default function ExistingMortgageForecast({
             tracks={[]}
             locale={locale}
             labels={calculatorLabels}
+            milestones={existingMilestones(simulation)}
+            trackNames={simulation.tracks.map(trackName)}
+            monthLabels={simulation.months.map((month) => formatMonth(month.month))}
           />
           <div className="mt-6">
             <AmortizationSchedule
@@ -211,6 +215,7 @@ export default function ExistingMortgageForecast({
     </section>
     {comparison && (
       <RefinanceComparison
+        loans={loans}
         simulation={officialSimulation}
         balanceToSettle={reportTotals.totalToSettle}
         fees={reportTotals.fees}

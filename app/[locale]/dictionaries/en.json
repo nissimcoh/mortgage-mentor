@@ -103,6 +103,7 @@
     "calculator": "Calculator",
     "learn": "Learn",
     "saved": "Saved",
+    "myMortgage": "My mortgage",
     "signIn": "Sign in",
     "bottomNavLearn": "Learn",
     "search": "Search",
@@ -125,6 +126,7 @@
     "menuLabel": "Account menu",
     "avatarAlt": "Profile picture",
     "savedScenarios": "Saved scenarios",
+    "myMortgage": "My mortgage",
     "signOut": "Sign out"
   },
   "home": {
@@ -1175,8 +1177,7 @@
     "compareHeading": "Compare with a new mix",
     "compareIntro": "What refinancing today into one of your saved mixes would look like: the current mortgage continues as simulated, and the new mix also pays the early-repayment fees from the report.",
     "compareChoose": "Mix to compare",
-    "compareNone": "No saved mixes yet. Build a mix on the balance to settle in the calculator and save it.",
-    "compareNoneCta": "Open the calculator",
+    "compareNone": "No saved mixes to compare yet.",
     "compareCurrent": "Current mortgage",
     "compareRowFirst": "First payment",
     "compareRowHighest": "Highest payment",
@@ -1190,6 +1191,10 @@
     "comparePrincipalMismatch": "The mix borrows {mix}, while the balance to settle is {current}. The comparison is accurate when the two are close; you can build a mix on {current} in the calculator.",
     "compareNote": "A forecast comparison only, not advice. The saved mix was calculated on the forecast of the day it was saved, the current mortgage on today's. Refinancing also has costs not shown here, such as appraisal, insurance and registration.",
     "unavailableTitle": "Report reading opens soon",
-    "unavailableBody": "Soon you'll be able to upload a balance report here and see your current mortgage from today on."
+    "unavailableBody": "Soon you'll be able to upload a balance report here and see your current mortgage from today on.",
+    "compareNewMix": "New mix on the balance ({amount})",
+    "compareFromCurrent": "Start from the current mix",
+    "compareShortcutsHelp": "The calculator opens with the amount. Build a mix, save it and come back: it will be first in the comparison.",
+    "compareFromCurrentNote": "In the current mix, terms are rounded to the calculator's options and variable rates start their reset cycle today, so it is an approximation."
   }
 }

@@ -3,6 +3,7 @@ import { prepareForConfirm } from "../confirm";
 import { parsePayoffReportFile } from "../parse";
 import {
   existingCombinedBases,
+  existingMilestones,
   existingTrackBasis,
   simulateExistingMortgage,
   type ExistingMortgageMarket,
@@ -181,5 +182,33 @@ describe("combined schedule and forecast basis", () => {
   it("calls nothing a forecast in constant mode", () => {
     const constant = simulateExistingMortgage(loans(), market, "constant");
     expect(existingCombinedBases(constant).every((basis) => basis === "contractual")).toBe(true);
+  });
+});
+
+describe("existingMilestones", () => {
+  it("marks the printed reset, later resets and each track's last payment", () => {
+    const simulation = simulateExistingMortgage(loans(), market);
+    const variable = simulation.tracks.findIndex((track) => track.kind === "variableLinked");
+    expect(simulation.tracks[variable].resetPayments).toEqual([31, 91, 151]);
+    const milestones = existingMilestones(simulation);
+    const months = (kind: "reset" | "end", trackIndex: number) =>
+      milestones.filter((milestone) => milestone.events.some((event) => event.kind === kind && event.trackIndex === trackIndex)).map((milestone) => milestone.month);
+    // Combined month 31 is October 2028, right after the September reset date.
+    expect(months("reset", variable)).toEqual([31, 91, 151]);
+    expect(simulation.months[30].month).toBe("2028-10");
+    // Last payments: fixed March 2036 (120), variable March 2041 (180), prime March 2033 (84).
+    expect(simulation.tracks.map((_, index) => months("end", index)[0])).toEqual([120, 180, 84]);
+    expect(milestones.map((milestone) => milestone.month)).toEqual([...milestones.map((milestone) => milestone.month)].sort((a, b) => a - b));
+  });
+
+  it("keeps contractual resets in constant mode, and shifts late-starting tracks", () => {
+    expect(existingMilestones(simulateExistingMortgage(loans(), market, "constant")).some((m) => m.events.some((e) => e.kind === "reset"))).toBe(true);
+    const shifted = loans();
+    shifted[1].tracks[0].firstPaymentDate = "2026-06-01";
+    shifted[1].tracks[0].endDate = "2033-05-01";
+    const simulation = simulateExistingMortgage(shifted, market);
+    const prime = simulation.tracks.findIndex((track) => track.kind === "prime");
+    const end = existingMilestones(simulation).find((m) => m.events.some((e) => e.kind === "end" && e.trackIndex === prime));
+    expect(end?.month).toBe(2 + 84); // starts two months after the others
   });
 });

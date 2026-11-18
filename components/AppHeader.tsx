@@ -29,6 +29,9 @@ export default function AppHeader({ locale, labels, accountMenu }: AppHeaderProp
     { href: `/${locale}/calculator`, label: labels.calculator },
     { href: `/${locale}/learn`, label: labels.learn },
     { href: `/${locale}/saved`, label: labels.saved },
+    // Desktop only: the mobile tab bar keeps four tabs; there it is reached
+    // from the account menu and the Saved page.
+    { href: `/${locale}/my-mortgage`, label: labels.myMortgage },
   ];
 
   function isActive(href: string): boolean {

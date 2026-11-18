@@ -8,6 +8,7 @@ import {
   spitzerMonthlyPaymentRaw,
   type AmortizationEntry,
 } from "@/lib/mortgage";
+import type { MortgageMilestone } from "@/lib/mortgage/milestones";
 import type { ScheduleBasis } from "@/lib/mortgage/schedule-certainty";
 import { remainingPaymentCounts } from "./checks";
 import type { IsoDate, PayoffLoan, PayoffTrack } from "./types";
@@ -82,6 +83,8 @@ export interface ExistingTrackSimulation {
   knownRatePayments: number | null;
   /** Whether payments follow the CPI forecast. */
   indexLinked: boolean;
+  /** Payment numbers (1-based) at which a contractual rate reset takes effect. */
+  resetPayments: number[];
 }
 
 export interface ExistingMonth {
@@ -294,6 +297,7 @@ function simulateTrack(
   let schedule: AmortizationEntry[];
   // Prime follows the forecast from the first month; resets after their date.
   let knownRatePayments: number | null = null;
+  const resetPayments: number[] = [];
   const variable = track.variable;
   const anchor = variable?.anchorSeries ?? null;
   const modelable =
@@ -345,6 +349,8 @@ function simulateTrack(
       : { path: constantPath, resets: [], extended: false };
     if (reset.extended) assumptions.push("curveExtended");
     if (official && firstBlock < months) knownRatePayments = firstBlock;
+    // Contractual resets happen in either mode, even if the rate stays put.
+    for (let start = firstBlock; start < months; start += period) resetPayments.push(start + 1);
     schedule = linked
       ? buildLinkedResetSchedule(startBalance, reset.path, cpi.factors, reset.resets)
       : buildBlockRepricedSpitzerSchedule({ loanAmount: startBalance, annualRatePercentPath: reset.path, numberOfPayments: months });
@@ -365,7 +371,30 @@ function simulateTrack(
     assumptions: [...new Set(assumptions)],
     knownRatePayments,
     indexLinked: linked && official,
+    resetPayments,
   };
+}
+
+/**
+ * Chart markers on the combined schedule's months: each variable track's
+ * contractual resets and each track's last payment. `trackIndex` is the
+ * index into `simulation.tracks`.
+ */
+export function existingMilestones(simulation: ExistingMortgageSimulation): MortgageMilestone[] {
+  const first = simulation.months[0]?.month;
+  if (first === undefined) return [];
+  const grouped = new Map<number, MortgageMilestone["events"]>();
+  const add = (month: number, trackIndex: number, kind: "reset" | "end") => {
+    const events = grouped.get(month) ?? [];
+    events.push({ trackIndex, kind });
+    grouped.set(month, events);
+  };
+  simulation.tracks.forEach((track, trackIndex) => {
+    const offset = monthsBetween(`${first}-01`, `${monthKey(track.firstPaymentDate)}-01`);
+    for (const payment of track.resetPayments) add(offset + payment, trackIndex, "reset");
+    add(offset + track.numberOfPayments, trackIndex, "end");
+  });
+  return [...grouped].sort(([a], [b]) => a - b).map(([month, events]) => ({ month, events }));
 }
 
 /** Whether a track's payment in a given month depends on a forecast. */

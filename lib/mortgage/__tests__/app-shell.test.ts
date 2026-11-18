@@ -23,6 +23,7 @@ describe("app-shell navigation labels", () => {
     expect(nav.calculator).toBe("מחשבון");
     expect(nav.learn).toBe("לומדים");
     expect(nav.saved).toBe("שמורים");
+    expect(nav.myMortgage).toBe("המשכנתא שלי");
     expect(nav.signIn).toBe("כניסה");
   });
 
@@ -78,6 +79,7 @@ describe("header account menu labels", () => {
 
   it("has the exact requested Hebrew account-menu labels", () => {
     expect(heDict.accountMenu.savedScenarios).toBe("שמורים");
+    expect(heDict.accountMenu.myMortgage).toBe("המשכנתא שלי");
     expect(heDict.accountMenu.signOut).toBe("התנתקות");
   });
 

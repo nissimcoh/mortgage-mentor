@@ -9,7 +9,9 @@ import {
   fillTemplate,
   formatMoney,
   type ExistingMortgageSimulation,
+  type PayoffLoan,
 } from "@/lib/payoff-report";
+import { currentMixHref, longestRemainingMonths, newMixHref } from "@/lib/payoff-report/to-calculator";
 import type { ComparisonScenario } from "@/lib/scenarios/comparison";
 import { loadComparisonPayments } from "@/lib/scenarios/comparison-actions";
 import ComparisonPaymentCharts from "./ComparisonPaymentCharts";
@@ -23,6 +25,7 @@ const MY_MORTGAGE_ID = "my-mortgage";
  * one of the lines.
  */
 export default function RefinanceComparison({
+  loans,
   simulation,
   balanceToSettle,
   fees,
@@ -31,6 +34,7 @@ export default function RefinanceComparison({
   comparisonLabels,
   locale,
 }: {
+  loans: PayoffLoan[];
   /** Always the official-forecast simulation: saved mixes use the official forecast too. */
   simulation: ExistingMortgageSimulation;
   balanceToSettle: number;
@@ -57,14 +61,37 @@ export default function RefinanceComparison({
     };
   }, [selectedId, payments]);
 
+  // Calculator shortcuts: a new mix on the whole balance to settle (what a
+  // refinance must fund), or the current mix as a starting point.
+  const fromCurrent = currentMixHref(locale, loans);
+  const shortcuts = (
+    <div className="mt-4">
+      <div className="flex flex-wrap gap-2">
+        <Link
+          href={newMixHref(locale, balanceToSettle, longestRemainingMonths(loans))}
+          className="glass-button inline-flex min-h-11 items-center px-5 text-sm font-medium"
+        >
+          {fillTemplate(labels.compareNewMix, { amount: money(balanceToSettle) })}
+        </Link>
+        {fromCurrent && (
+          <Link href={fromCurrent.href} className="glass-secondary inline-flex min-h-11 items-center px-5 text-sm font-medium">
+            {labels.compareFromCurrent}
+          </Link>
+        )}
+      </div>
+      <p className="mt-2 text-xs leading-5 text-slate-500">
+        {labels.compareShortcutsHelp}
+        {fromCurrent?.approximated && <> {labels.compareFromCurrentNote}</>}
+      </p>
+    </div>
+  );
+
   if (mixes.length === 0) {
     return (
-      <section className="glass-panel px-6 py-8 text-center">
+      <section className="glass-panel px-6 py-8">
         <h2 className="text-xl font-semibold tracking-tight">{labels.compareHeading}</h2>
         <p className="mt-2 text-sm text-slate-500">{labels.compareNone}</p>
-        <Link href={`/${locale}/calculator`} className="glass-button mt-5 inline-flex min-h-11 items-center px-6 text-[15px] font-medium">
-          {labels.compareNoneCta}
-        </Link>
+        {shortcuts}
       </section>
     );
   }
@@ -103,6 +130,7 @@ export default function RefinanceComparison({
     <section aria-labelledby="refinance-heading" className="glass-panel px-5 py-6 sm:px-6">
       <h2 id="refinance-heading" className="text-xl font-semibold tracking-tight">{labels.compareHeading}</h2>
       <p className="mt-2 text-sm leading-6 text-slate-500">{labels.compareIntro}</p>
+      {shortcuts}
 
       <fieldset className="mt-5">
         <legend className="mb-2 text-sm font-medium">{labels.compareChoose}</legend>
