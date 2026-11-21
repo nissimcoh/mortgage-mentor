@@ -1,4 +1,3 @@
-import { PDFDocument } from "pdf-lib";
 import { extractText, getDocumentProxy } from "unpdf";
 
 /**
@@ -45,10 +44,18 @@ export async function trimPayoffPdf(pdf: Uint8Array): Promise<TrimmedPdf> {
     // pdf.js may transfer the buffer it is given and rejects Node Buffers,
     // so hand it a plain Uint8Array copy.
     const document = await getDocumentProxy(new Uint8Array(pdf));
-    const { totalPages, text } = await extractText(document, { mergePages: false });
-    const keep = selectDataPages(text);
+    const totalPages = document.numPages;
+    let keep: number[] | null;
+    try {
+      if (totalPages === 1) return { pdf, totalPages, keptPages: null };
+      const { text } = await extractText(document, { mergePages: false });
+      keep = selectDataPages(text);
+    } finally {
+      await document.loadingTask.destroy();
+    }
     if (keep === null) return { pdf, totalPages, keptPages: null };
 
+    const { PDFDocument } = await import("pdf-lib");
     const source = await PDFDocument.load(pdf, { ignoreEncryption: true });
     const trimmed = await PDFDocument.create();
     for (const page of await trimmed.copyPages(source, keep)) trimmed.addPage(page);

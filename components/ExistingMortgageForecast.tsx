@@ -57,12 +57,10 @@ export default function ExistingMortgageForecast({
 }) {
   const [mode, setMode] = useState<ExistingForecastMode>("official");
   const [scheduleId, setScheduleId] = useState(COMBINED);
-  const simulation = useMemo(() => simulateExistingMortgage(loans, market, mode), [loans, market, mode]);
-  // Saved mixes carry official forecasts, so the comparison always uses one too.
-  const officialSimulation = useMemo(
-    () => (mode === "official" ? simulation : simulateExistingMortgage(loans, market, "official")),
-    [mode, simulation, loans, market],
-  );
+  // The initial view and the refinance comparison share the official forecast.
+  const officialSimulation = useMemo(() => simulateExistingMortgage(loans, market, "official"), [loans, market]);
+  const simulation = useMemo(() => mode === "official" ? officialSimulation : simulateExistingMortgage(loans, market, mode),
+    [mode, officialSimulation, loans, market]);
   const reportTotals = useMemo(() => combinePayoffFiles([{ fileName: "", loans }]).totals, [loans]);
   const { totals } = simulation;
   const money = (value: number) => formatMoney(value, locale);

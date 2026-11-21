@@ -21,13 +21,18 @@ export function parseNumberInput(text: string): number | null | undefined {
   return /^-?\d+(\.\d+)?$/.test(cleaned) ? Number(cleaned) : undefined;
 }
 
+const moneyFormats = new Map<string, Intl.NumberFormat>();
+
 export function formatMoney(value: number, locale: string): string {
-  return new Intl.NumberFormat(locale === "he" ? "he-IL" : "en-IL", {
-    style: "currency",
-    currency: "ILS",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
+  const language = locale === "he" ? "he-IL" : "en-IL";
+  let format = moneyFormats.get(language);
+  if (!format) {
+    format = new Intl.NumberFormat(language, {
+      style: "currency", currency: "ILS", minimumFractionDigits: 2, maximumFractionDigits: 2,
+    });
+    moneyFormats.set(language, format);
+  }
+  return format.format(value);
 }
 
 /** `YYYY-MM-DD` as DD/MM/YYYY, the way Israeli reports print it. */

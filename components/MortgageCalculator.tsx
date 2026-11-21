@@ -15,6 +15,8 @@ import type { CalculatorMarketData } from "@/lib/market-data/build-calculator-ma
 import type { Dictionary } from "@/app/[locale]/dictionaries";
 import {
   calculateScenarioSummary,
+  calculateTrackSummary,
+  currentTrackPayment,
   classifyPaymentPath,
   combinedStabilityScore,
   getForecastFinancingCost,
@@ -113,6 +115,26 @@ function tryCalculateScenario(
   } catch {
     return null;
   }
+}
+
+function createPaymentPreview(market: MarketContextForParsing) {
+  // Edits replace only the changed draft. Market changes invalidate all previews.
+  const cache = new WeakMap<TrackDraft, number | null>();
+  return (draft: TrackDraft) => {
+    const cached = cache.get(draft);
+    if (cached !== undefined) return cached;
+    const input = parseTrackDraft(draft, market);
+    let payment = null;
+    if (input) {
+      try {
+        payment = currentTrackPayment(calculateTrackSummary(input));
+      } catch {
+        // A draft may parse before its forecast assumptions are usable.
+      }
+    }
+    cache.set(draft, payment);
+    return payment;
+  };
 }
 
 interface FreshnessRowData {
@@ -581,18 +603,15 @@ export default function MortgageCalculator({
   // today's rate, and their sum once every track is complete. Deferred so a
   // slow device keeps typing smooth; Calculate still produces the full result.
   const deferredDrafts = useDeferredValue(drafts);
+  const previewPayment = useMemo(() => createPaymentPreview(market), [market]);
   const live = useMemo(() => {
-    const perTrack = deferredDrafts.map((draft) => {
-      const input = parseTrackDraft(draft, market);
-      const summary = input ? tryCalculateScenario([input]) : null;
-      return summary ? summary.currentCombinedFirstPayment : null;
-    });
+    const perTrack = deferredDrafts.map(previewPayment);
     const complete = perTrack.every((payment): payment is number => payment !== null);
     return {
       perTrack: Object.fromEntries(deferredDrafts.map((draft, index) => [draft.id, perTrack[index]])) as Record<string, number | null>,
       total: complete ? roundMoney(perTrack.reduce<number>((sum, payment) => sum + (payment ?? 0), 0)) : null,
     };
-  }, [deferredDrafts, market]);
+  }, [deferredDrafts, previewPayment]);
   const formIsBlank = drafts.length === 1 && drafts[0].amount === "" && drafts[0].ratePercent === "" &&
     drafts[0].currentRatePercent === "" && drafts[0].years === "";
   const showExamples = formIsBlank && submitted === null && !editState.context;
@@ -1057,7 +1076,7 @@ export default function MortgageCalculator({
                   items={submitted.inputs.map((input, index) => ({
                     label: `${labels.trackLabel} ${index + 1} · ${trackTypeLabels[input.type]}`,
                     amount: wholeCurrencyFormat.format(input.loanAmount),
-                    share: new Intl.NumberFormat(intlLocale, { style: "percent", maximumFractionDigits: 0 }).format(input.loanAmount / totalPrincipal),
+                    share: shareFormat.format(input.loanAmount / totalPrincipal),
                     fraction: input.loanAmount / totalPrincipal,
                   }))}
                 />

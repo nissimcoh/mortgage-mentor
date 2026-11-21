@@ -6,6 +6,7 @@ import type { Locale } from "@/lib/i18n/config";
 import { deleteMyMortgage, saveMyMortgage } from "@/lib/payoff-report/actions";
 import {
   fillTemplate,
+  needsReportDate,
   type ExistingMortgageMarket,
   type PayoffLoan,
   type SavedMyMortgage,
@@ -14,6 +15,7 @@ import { formatDateOnly } from "@/lib/forms/dates";
 import type { ComparisonScenario } from "@/lib/scenarios/comparison";
 import ExistingMortgageForecast from "./ExistingMortgageForecast";
 import PayoffReportUpload from "./PayoffReportUpload";
+import ReportDateField from "./ReportDateField";
 
 type Labels = Dictionary["payoffPage"];
 
@@ -47,8 +49,8 @@ export default function MyMortgage({
   const [replacing, setReplacing] = useState(initialSaved === null);
   const [deleteStep, setDeleteStep] = useState<"idle" | "confirm" | "deleting" | "error">("idle");
 
-  async function save(loans: PayoffLoan[]): Promise<string | null> {
-    const result = await saveMyMortgage(loans);
+  async function save(loans: PayoffLoan[], expectedUpdatedAt?: string): Promise<string | null> {
+    const result = await saveMyMortgage(loans, expectedUpdatedAt).catch(() => ({ ok: false as const, error: "failed" }));
     if (!result.ok) return result.error;
     setSaved({ loans, updatedAt: result.updatedAt });
     setReplacing(false);
@@ -102,14 +104,17 @@ export default function MyMortgage({
             <p role="alert" className="w-full text-sm text-red-700">{labels.saveError}</p>
           )}
         </div>
-        <ExistingMortgageForecast
+        {saved.loans.some(needsReportDate) ? (
+          <SavedDateRepair key={saved.updatedAt} loans={saved.loans} labels={labels}
+            onSave={(loans) => save(loans, saved.updatedAt)} />
+        ) : <ExistingMortgageForecast
           loans={saved.loans}
           market={market}
           labels={labels}
           calculatorLabels={calculatorLabels}
           locale={locale}
           comparison={{ mixes, labels: comparisonLabels }}
-        />
+        />}
       </div>
     );
   }
@@ -143,5 +148,37 @@ export default function MyMortgage({
         hasSaved={saved !== null}
       />
     </div>
+  );
+}
+
+function SavedDateRepair({ loans, labels, onSave }: {
+  loans: PayoffLoan[];
+  labels: Labels;
+  onSave: (loans: PayoffLoan[]) => Promise<string | null>;
+}) {
+  const [draft, setDraft] = useState(loans);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <form className="glass-panel space-y-4 px-6 py-5" onSubmit={async (event) => {
+      event.preventDefault();
+      if (saving || draft.some(needsReportDate)) return;
+      setSaving(true);
+      setError(await onSave(draft));
+      setSaving(false);
+    }}>
+      <h2 className="text-lg font-semibold">{labels.repairDateTitle}</h2>
+      <p className="text-sm text-slate-600">{labels.repairDateBody}</p>
+      <fieldset disabled={saving} className="space-y-3">
+        {loans.map((loan, index) => needsReportDate(loan) && (
+          <ReportDateField key={index} loan={draft[index]} index={index} labels={labels}
+            onChange={(asOfDate) => setDraft((current) => current.map((entry, i) => i === index ? { ...entry, asOfDate } : entry))} />
+        ))}
+      </fieldset>
+      {error && <p role="alert" className="text-sm text-red-700">{error === "changed" ? labels.repairDateChanged : labels.saveError}</p>}
+      <button type="submit" disabled={saving || draft.some(needsReportDate)} className="glass-button min-h-11 px-5 text-sm font-medium">
+        {saving ? labels.saving : labels.repairDateSave}
+      </button>
+    </form>
   );
 }

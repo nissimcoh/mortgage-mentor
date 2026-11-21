@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import type { Dictionary } from "@/app/[locale]/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 import {
@@ -24,7 +24,7 @@ const MY_MORTGAGE_ID = "my-mortgage";
  * out today instead. Uses the saved-comparison charts with "my mortgage" as
  * one of the lines.
  */
-export default function RefinanceComparison({
+const RefinanceComparison = memo(function RefinanceComparison({
   loans,
   simulation,
   balanceToSettle,
@@ -45,21 +45,20 @@ export default function RefinanceComparison({
   locale: Locale;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(mixes[0]?.id ?? null);
+  const [extraCosts, setExtraCosts] = useState<Record<string, string>>({});
   // Payment series per mix, fetched once the first time a mix is selected.
   const [payments, setPayments] = useState<Record<string, number[] | null>>({});
+  const requested = useRef(new Set<string>());
   const money = (value: number) => formatMoney(value, locale);
   const selected = mixes.find((mix) => mix.id === selectedId) ?? null;
 
   useEffect(() => {
-    if (selectedId === null || selectedId in payments) return;
-    let cancelled = false;
-    void loadComparisonPayments([selectedId]).then((loaded) => {
-      if (!cancelled) setPayments((current) => ({ ...current, [selectedId]: loaded?.[selectedId] ?? null }));
+    if (selectedId === null || requested.current.has(selectedId)) return;
+    requested.current.add(selectedId);
+    void loadComparisonPayments([selectedId]).catch(() => null).then((loaded) => {
+      setPayments((current) => ({ ...current, [selectedId]: loaded?.[selectedId] ?? null }));
     });
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedId, payments]);
+  }, [selectedId]);
 
   // Calculator shortcuts: a new mix on the whole balance to settle (what a
   // refinance must fund), or the current mix as a starting point.
@@ -97,14 +96,19 @@ export default function RefinanceComparison({
   }
 
   const mixPayments = selected ? payments[selected.id] : undefined;
-  const result = selected
+  const extra = (selected && extraCosts[selected.id]) || "";
+  const cashAmount = Number(extra.replaceAll(",", ""));
+  const extraValid = extra === "" || (/^(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d{0,2})?$/.test(extra)
+    && Number.isSafeInteger(Math.round(cashAmount * 100)));
+  const result = selected && extraValid
     ? compareRefinance(simulation, balanceToSettle, fees, {
         firstPayment: selected.result.firstPayment,
         highestPayment: selected.result.highestPayment,
         forecastTotalPaid: selected.result.forecastTotalPaid,
         totalPrincipal: selected.result.totalPrincipal,
         years: selected.years,
-      }, mixPayments)
+        trackCount: selected.result.trackCount,
+      }, mixPayments, cashAmount)
     : null;
 
   const mine: ComparisonScenario = {
@@ -120,7 +124,9 @@ export default function RefinanceComparison({
         [labels.compareRowFirst, money(result.current.firstPayment), money(result.mix.firstPayment)],
         [labels.compareRowHighest, money(result.current.highestPayment), money(result.mix.highestPayment)],
         [labels.compareRowTotal, money(result.current.totalPayment), money(result.mix.totalPayment)],
-        [labels.compareRowFees, "—", money(result.fees)],
+        [labels.compareRowFinancedFees, "—", money(result.financedFees)],
+        [labels.compareRowCashFees, "—", money(result.cashFees)],
+        [labels.compareOtherCosts, "—", money(cashAmount)],
         [labels.compareRowTotalWithFees, money(result.current.totalPayment), money(result.mixTotalWithFees)],
         [labels.compareRowYears, (result.current.months / 12).toFixed(1), (result.mix.months / 12).toFixed(1)],
       ]
@@ -151,6 +157,19 @@ export default function RefinanceComparison({
         </div>
       </fieldset>
 
+      {selected && (
+        <label className="glass-form mt-4 block max-w-sm text-sm">
+          {labels.compareOtherCosts}
+          <input type="text" inputMode="decimal" dir="ltr" placeholder="0" value={extra}
+            aria-invalid={!extraValid} className="mt-1 block w-full border px-3"
+            onChange={(event) => {
+              const value = event.target.value.trim();
+              setExtraCosts((current) => ({ ...current, [selected.id]: value }));
+            }} />
+          {!extraValid && <span role="alert" className="text-red-700">{labels.compareCostInvalid}</span>}
+        </label>
+      )}
+
       {result && selected && (
         <>
           <div className="mt-5 overflow-x-auto">
@@ -174,7 +193,7 @@ export default function RefinanceComparison({
             </table>
           </div>
 
-          <div className={`mt-4 rounded-xl px-4 py-3 text-sm ${result.difference >= 0 ? "bg-accent-soft text-accent-strong" : "bg-amber-50 text-amber-900"}`}>
+          {result.principalMatches && <div className={`mt-4 rounded-xl px-4 py-3 text-sm ${result.difference >= 0 ? "bg-accent-soft text-accent-strong" : "bg-amber-50 text-amber-900"}`}>
             <p className="font-medium">
               {fillTemplate(result.difference >= 0 ? labels.compareSaving : labels.compareExtra, {
                 amount: money(Math.abs(result.difference)),
@@ -182,12 +201,12 @@ export default function RefinanceComparison({
             </p>
             {/* Only when refinancing comes out ahead overall: a longer, pricier mix
                 with lower payments also "recovers" its fees month by month. */}
-            {result.difference >= 0 && result.breakEvenMonth !== null && result.fees > 0 && (
+            {result.difference >= 0 && result.breakEvenMonth !== null && (
               <p className="mt-1">
                 {fillTemplate(labels.compareBreakEven, { years: (result.breakEvenMonth / 12).toFixed(1) })}
               </p>
             )}
-          </div>
+          </div>}
 
           {!result.principalMatches && (
             <p className="mt-3 text-sm text-amber-800">
@@ -214,4 +233,6 @@ export default function RefinanceComparison({
       )}
     </section>
   );
-}
+});
+
+export default RefinanceComparison;

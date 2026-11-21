@@ -1,4 +1,3 @@
-import { extractPayoffReport } from "@/lib/payoff-report/extract";
 import { isQuotaClaim, readQuotaLimits } from "@/lib/payoff-report/quota";
 import { MAX_PAYOFF_PDF_BYTES, readPayoffUpload } from "@/lib/payoff-report/upload";
 import { createClient } from "@/lib/supabase/server";
@@ -62,6 +61,7 @@ export async function POST(request: Request) {
   if (claim === "user-limit") return failure("quota", 429);
   if (claim === "site-limit") return failure("site-quota", 429);
 
+  const { extractPayoffReport } = await import("@/lib/payoff-report/extract");
   const result = await extractPayoffReport({
     pdf: upload.pdf,
     fileName: upload.fileName,

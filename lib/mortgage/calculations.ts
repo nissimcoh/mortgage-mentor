@@ -638,6 +638,11 @@ export function calculateTrackSummary(track: MortgageTrackInput): TrackSummary {
   }
 }
 
+/** First payment at today's rate, before future rate resets or indexation. */
+export function currentTrackPayment(summary: TrackSummary): number {
+  return summary.forecast?.currentFirstPayment ?? summary.cpiForecast?.currentFirstPayment ?? summary.firstPayment;
+}
+
 /**
  * Compute the combined summary of a multi-track scenario (תמהיל).
  *
@@ -714,14 +719,7 @@ export function calculateScenarioSummary(
   // First payments at today's rates vs. month 1 of the forecast schedules.
   // For non-prime tracks (and constant-mode prime) the two coincide.
   const currentCombinedFirstPayment = roundMoney(
-    trackSummaries.reduce(
-      (sum, summary) =>
-        sum +
-        (summary.forecast?.currentFirstPayment ??
-          summary.cpiForecast?.currentFirstPayment ??
-          summary.firstPayment),
-      0,
-    ),
+    trackSummaries.reduce((sum, summary) => sum + currentTrackPayment(summary), 0),
   );
 
   const totalLoanAmount = scenario.tracks.reduce(

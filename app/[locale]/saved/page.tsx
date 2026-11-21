@@ -48,24 +48,25 @@ export default async function SavedPage({
     redirect(`/${locale}/signin?next=${encodeURIComponent(`/${locale}/saved`)}`);
   }
 
-  const [dict, myMortgage] = await Promise.all([getDictionary(locale), loadMyMortgage(user.id)]);
-  const myTotals = myMortgage ? combinePayoffFiles([{ fileName: "", loans: myMortgage.loans }]).totals : null;
-  // Reading reports needs the server-side API key; without it, offer the
-  // card only to someone who already has a saved mortgage.
-  const showMyMortgage = myTotals !== null || Boolean(process.env.ANTHROPIC_API_KEY);
-
   // RLS's "select own scenarios" policy is the real ownership boundary;
   // this .eq("user_id", ...) is the normal, expected app-level filter on
   // top of it, using the signed-in user's own session as usual.
   // One page of rows plus the exact total, in a single request.
   const from = (requestedPage - 1) * PAGE_SIZE;
-  const { data: rows, error, count } = await supabase
+  const scenariosQuery = supabase
     .from("mortgage_scenarios")
     .select("id, name, result_snapshot, updated_at", { count: "exact" })
     .eq("user_id", user.id)
     .order("updated_at", { ascending: false })
     .order("id", { ascending: false })
     .range(from, from + PAGE_SIZE - 1);
+  const [dict, myMortgage, { data: rows, error, count }] = await Promise.all([
+    getDictionary(locale),
+    loadMyMortgage(user.id),
+    scenariosQuery,
+  ]);
+  const myTotals = myMortgage ? combinePayoffFiles([{ fileName: "", loans: myMortgage.loans }]).totals : null;
+  const showMyMortgage = myTotals !== null || Boolean(process.env.ANTHROPIC_API_KEY);
   const total = count ?? rows?.length ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   // Past the end (e.g. after deleting the last cards of the last page).

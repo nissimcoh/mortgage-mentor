@@ -75,13 +75,13 @@ export default function MortgageStory({ locale, labels }: { locale: Locale; labe
   const running = (value: number) => money.format(t >= 1 ? Math.round(value) : Math.round(value / 1000) * 1000);
   const crossoverYear = Math.ceil(STORY.crossoverMonth / 12);
 
-  const beats = labels.storyBeats.map((beat) => ({
+  const beats = useMemo(() => labels.storyBeats.map((beat) => ({
     title: beat.title,
     body: beat.body
       .replace("{share}", percent.format(STORY.points[0].interestShare))
       .replace("{year}", String(crossoverYear))
       .replace("{interest}", money.format(Math.round(STORY.totalInterest))),
-  }));
+  })), [labels.storyBeats, percent, money, crossoverYear]);
   // Beat boundaries follow the loan itself: the turning point starts beat 2.
   const starts = [0, crossoverYear - 2.5, 22, 28.5];
   const beatIndex = starts.reduce((active, start, index) => (year >= start ? index : active), 0);

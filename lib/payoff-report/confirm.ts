@@ -1,3 +1,4 @@
+import { isPayoffDate } from "./parse";
 import type {
   PayoffAnchorSeries,
   PayoffLoan,
@@ -26,6 +27,10 @@ export type PayoffConfirmField =
 export interface PayoffMissingField {
   trackIndex: number;
   field: PayoffConfirmField;
+}
+
+export function needsReportDate(loan: PayoffLoan): boolean {
+  return !isPayoffDate(loan.asOfDate) && loan.tracks.some((track) => track.status === "active");
 }
 
 export function missingTrackFields(track: PayoffTrack): PayoffConfirmField[] {

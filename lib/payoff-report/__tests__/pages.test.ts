@@ -51,6 +51,7 @@ describe("trimPayoffPdf", () => {
     const input = await makePdf([dataPage]);
     const result = await trimPayoffPdf(input);
     expect(result.keptPages).toBeNull();
+    expect(result.totalPages).toBe(1);
     expect(result.pdf).toBe(input);
   });
 

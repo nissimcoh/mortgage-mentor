@@ -2,9 +2,12 @@
 import { act, type ComponentProps } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import SavedScenarioComparison from "../SavedScenarioComparison";
+import RefinanceComparison from "../RefinanceComparison";
+import { simulateExistingMortgage } from "@/lib/payoff-report/simulate";
+import { formatMoney } from "@/lib/payoff-report/present";
 import he from "@/app/[locale]/dictionaries/he.json";
 import type { ComparisonScenario } from "@/lib/scenarios/comparison";
-import { mount, unmount } from "./dom-helpers";
+import { button, click, mount, type, unmount } from "./dom-helpers";
 
 const mocks = vi.hoisted(() => ({ load: vi.fn() }));
 vi.mock("next/link", () => ({ default: (props: ComponentProps<"a">) => <a {...props} /> }));
@@ -19,6 +22,54 @@ const scenario = (n: number, payments: number[] | null | undefined): ComparisonS
 
 beforeEach(() => mocks.load.mockReset());
 afterEach(unmount);
+
+it("includes funded fees in repayments and adds only this mix's upfront costs", async () => {
+  const a = scenario(1, null);
+  const b = scenario(2, null);
+  b.result.totalPrincipal -= 5000;
+  mocks.load.mockResolvedValue(null);
+  const labels = he.payoffPage;
+  const simulation = simulateExistingMortgage([], {
+    boiRatePercent: 3, nominalZeroYieldsPercent: [], realZeroYieldsPercent: [], expectedCpiIndex: [],
+  });
+  await mount(<RefinanceComparison locale="he" loans={[]} simulation={simulation} balanceToSettle={180000.25}
+    fees={1662.72} mixes={[a, b]} labels={labels} comparisonLabels={he.savedComparison} />);
+  const amount = () => document.querySelector<HTMLInputElement>('input[inputmode="decimal"]')!;
+  const value = (label: string) => [...document.querySelectorAll("tbody tr")]
+    .find(row => row.querySelector("th")?.textContent === label)?.lastElementChild?.textContent;
+  expect(value(labels.compareRowFinancedFees)).toBe(formatMoney(1662.72, "he"));
+  expect(value(labels.compareRowTotalWithFees)).toBe(formatMoney(216000, "he"));
+  await type(amount(), "360");
+  expect(value(labels.compareRowTotalWithFees)).toBe(formatMoney(216360, "he"));
+  await click(button(b.name));
+  expect(amount().value).toBe("");
+  expect(document.body.textContent).toContain(labels.comparePrincipalMismatch.split("{mix}")[0]);
+  expect(document.body.textContent).not.toContain(labels.compareExtra.split("{amount}")[0]);
+  await click(button(a.name));
+  expect(amount().value).toBe("360");
+  await type(amount(), "-5");
+  expect(document.querySelector('[role="alert"]')?.textContent).toBe(labels.compareCostInvalid);
+  expect(value(labels.compareRowTotalWithFees)).toBeUndefined();
+});
+
+it("reuses an in-flight refinance series when switching back and handles a failed read", async () => {
+  const a = scenario(1, undefined), b = scenario(2, undefined);
+  let resolveA!: (series: Record<string, number[]>) => void;
+  mocks.load.mockReturnValueOnce(new Promise(done => { resolveA = done; }))
+    .mockRejectedValueOnce(new Error("offline"));
+  const simulation = simulateExistingMortgage([], {
+    boiRatePercent: 3, nominalZeroYieldsPercent: [], realZeroYieldsPercent: [], expectedCpiIndex: [],
+  });
+  await mount(<RefinanceComparison locale="he" loans={[]} simulation={simulation} balanceToSettle={180000}
+    fees={0} mixes={[a, b]} labels={he.payoffPage} comparisonLabels={he.savedComparison} />);
+  await click(button(b.name));
+  expect(document.body.textContent).toContain(he.savedComparison.chartUnavailable);
+  await click(button(a.name));
+  expect(document.body.textContent).toContain(he.savedComparison.chartsLoading);
+  await act(async () => resolveA({ [a.id]: Array(180).fill(1200) }));
+  expect(document.body.textContent).toContain(he.savedComparison.monthlyChartTitle);
+  expect(mocks.load.mock.calls).toEqual([[[a.id]], [[b.id]]]);
+});
 
 it("requests a series only for a newly selected mix, once, and shows the charts after it arrives", async () => {
   const third = scenario(3, undefined);

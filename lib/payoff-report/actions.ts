@@ -2,6 +2,7 @@
 
 import { createClient } from "../supabase/server";
 import { readSavedLoans } from "./saved";
+import { needsReportDate } from "./confirm";
 
 /**
  * Save and delete the signed-in user's current mortgage (the loans
@@ -11,10 +12,11 @@ import { readSavedLoans } from "./saved";
  * never as a raw database message.
  */
 
-export type MyMortgageError = "unauthenticated" | "invalid" | "failed";
+export type MyMortgageError = "unauthenticated" | "invalid" | "failed" | "changed";
 
 export async function saveMyMortgage(
   loans: unknown,
+  expectedUpdatedAt?: string,
 ): Promise<{ ok: true; updatedAt: string } | { ok: false; error: MyMortgageError }> {
   const supabase = await createClient();
   const {
@@ -23,14 +25,18 @@ export async function saveMyMortgage(
   if (!user) return { ok: false, error: "unauthenticated" };
 
   const valid = readSavedLoans(loans);
-  if (valid === null || valid.length > 20) return { ok: false, error: "invalid" };
+  if (valid === null || valid.length > 20 || valid.some(needsReportDate)) return { ok: false, error: "invalid" };
   const asOfDate = valid.map((loan) => loan.asOfDate).filter((date) => date !== null).sort().at(-1) ?? null;
 
-  const { data, error } = await supabase
-    .from("existing_mortgages")
-    .upsert({ user_id: user.id, schema_version: 1, loans: valid, as_of_date: asOfDate }, { onConflict: "user_id" })
+  const row = { schema_version: 1, loans: valid, as_of_date: asOfDate };
+  const mortgages = supabase.from("existing_mortgages");
+  const write = expectedUpdatedAt === undefined
+    ? mortgages.upsert({ ...row, user_id: user.id }, { onConflict: "user_id" })
+    : mortgages.update(row).eq("user_id", user.id).eq("updated_at", expectedUpdatedAt);
+  const { data, error } = await write
     .select("updated_at")
-    .single();
+    .maybeSingle();
+  if (!error && !data && expectedUpdatedAt !== undefined) return { ok: false, error: "changed" };
   if (error || !data) {
     console.error("[my-mortgage] save failed:", { code: error?.code, message: error?.message });
     return { ok: false, error: "failed" };

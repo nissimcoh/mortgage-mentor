@@ -1,6 +1,7 @@
 "use client";
 
-import { memo, useEffect, useId, useMemo, useRef, useState } from "react";
+import { memo, startTransition, useEffect, useId, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import type { Locale } from "@/lib/i18n/config";
 // Type-only import: erased at compile time, keeps the server-only
 // dictionary module out of the client bundle.
@@ -11,6 +12,8 @@ import type { ScheduleBasis } from "@/lib/mortgage/schedule-certainty";
 import ExportScheduleCsvButton from "./ExportScheduleCsvButton";
 
 type CalculatorLabels = Dictionary["calculator"];
+// More than one screenful in the 500px table, even at the smallest row height.
+const INITIAL_ROWS = 24;
 
 interface AmortizationScheduleProps {
   /** The schedule as returned by the mortgage engine — no math happens here. */
@@ -112,6 +115,32 @@ const AmortizationSchedule = memo(function AmortizationSchedule({
   const legendId = useId();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isScrollable, setIsScrollable] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const hasDeferredRows = !expanded && schedule.length > INITIAL_ROWS;
+
+  useEffect(() => {
+    const table = scrollRef.current;
+    if (!table || !hasDeferredRows) return;
+    const expand = () => startTransition(() => setExpanded(true));
+    const beforePrint = () => flushSync(() => setExpanded(true));
+    let observer: IntersectionObserver | undefined;
+    if (typeof IntersectionObserver === "undefined") {
+      expand();
+    } else {
+      observer = new IntersectionObserver(entries => {
+        if (entries.some(entry => entry.isIntersecting)) {
+          observer?.disconnect();
+          expand();
+        }
+      }, { rootMargin: "400px 0px" });
+      observer.observe(table);
+    }
+    window.addEventListener("beforeprint", beforePrint);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("beforeprint", beforePrint);
+    };
+  }, [hasDeferredRows]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -212,6 +241,11 @@ const AmortizationSchedule = memo(function AmortizationSchedule({
       >
         <div
           ref={scrollRef}
+          role="region"
+          aria-label={title}
+          tabIndex={0}
+          onFocusCapture={hasDeferredRows ? () => setExpanded(true) : undefined}
+          onScroll={hasDeferredRows ? () => setExpanded(true) : undefined}
           className="max-h-[500px] overflow-auto rounded-2xl border border-slate-200 bg-white shadow-sm"
         >
           <table aria-describedby={legendId} className="w-full min-w-[680px] text-sm">
@@ -241,7 +275,7 @@ const AmortizationSchedule = memo(function AmortizationSchedule({
             </tr>
           </thead>
           <tbody>
-            {schedule.map((entry, index) => {
+            {(hasDeferredRows ? schedule.slice(0, INITIAL_ROWS) : schedule).map((entry, index) => {
               const basis = rowBases[index];
               const contractual = basis === "contractual";
               return (

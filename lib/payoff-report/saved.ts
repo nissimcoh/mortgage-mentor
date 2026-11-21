@@ -9,6 +9,6 @@ export interface SavedMyMortgage {
 
 /** Same validation as model output: unknown input in, typed loans out. */
 export function readSavedLoans(value: unknown): PayoffLoan[] | null {
-  const parsed = parsePayoffReportFile({ loans: value }, "saved");
+  const parsed = parsePayoffReportFile({ loans: value }, "saved", "confirmed");
   return parsed.ok ? parsed.file.loans : null;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState, type DragEvent, type ReactNode } from "react";
+import { useId, useMemo, useRef, useState, type DragEvent, type ReactNode } from "react";
 import type { Dictionary } from "@/app/[locale]/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 import {
@@ -10,6 +10,7 @@ import {
   formatIsoDate,
   formatMoney,
   missingLoanFields,
+  needsReportDate,
   parseNumberInput,
   suggestAnchorSeries,
   prepareForConfirm,
@@ -26,6 +27,7 @@ import {
 } from "@/lib/payoff-report";
 import ExistingMortgageForecast from "./ExistingMortgageForecast";
 import Icon from "./Icon";
+import ReportDateField from "./ReportDateField";
 
 type Labels = Dictionary["payoffPage"];
 
@@ -145,14 +147,22 @@ export default function PayoffReportUpload({
     setUploads((current) => current.filter((item) => item.id !== id));
   }
 
-  const done = uploads.filter((item): item is DoneUpload => item.status === "done");
-  // Cheap enough to recompute on every edit; keeps one source of truth.
-  const combined = combinePayoffFiles(done.map((item) => item.file));
-  const missingCount = combined.loans.reduce(
+  const done = useMemo(() => uploads.filter((item): item is DoneUpload => item.status === "done"), [uploads]);
+  const combined = useMemo(() => combinePayoffFiles(done.map((item) => item.file)), [done]);
+  const missingCount = useMemo(() => combined.loans.reduce(
     (count, entry) => count + missingLoanFields(entry.loan).length,
-    0,
-  );
+    done.reduce((count, item) => count + item.file.loans.filter(needsReportDate).length, 0),
+  ), [combined, done]);
   const reading = uploads.some((item) => item.status === "reading");
+
+  function editDate(id: string, loanIndex: number, asOfDate: string | null) {
+    clearConfirmation();
+    setUploads((current) => current.map((item) => {
+      if (item.id !== id || item.status !== "done") return item;
+      const loans = item.file.loans.map((loan, index) => index === loanIndex ? { ...loan, asOfDate } : loan);
+      return { ...item, file: { ...item.file, loans } };
+    }));
+  }
 
   function editTrack(entry: CombinedLoan, trackIndex: number, update: (track: PayoffTrack) => PayoffTrack) {
     const target = done[entry.fileIndex];
@@ -170,6 +180,7 @@ export default function PayoffReportUpload({
   // "Edit figures" and "Save" stays, above the simulation.
   const confirmBarRef = useRef<HTMLDivElement>(null);
   function confirm() {
+    if (reading || missingCount > 0 || combined.loans.length === 0) return;
     setConfirmedLoans(combined.loans.map((entry) => entry.loan));
     requestAnimationFrame(() => confirmBarRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
@@ -274,6 +285,14 @@ export default function PayoffReportUpload({
                   >
                     <Icon name="close" size={16} />
                   </button>
+                )}
+                {item.status === "done" && (
+                  <div className="mt-2 grid w-full gap-3 sm:grid-cols-2">
+                    {item.file.loans.map((loan, index) => (
+                      <ReportDateField key={index} loan={loan} index={index} labels={labels}
+                        onChange={(date) => editDate(item.id, index, date)} />
+                    ))}
+                  </div>
                 )}
               </li>
             ))}

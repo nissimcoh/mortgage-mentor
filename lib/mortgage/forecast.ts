@@ -387,6 +387,8 @@ export function solveMonthlyIrr(
   let high = 0.05;
   for (let iteration = 0; iteration < 200; iteration++) {
     const mid = (low + high) / 2;
+    // Once the midpoint rounds to an endpoint, further bisections repeat it.
+    if (mid === low || mid === high) return mid;
     let presentValue = 0;
     for (let index = 0; index < payments.length; index++) {
       presentValue += payments[index] / Math.pow(1 + mid, index + 1);

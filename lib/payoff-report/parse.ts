@@ -1,5 +1,6 @@
 import type {
   IsoDate,
+  PayoffAnchorSeries,
   PayoffBalance,
   PayoffFees,
   PayoffLinkage,
@@ -37,6 +38,7 @@ const REPAYMENT_METHODS: readonly PayoffRepaymentMethod[] = [
   "unknown",
 ];
 const STATUSES: readonly PayoffTrackStatus[] = ["active", "closed"];
+const ANCHORS: readonly PayoffAnchorSeries[] = ["governmentBondUnlinked", "governmentBondLinked", "makam", "other"];
 
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 const SLASH_DATE = /^(\d{1,2})[/.](\d{1,2})[/.](\d{4})$/;
@@ -50,12 +52,18 @@ function isRealDate(year: number, month: number, day: number): boolean {
   );
 }
 
+export function isPayoffDate(value: string | null): boolean {
+  const parts = value && ISO_DATE.exec(value);
+  return !!parts && isRealDate(Number(parts[1]), Number(parts[2]), Number(parts[3]));
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 class Reader {
   readonly issues: PayoffParseIssue[] = [];
+  constructor(readonly confirmed: boolean) {}
 
   issue(path: string, message: string): void {
     this.issues.push({ path, message });
@@ -89,8 +97,7 @@ class Reader {
   date(value: unknown, path: string): IsoDate | null {
     const raw = this.text(value, path);
     if (raw === null) return null;
-    const iso = ISO_DATE.exec(raw);
-    if (iso && isRealDate(Number(iso[1]), Number(iso[2]), Number(iso[3]))) return raw;
+    if (isPayoffDate(raw)) return raw;
     const slash = SLASH_DATE.exec(raw);
     if (slash) {
       const [day, month, year] = [Number(slash[1]), Number(slash[2]), Number(slash[3])];
@@ -184,6 +191,9 @@ function readVariable(
       `${path}.originalRatePercent`,
     ),
   };
+  if (reader.confirmed && variable.anchorSeries != null) {
+    read.anchorSeries = ANCHORS.find((anchor) => anchor === variable.anchorSeries) ?? null;
+  }
   // Readers that cannot output null send an all-empty object instead.
   return Object.values(read).every((field) => field === null) ? null : read;
 }
@@ -267,8 +277,8 @@ function readLoan(reader: Reader, value: unknown, path: string): PayoffLoan | nu
  * Validate one file's worth of report data. Fails only when no usable loan
  * remains; otherwise returns the file with every issue for the confirm step.
  */
-export function parsePayoffReportFile(raw: unknown, fileName: string): PayoffParseResult {
-  const reader = new Reader();
+export function parsePayoffReportFile(raw: unknown, fileName: string, source: "report" | "confirmed" = "report"): PayoffParseResult {
+  const reader = new Reader(source === "confirmed");
   if (!isRecord(raw)) {
     reader.issue("", "expected an object");
     return { ok: false, issues: reader.issues };
