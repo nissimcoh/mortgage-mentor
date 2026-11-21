@@ -6,4 +6,8 @@ export const legalOperator: { name: string; email: string } = {
 };
 
 export const legalDetailsComplete = Boolean(legalOperator.name && legalOperator.email);
-export const legalUpdatedAt = "2026-11-17";
+export const legalUpdatedAt = {
+  privacy: "2026-11-21",
+  terms: "2026-11-21",
+  accessibility: "2026-11-17",
+};

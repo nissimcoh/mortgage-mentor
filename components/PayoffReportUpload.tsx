@@ -1,6 +1,8 @@
 "use client";
 
 import { useId, useMemo, useRef, useState, type DragEvent, type ReactNode } from "react";
+import Link from "next/link";
+import { legalLabels } from "@/lib/legal/labels";
 import type { Dictionary } from "@/app/[locale]/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 import {
@@ -238,7 +240,12 @@ export default function PayoffReportUpload({
             event.target.value = "";
           }}
         />
-        <p className="mt-5 max-w-xl text-sm leading-6 text-slate-500">{labels.privacyNote}</p>
+        <p className="mt-5 max-w-xl text-sm leading-6 text-slate-600">
+          {labels.privacyNote}{" "}
+          <Link href={`/${locale}/privacy`} target="_blank" rel="noopener noreferrer" className="underline">
+            {legalLabels[locale].privacy}
+          </Link>
+        </p>
       </div>
 
       {notice && (

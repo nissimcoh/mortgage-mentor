@@ -158,16 +158,17 @@ const RefinanceComparison = memo(function RefinanceComparison({
       </fieldset>
 
       {selected && (
-        <label className="glass-form mt-4 block max-w-sm text-sm">
-          {labels.compareOtherCosts}
-          <input type="text" inputMode="decimal" dir="ltr" placeholder="0" value={extra}
-            aria-invalid={!extraValid} className="mt-1 block w-full border px-3"
+        <div className="glass-form mt-4 text-sm">
+          <label htmlFor="refinance-extra-costs">{labels.compareOtherCosts}</label>
+          <input id="refinance-extra-costs" type="text" inputMode="decimal" dir="ltr" placeholder="0" value={extra}
+            aria-describedby="refinance-fee-notice" aria-invalid={!extraValid} className="mt-1 block w-full max-w-sm border px-3"
             onChange={(event) => {
               const value = event.target.value.trim();
               setExtraCosts((current) => ({ ...current, [selected.id]: value }));
             }} />
           {!extraValid && <span role="alert" className="text-red-700">{labels.compareCostInvalid}</span>}
-        </label>
+          <p id="refinance-fee-notice" className="mt-2 max-w-prose leading-6 text-slate-600">{labels.compareFeeNotice}</p>
+        </div>
       )}
 
       {result && selected && (

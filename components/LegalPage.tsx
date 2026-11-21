@@ -29,7 +29,7 @@ export default async function LegalPage({ kind, params }: LegalPageProps & { kin
       <Link href={`/${locale}`} className="inline-flex items-center gap-1 text-sm text-slate-500 transition-colors hover:text-slate-900">{he ? "חזרה לדף הבית" : "Back to home"}</Link>
       <article className="glass-panel mt-5 p-6 sm:p-10">
         <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">{legalLabels[locale][kind]}</h1>
-        <p className="mt-3 text-sm text-slate-600">{he ? "עדכון אחרון: " : "Last updated: "}<time dateTime={legalUpdatedAt}>{formatDateOnly(legalUpdatedAt, locale)}</time></p>
+        <p className="mt-3 text-sm text-slate-600">{he ? "עדכון אחרון: " : "Last updated: "}<time dateTime={legalUpdatedAt[kind]}>{formatDateOnly(legalUpdatedAt[kind], locale)}</time></p>
         {!legalDetailsComplete && (
           <p role="status" className="mt-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
             {he ? "טיוטה — פרטי המפעיל ויצירת הקשר עדיין אינם מלאים. העמוד אינו מדיניות סופית לפרסום." : "Draft — operator and contact details are not yet complete. This page is not a final policy for publication."}
