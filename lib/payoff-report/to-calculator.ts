@@ -148,7 +148,8 @@ export function currentMixHref(
     const active = loan.tracks.filter((track) => track.status === "active");
     // Fees charged once per loan ride on its largest track, so the mix
     // still adds up to the loan's balance to settle.
-    const amounts = active.map((track) => track.balance.totalToSettle ?? (track.balance.principal ?? 0) + (track.balance.indexation ?? 0));
+    const amounts = active.map((track) => track.balance.totalToSettle);
+    if (!amounts.every((amount): amount is number => amount !== null)) return null;
     const largest = amounts.indexOf(Math.max(...amounts));
     for (const [index, track] of active.entries()) {
       const months = remainingMonths(track, loan.asOfDate);

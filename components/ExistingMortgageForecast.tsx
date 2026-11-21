@@ -94,6 +94,15 @@ export default function ExistingMortgageForecast({
     ...simulation.tracks.map((track) => ({ id: `${track.loanIndex}-${track.trackIndex}`, label: trackName(track) })),
   ];
 
+  if (simulation.skipped.length > 0) {
+    return (
+      <section className="glass-panel px-5 py-6">
+        <h2 className="text-xl font-semibold">{labels.forecastHeading}</h2>
+        <p className="mt-2 text-sm leading-6">{labels.forecastIncomplete}</p>
+      </section>
+    );
+  }
+
   return (
     <>
     <section aria-labelledby="existing-forecast-heading" className="glass-panel mb-6 px-5 py-6 sm:px-6">
@@ -211,7 +220,12 @@ export default function ExistingMortgageForecast({
         </>
       )}
     </section>
-    {comparison && (
+    {comparison && (reportTotals.totalToSettle === null || reportTotals.fees === null ? (
+      <section className="glass-panel px-5 py-6">
+        <h2 className="text-xl font-semibold">{labels.compareHeading}</h2>
+        <p className="mt-2 text-sm leading-6">{labels.compareIncomplete}</p>
+      </section>
+    ) : (
       <RefinanceComparison
         loans={loans}
         simulation={officialSimulation}
@@ -222,7 +236,7 @@ export default function ExistingMortgageForecast({
         comparisonLabels={comparison.labels}
         locale={locale}
       />
-    )}
+    ))}
     </>
   );
 }

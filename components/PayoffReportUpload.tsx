@@ -392,9 +392,9 @@ function Summary({
 }) {
   const { totals, asOfDates, skipped } = combined;
   const stats: [string, string][] = [
-    [labels.summaryToSettle, formatMoney(totals.totalToSettle, locale)],
-    [labels.summaryMonthly, formatMoney(totals.monthlyPayment, locale)],
-    [labels.summaryFees, formatMoney(totals.fees, locale)],
+    [labels.summaryToSettle, totals.totalToSettle === null ? labels.incompleteReportAmount : formatMoney(totals.totalToSettle, locale)],
+    [labels.summaryMonthly, totals.monthlyPayment === null ? labels.incompleteReportAmount : formatMoney(totals.monthlyPayment, locale)],
+    [labels.summaryFees, totals.fees === null ? labels.incompleteReportAmount : formatMoney(totals.fees, locale)],
     [labels.summaryActiveTracks, String(totals.activeTrackCount)],
   ];
   return (

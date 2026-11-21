@@ -115,11 +115,11 @@ export default async function SavedPage({
             <dl className="flex gap-6">
               <div>
                 <dt className="text-xs text-slate-500">{dict.savedPage.myMortgageBalance}</dt>
-                <dd className="mt-0.5 text-xl font-semibold tabular-nums"><bdi>{formatMoney(myTotals.totalToSettle, locale)}</bdi></dd>
+                <dd className="mt-0.5 text-xl font-semibold tabular-nums"><bdi>{myTotals.totalToSettle === null ? dict.payoffPage.incompleteReportAmount : formatMoney(myTotals.totalToSettle, locale)}</bdi></dd>
               </div>
               <div>
                 <dt className="text-xs text-slate-500">{dict.savedPage.myMortgagePayment}</dt>
-                <dd className="mt-0.5 text-xl font-semibold tabular-nums"><bdi>{formatMoney(myTotals.monthlyPayment, locale)}</bdi></dd>
+                <dd className="mt-0.5 text-xl font-semibold tabular-nums"><bdi>{myTotals.monthlyPayment === null ? dict.payoffPage.incompleteReportAmount : formatMoney(myTotals.monthlyPayment, locale)}</bdi></dd>
               </div>
             </dl>
           ) : (

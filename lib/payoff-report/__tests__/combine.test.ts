@@ -25,6 +25,29 @@ describe("normalizeLoanNumber", () => {
 });
 
 describe("combinePayoffFiles", () => {
+  it("uses the full printed loan total when one active track amount is missing", () => {
+    const files = splitFiles();
+    const track = files[0].loans[0].tracks[0];
+    track.balance.totalToSettle = null;
+    track.fees.total = null;
+    track.monthlyPayment = null;
+    expect(combinePayoffFiles(files).totals).toEqual({
+      activeTrackCount: 3, monthlyPayment: 2867.87, fees: 1662.72, totalToSettle: 284378.25,
+    });
+  });
+
+  it("keeps unknown household amounts distinct from an explicitly reported zero", () => {
+    const files = splitFiles();
+    const loan = files[1].loans[0];
+    loan.tracks[0].balance.totalToSettle = null;
+    loan.tracks[0].fees.total = null;
+    loan.reportedTotals.totalToSettle = null;
+    loan.reportedTotals.fees = null;
+    expect(combinePayoffFiles(files).totals).toMatchObject({ fees: null, totalToSettle: null });
+    loan.reportedTotals.fees = 0;
+    expect(combinePayoffFiles(files).totals.fees).toBe(1612.65);
+  });
+
   it("totals active tracks across files plus loan-level fees", () => {
     const combined = combinePayoffFiles(splitFiles());
     expect(combined.loans.map((loan) => loan.fileName)).toEqual(["loan-0.pdf", "loan-1.pdf"]);

@@ -27,9 +27,9 @@ export interface SkippedLoan {
 
 export interface CombinedPayoffTotals {
   activeTrackCount: number;
-  monthlyPayment: number;
-  fees: number;
-  totalToSettle: number;
+  monthlyPayment: number | null;
+  fees: number | null;
+  totalToSettle: number | null;
 }
 
 export interface CombinedPayoff {
@@ -49,6 +49,15 @@ export function normalizeLoanNumber(loanNumber: string | null): string | null {
 
 function round2(value: number): number {
   return Math.round(value * 100) / 100;
+}
+
+function completeSum(values: readonly (number | null)[]): number | null {
+  let sum = 0;
+  for (const value of values) {
+    if (value === null) return null;
+    sum += value;
+  }
+  return round2(sum);
 }
 
 export function combinePayoffFiles(files: readonly PayoffReportFile[]): CombinedPayoff {
@@ -89,23 +98,18 @@ export function combinePayoffFiles(files: readonly PayoffReportFile[]): Combined
     });
   });
 
-  const totals: CombinedPayoffTotals = {
-    activeTrackCount: 0,
-    monthlyPayment: 0,
-    fees: 0,
-    totalToSettle: 0,
-  };
+  let activeTrackCount = 0;
+  const payments: (number | null)[] = [];
+  const fees: (number | null)[] = [];
+  const balances: (number | null)[] = [];
   for (const { loan } of kept) {
     const loanFees = loan.loanLevelFees ?? 0;
-    totals.fees += loanFees;
-    totals.totalToSettle += loanFees;
-    for (const track of loan.tracks) {
-      if (track.status !== "active") continue;
-      totals.activeTrackCount++;
-      totals.monthlyPayment += track.monthlyPayment ?? 0;
-      totals.fees += track.fees.total ?? 0;
-      totals.totalToSettle += track.balance.totalToSettle ?? 0;
-    }
+    const active = loan.tracks.filter((track) => track.status === "active");
+    activeTrackCount += active.length;
+    payments.push(completeSum(active.map((track) => track.monthlyPayment)) ?? loan.reportedTotals.monthlyPayment);
+    // The bank's loan totals already include the loan-level fees.
+    fees.push(completeSum([loanFees, ...active.map((track) => track.fees.total)]) ?? loan.reportedTotals.fees);
+    balances.push(completeSum([loanFees, ...active.map((track) => track.balance.totalToSettle)]) ?? loan.reportedTotals.totalToSettle);
   }
 
   const asOfDates = [
@@ -117,10 +121,10 @@ export function combinePayoffFiles(files: readonly PayoffReportFile[]): Combined
     skipped,
     asOfDates,
     totals: {
-      activeTrackCount: totals.activeTrackCount,
-      monthlyPayment: round2(totals.monthlyPayment),
-      fees: round2(totals.fees),
-      totalToSettle: round2(totals.totalToSettle),
+      activeTrackCount,
+      monthlyPayment: completeSum(payments),
+      fees: completeSum(fees),
+      totalToSettle: completeSum(balances),
     },
   };
 }

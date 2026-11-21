@@ -74,3 +74,18 @@ it("repairs a legacy saved mortgage without a reader, keeps the draft on failure
   expect(document.querySelector("#existing-forecast-heading")?.textContent).toBe(labels.forecastHeading);
   expect(document.querySelector('input[type="date"]')).toBeNull();
 });
+
+it("keeps an incomplete settlement quote out of refinancing and an incomplete schedule out of forecasts", async () => {
+  const loans = fixture().loans;
+  loans[1].tracks[0].balance.totalToSettle = null;
+  loans[1].reportedTotals.totalToSettle = null;
+  await mount(<MyMortgage {...props} initialSaved={{ loans, updatedAt: "2026-06-01" }} readingAvailable />);
+  expect(document.body.textContent).toContain(labels.compareIncomplete);
+  expect(document.querySelector('a[href*="track1Amount"]')).toBeNull();
+  expect(document.querySelector("#existing-forecast-heading")).not.toBeNull();
+  await unmount();
+  loans[1].tracks[0].endDate = "2020-01-01";
+  await mount(<MyMortgage {...props} initialSaved={{ loans, updatedAt: "2026-06-01" }} readingAvailable />);
+  expect(document.body.textContent).toContain(labels.forecastIncomplete);
+  expect(document.body.textContent).not.toContain(labels.forecastNextPayment);
+});
