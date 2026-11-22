@@ -48,8 +48,6 @@ type ReadResult =
   | { ok: false; error: string };
 
 async function readReport(source: File): Promise<ReadResult> {
-  if (source.size > MAX_BYTES) return { ok: false, error: "too-large" };
-  if (source.size === 0) return { ok: false, error: "empty" };
   const body = new FormData();
   body.set("file", source);
   try {
@@ -95,6 +93,7 @@ export default function PayoffReportUpload({
   };
   const inputRef = useRef<HTMLInputElement>(null);
   const nextId = useRef(0);
+  const fileByDigest = useRef(new Map<string, string>());
 
   const errorText = (code: string) =>
     labels.errors[code as keyof Labels["errors"]] ?? labels.errors.generic;
@@ -105,9 +104,30 @@ export default function PayoffReportUpload({
 
   async function startReading(id: string, source: File) {
     setUpload(id, { id, name: source.name, status: "reading" });
-    if (!isPdfName(source)) {
-      setUpload(id, { id, name: source.name, status: "error", error: "not-pdf", source });
+    const error = !isPdfName(source) ? "not-pdf" : source.size > MAX_BYTES ? "too-large" : source.size === 0 ? "empty" : null;
+    if (error) {
+      setUpload(id, { id, name: source.name, status: "error", error, source });
       return;
+    }
+    // Reserve before fetching so simultaneous drops share the duplicate check.
+    // IDs live only for the files still listed on this screen.
+    if (globalThis.crypto?.subtle && typeof source.arrayBuffer === "function") {
+      let digest: string | undefined;
+      try {
+        const bytes = await crypto.subtle.digest("SHA-256", await source.arrayBuffer());
+        digest = Array.from(new Uint8Array(bytes), (b) => b.toString(16).padStart(2, "0")).join("");
+      } catch {
+        // File reading can still work through FormData without a local digest.
+      }
+      if (digest) {
+        const existing = fileByDigest.current.get(digest);
+        if (existing && existing !== id) {
+          setUploads((current) => current.filter((item) => item.id !== id));
+          setNotice(fillTemplate(labels.duplicateFile, { file: source.name }));
+          return;
+        }
+        fileByDigest.current.set(digest, id);
+      }
     }
     const result = await readReport(source);
     setUpload(
@@ -146,6 +166,9 @@ export default function PayoffReportUpload({
 
   function removeUpload(id: string) {
     clearConfirmation();
+    for (const [digest, owner] of fileByDigest.current) {
+      if (owner === id) fileByDigest.current.delete(digest);
+    }
     setUploads((current) => current.filter((item) => item.id !== id));
   }
 
@@ -219,6 +242,10 @@ export default function PayoffReportUpload({
         </span>
         <p className="text-xl font-semibold tracking-tight">{labels.dropTitle}</p>
         <p className="mt-2 text-base text-slate-500">{labels.dropHint}</p>
+        <details className="mt-3 max-w-xl text-start text-sm leading-6 text-slate-700">
+          <summary className="cursor-pointer font-medium text-accent">{labels.reportHelpTitle}</summary>
+          <p className="mt-1">{labels.reportHelpBody}</p>
+        </details>
         <button
           type="button"
           onClick={() => inputRef.current?.click()}

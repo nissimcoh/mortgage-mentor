@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act } from "react";
+import { webcrypto } from "node:crypto";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import he from "@/app/[locale]/dictionaries/he.json";
 import { fictionalTwoLoanFile } from "@/lib/payoff-report/__tests__/fixtures";
@@ -22,6 +23,27 @@ function fixture() {
 
 beforeEach(() => {
   vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+});
+
+it("makes one paid read for identical contents selected together and accepts a changed report with the same name", async () => {
+  vi.stubGlobal("crypto", webcrypto);
+  const fetch = vi.fn().mockResolvedValue({ json: async () => ({ ok: true, file: fixture(), issues: [] }) });
+  vi.stubGlobal("fetch", fetch);
+  await mount(<MyMortgage {...props} initialSaved={null} readingAvailable />);
+  expect(document.querySelector("summary")?.textContent).toBe(labels.reportHelpTitle);
+  const input = document.querySelector<HTMLInputElement>('input[type="file"]')!;
+  const pdf = (name: string, contents: string) => {
+    const file = new File([contents], name, { type: "application/pdf" });
+    Object.defineProperty(file, "arrayBuffer", { value: async () => new TextEncoder().encode(contents).buffer });
+    return file;
+  };
+  Object.defineProperty(input, "files", { value: [pdf("report.pdf", "123"), pdf("copy.pdf", "123"), pdf("report.pdf", "124")] });
+  await act(async () => {
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+  });
+  expect(document.querySelector('[role="status"]')?.textContent).toContain("כבר ברשימה");
+  expect(document.querySelectorAll('li input[type="date"]')).toHaveLength(4);
 });
 
 afterEach(async () => {
