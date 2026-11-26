@@ -10,6 +10,7 @@ import {
 } from "@/lib/mortgage";
 import type { MortgageMilestone } from "@/lib/mortgage/milestones";
 import type { ScheduleBasis } from "@/lib/mortgage/schedule-certainty";
+import { invalidResetPeriod } from "./confirm";
 import { remainingPaymentCounts } from "./checks";
 import type { IsoDate, PayoffLoan, PayoffTrack } from "./types";
 
@@ -126,14 +127,12 @@ function addMonths(date: IsoDate, months: number): IsoDate {
   return `${nextYear}-${String(nextMonth).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
-function monthKey(date: IsoDate): string {
-  return date.slice(0, 7);
+function monthIndex(date: string): number {
+  return Number(date.slice(0, 4)) * 12 + Number(date.slice(5, 7)) - 1;
 }
 
 function monthsBetween(from: IsoDate, to: IsoDate): number {
-  const [fromYear, fromMonth] = from.split("-").map(Number);
-  const [toYear, toMonth] = to.split("-").map(Number);
-  return (toYear - fromYear) * 12 + (toMonth - fromMonth);
+  return monthIndex(to) - monthIndex(from);
 }
 
 /** Date of the next payment after the report date. */
@@ -273,7 +272,7 @@ function simulateTrack(
 ): Omit<ExistingTrackSimulation, "loanIndex" | "trackIndex"> | "missingFields" | "noPaymentsLeft" {
   const rate = track.annualRatePercent;
   const principal = track.balance.principal;
-  if (rate === null || principal === null || track.endDate === null) return "missingFields";
+  if (rate === null || principal === null || track.endDate === null || invalidResetPeriod(track)) return "missingFields";
 
   const paymentDay = Number((track.firstPaymentDate ?? track.endDate).slice(8, 10));
   const firstPaymentDate = nextPaymentDate(asOf, paymentDay, track.firstPaymentDate);
@@ -390,7 +389,7 @@ export function existingMilestones(simulation: ExistingMortgageSimulation): Mort
     grouped.set(month, events);
   };
   simulation.tracks.forEach((track, trackIndex) => {
-    const offset = monthsBetween(`${first}-01`, `${monthKey(track.firstPaymentDate)}-01`);
+    const offset = monthsBetween(first, track.firstPaymentDate);
     for (const payment of track.resetPayments) add(offset + payment, trackIndex, "reset");
     add(offset + track.numberOfPayments, trackIndex, "end");
   });
@@ -409,12 +408,13 @@ export function existingTrackBasis(
 
 /** The combined schedule's basis per row: any forecast-dependent track counts. */
 export function existingCombinedBases(simulation: ExistingMortgageSimulation): ScheduleBasis[] {
-  return simulation.combinedSchedule.map((_, index) => {
-    const key = simulation.months[index].month;
+  const starts = simulation.tracks.map((track) => monthIndex(track.firstPaymentDate));
+  return simulation.months.map(({ month }) => {
+    const index = monthIndex(month);
     let rate = false;
     let linked = false;
-    for (const track of simulation.tracks) {
-      const paymentNumber = monthsBetween(`${monthKey(track.firstPaymentDate)}-01`, `${key}-01`) + 1;
+    for (const [i, track] of simulation.tracks.entries()) {
+      const paymentNumber = index - starts[i] + 1;
       if (paymentNumber < 1 || paymentNumber > track.numberOfPayments) continue;
       const basis = existingTrackBasis(track, paymentNumber);
       rate ||= basis === "rate" || basis === "rateAndIndex";
@@ -452,10 +452,11 @@ export function simulateExistingMortgage(
   // Add tracks up by calendar month. A track's balance before its first
   // payment counts as its starting balance.
   type Sums = { payment: number; principal: number; interest: number; indexation: number; rateWeight: number; opening: number };
-  const byMonth = new Map<string, Sums>();
-  for (const track of tracks) {
+  const byMonth = new Map<number, Sums>();
+  const starts = tracks.map((track) => monthIndex(track.firstPaymentDate));
+  for (const [trackIndex, track] of tracks.entries()) {
     track.schedule.forEach((entry, index) => {
-      const key = monthKey(addMonths(track.firstPaymentDate, index));
+      const key = starts[trackIndex] + index;
       const sums = byMonth.get(key) ?? { payment: 0, principal: 0, interest: 0, indexation: 0, rateWeight: 0, opening: 0 };
       const opening = entry.openingBalance ?? 0;
       sums.payment += entry.payment;
@@ -467,18 +468,18 @@ export function simulateExistingMortgage(
       byMonth.set(key, sums);
     });
   }
-  const keys = [...byMonth.keys()].sort();
+  const keys = [...byMonth.keys()].sort((a, b) => a - b);
   const months: ExistingMonth[] = keys.map((key) => {
-    const balance = tracks.reduce((sum, track) => {
-      const first = monthKey(track.firstPaymentDate);
+    const balance = tracks.reduce((sum, track, trackIndex) => {
+      const first = starts[trackIndex];
       if (key < first) return sum + track.startBalance;
-      const index = monthsBetween(`${first}-01`, `${key}-01`);
+      const index = key - first;
       const entry = track.schedule[Math.min(index, track.schedule.length - 1)];
       return sum + entry.remainingBalance;
     }, 0);
     const sums = byMonth.get(key)!;
     return {
-      month: key,
+      month: `${Math.floor(key / 12)}-${String(key % 12 + 1).padStart(2, "0")}`,
       payment: roundMoney(sums.payment),
       principal: roundMoney(sums.principal),
       interest: roundMoney(sums.interest),
@@ -487,7 +488,7 @@ export function simulateExistingMortgage(
   });
 
   const combinedSchedule: AmortizationEntry[] = months.map((month, index) => {
-    const sums = byMonth.get(month.month)!;
+    const sums = byMonth.get(keys[index])!;
     const previousBalance = index === 0 ? startBalanceOf(tracks) : months[index - 1].balance;
     return {
       month: index + 1,

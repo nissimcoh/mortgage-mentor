@@ -60,6 +60,14 @@ describe("combinePayoffFiles", () => {
     expect(feesAssumedZero(files.flatMap((file) => file.loans))).toBe(false);
   });
 
+  it("recognizes a printed component even when the fee total is absent", () => {
+    const loan = splitFiles()[1].loans[0];
+    loan.reportedTotals.fees = null;
+    loan.tracks[0].fees.total = null;
+    loan.tracks[0].fees.notice = 0;
+    expect(feesAssumedZero([loan])).toBe(false);
+  });
+
   it("cannot settle a track without its principal", () => {
     const files = splitFiles();
     const loan = files[1].loans[0];

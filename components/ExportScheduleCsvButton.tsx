@@ -1,5 +1,7 @@
 "use client";
 
+import { BRAND_NAME } from "@/lib/brand";
+
 import { useState } from "react";
 import type { Dictionary } from "@/app/[locale]/dictionaries";
 import type { AmortizationEntry } from "@/lib/mortgage/types";
@@ -18,7 +20,7 @@ export default function ExportScheduleCsvButton({ schedule, rowBases, labels, ti
     try {
       url = URL.createObjectURL(new Blob([buildScheduleCsv(schedule, rowBases, labels, rateHeader)], { type: "text/csv;charset=utf-8" }));
       link.href = url;
-      link.download = `MortgageMentor-${title.replace(/[\\/:*?"<>|]/g, "-")}.csv`;
+      link.download = `${BRAND_NAME}-${title.replace(/[\\/:*?"<>|]/g, "-")}.csv`;
       document.body.append(link);
       link.click();
     } catch { setFailed(true); }

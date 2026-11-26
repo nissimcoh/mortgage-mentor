@@ -90,11 +90,13 @@ export function trackSettlement(track: PayoffTrack): number | null {
   );
 }
 
-/** Whether some active track's fees were not printed and count as 0. */
+/** Whether some active track's report shows no fee at all, so it counts as 0. */
 export function feesAssumedZero(loans: readonly PayoffLoan[]): boolean {
   return loans.some((loan) =>
     loan.reportedTotals.fees === null &&
-    loan.tracks.some((track) => track.status === "active" && track.fees.total === null),
+    loan.tracks.some(({ status, fees }) =>
+      status === "active" &&
+      [fees.total, fees.capitalization, fees.notice, fees.averageCpi, fees.operational].every((value) => value === null)),
   );
 }
 

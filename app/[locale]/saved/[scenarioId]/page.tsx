@@ -1,3 +1,4 @@
+import { BRAND_NAME } from "@/lib/brand";
 import { TRACK_COLORS } from "@/lib/ui/track-colors";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -37,7 +38,7 @@ export async function generateMetadata({
   // per-user, auth-protected page's title from leaking into browser
   // history/tab titles.
   return {
-    title: `${dict.nav.saved} | MortgageMentor`,
+    title: `${dict.nav.saved} | ${BRAND_NAME}`,
     description: dict.scenarioDetailPage.snapshotNote,
   };
 }

@@ -22,7 +22,8 @@ export type PayoffConfirmField =
   | "principal"
   | "marginPercent"
   | "nextResetDate"
-  | "anchorSeries";
+  | "anchorSeries"
+  | "resetFrequencyMonths";
 
 export interface PayoffMissingField {
   trackIndex: number;
@@ -31,6 +32,11 @@ export interface PayoffMissingField {
 
 export function needsReportDate(loan: PayoffLoan): boolean {
   return !isPayoffDate(loan.asOfDate) && loan.tracks.some((track) => track.status === "active");
+}
+
+export function invalidResetPeriod(track: PayoffTrack): boolean {
+  const months = track.variable?.resetFrequencyMonths;
+  return track.status === "active" && track.rateType === "variable" && months != null && (!Number.isSafeInteger(months) || months < 1);
 }
 
 export function missingTrackFields(track: PayoffTrack): PayoffConfirmField[] {
@@ -44,6 +50,7 @@ export function missingTrackFields(track: PayoffTrack): PayoffConfirmField[] {
   if (track.endDate === null) missing.push("endDate");
   if (track.balance.principal === null) missing.push("principal");
   if (track.rateType === "variable") {
+    if (invalidResetPeriod(track)) missing.push("resetFrequencyMonths");
     if (track.variable?.marginPercent == null) missing.push("marginPercent");
     if (track.variable?.nextResetDate == null) missing.push("nextResetDate");
     if (track.variable?.anchorSeries == null) missing.push("anchorSeries");

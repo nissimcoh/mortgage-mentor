@@ -1,3 +1,4 @@
+import { BRAND_NAME } from "@/lib/brand";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -14,7 +15,7 @@ export async function legalMetadata(kind: LegalPageKind, { params }: LegalPagePr
   const { locale } = await params;
   if (!isValidLocale(locale)) notFound();
   return {
-    title: `${legalLabels[locale][kind]} | MortgageMentor`,
+    title: `${legalLabels[locale][kind]} | ${BRAND_NAME}`,
     alternates: pageAlternates(locale, `/${kind}`),
     robots: legalDetailsComplete ? { index: true, follow: true } : { index: false, follow: false },
   };

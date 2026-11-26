@@ -59,6 +59,16 @@ describe("currentMixHref", () => {
     expect(result.approximated).toBe(true);
   });
 
+  it("keeps the remaining term when only the last payment date is printed", () => {
+    const loan = loans()[0];
+    const track = loan.tracks[0];
+    track.firstPaymentDate = null;
+    track.balance.totalToSettle = null;
+    const input = [{ ...loan, tracks: [track] }];
+    expect(longestRemainingMonths(input)).toBe(120);
+    expect(params(currentMixHref("he", input)!.href).query).toMatchObject({ track1Years: "10", track1Amount: "151588" });
+  });
+
   it("is exact for fixed tracks whose terms are whole years", () => {
     const fixedOnly = loans().map((loan) => ({ ...loan, tracks: loan.tracks.filter((track) => track.rateType === "fixed") }));
     expect(currentMixHref("he", fixedOnly)?.approximated).toBe(false);

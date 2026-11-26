@@ -1,3 +1,4 @@
+import { BRAND_NAME } from "@/lib/brand";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -20,7 +21,7 @@ export async function generateMetadata({
   if (!isValidLocale(locale)) notFound();
   const dict = await getDictionary(locale);
   return {
-    title: `${dict.payoffPage.title} | MortgageMentor`,
+    title: `${dict.payoffPage.title} | ${BRAND_NAME}`,
     description: dict.payoffPage.intro,
     // Not linked from the site yet; keep it out of search results until it is.
     robots: { index: false, follow: false },

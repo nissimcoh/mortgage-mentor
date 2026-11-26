@@ -12,6 +12,7 @@ import {
   createTrackDraft,
   type TrackDraft,
 } from "@/lib/mortgage/scenario-form";
+import { trackSettlement } from "./combine";
 import { remainingPaymentCounts } from "./checks";
 import type { PayoffLoan, PayoffTrack } from "./types";
 
@@ -41,7 +42,7 @@ function wholeYears(months: number): number {
 
 function remainingMonths(track: PayoffTrack, asOfDate: string | null): number | null {
   if (asOfDate === null || track.endDate === null) return null;
-  const [months] = remainingPaymentCounts(asOfDate, track.firstPaymentDate ?? track.endDate, track.endDate);
+  const [months] = remainingPaymentCounts(asOfDate, track.firstPaymentDate, track.endDate);
   return months && months > 0 ? months : null;
 }
 
@@ -148,7 +149,7 @@ export function currentMixHref(
     const active = loan.tracks.filter((track) => track.status === "active");
     // Fees charged once per loan ride on its largest track, so the mix
     // still adds up to the loan's balance to settle.
-    const amounts = active.map((track) => track.balance.totalToSettle);
+    const amounts = active.map(trackSettlement);
     if (!amounts.every((amount): amount is number => amount !== null)) return null;
     const largest = amounts.indexOf(Math.max(...amounts));
     for (const [index, track] of active.entries()) {

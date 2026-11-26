@@ -401,7 +401,7 @@ export default function PayoffReportUpload({
           </div>
           {typeof saveState === "object" && (
             <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {saveState.error === "unauthenticated" ? labels.errors.unauthenticated : labels.saveError}
+              {saveState.error === "changed" ? labels.repairDateChanged : saveState.error === "unauthenticated" ? labels.errors.unauthenticated : labels.saveError}
             </p>
           )}
           {confirmed && (
@@ -672,6 +672,7 @@ function TrackFields({
           <NumberField
             label={labels.fields.resetFrequencyMonths}
             value={variable.resetFrequencyMonths}
+            missing={isMissing("resetFrequencyMonths") ? labels.invalidResetPeriod : null}
             onChange={(value) =>
               onChange((current) =>
                 withAnchorSuggestion({ ...current, variable: { ...(current.variable ?? variable), resetFrequencyMonths: value } }),

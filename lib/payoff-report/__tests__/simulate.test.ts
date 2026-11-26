@@ -141,6 +141,14 @@ describe("simulateExistingMortgage", () => {
     expect(track(short, 0, 0).assumptions).toEqual([]);
   });
 
+  it.each([0, -1, 0.5])("flags an invalid reset interval of %s for correction", (period) => {
+    const input = loans();
+    input[0].tracks[1].variable!.resetFrequencyMonths = period;
+    for (const mode of ["official", "constant"] as const) {
+      expect(simulateExistingMortgage(input, market, mode).skipped).toEqual([{ loanIndex: 0, trackIndex: 1, reason: "missingFields" }]);
+    }
+  });
+
   it("skips tracks missing what a simulation needs", () => {
     const missing = loans();
     missing[0].tracks[0].annualRatePercent = null;

@@ -18,6 +18,10 @@ describe("selectDataPages", () => {
     expect(selectDataPages([boilerplate, dataPage, boilerplate, dataPage])).toEqual([1, 3]);
   });
 
+  it("preserves scans and sparse fee or date pages in a mixed PDF", () => {
+    expect(selectDataPages([dataPage, "", "Page 3", "עמלה 12.50", "תאריך הדוח 01/02/2026", boilerplate])).toEqual([0, 1, 2, 3, 4]);
+  });
+
   it("sends the whole document when nothing would be dropped or kept", () => {
     expect(selectDataPages([dataPage, dataPage])).toBeNull();
     expect(selectDataPages(["", ""])).toBeNull(); // scanned, no text layer

@@ -4,20 +4,17 @@
 
 # MortgageMentor · מנטור משכנתא
 
-**Understand the numbers. Plan the mortgage.**
-<br />
-A bilingual (Hebrew/English) Israeli mortgage-mix calculator built on official Bank of Israel forecasts.
+Build an Israeli mortgage mix, read a bank payoff statement and compare refinancing options against the loan you already have.
 
-<p dir="rtl"><b>מבינים את המספרים. מתכננים את המשכנתא.</b><br />מחשבון תמהיל משכנתא בעברית ובאנגלית, המבוסס על תחזיות רשמיות של בנק ישראל.</p>
+<p dir="rtl">מחשבון משכנתא חינמי. אפשר לבנות תמהיל חדש, להעלות דוח יתרות מהבנק ולראות איך שינוי של מסלול משפיע על ההחזר החודשי ועל סך התשלומים.</p>
 
-[**Live app →**](https://mortgage-mentor-fawn.vercel.app/he)
+[**פתחו את המחשבון בעברית**](https://mortgage-mentor-fawn.vercel.app/he/calculator) · [**Try it in English**](https://mortgage-mentor-fawn.vercel.app/en/calculator)
 
 ![Next.js 16](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)
 ![React 19](https://img.shields.io/badge/React-19-149eca?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-Auth%20%2B%20Postgres-3ecf8e?logo=supabase&logoColor=white)
 ![Tailwind CSS 4](https://img.shields.io/badge/Tailwind_CSS-4-06b6d4?logo=tailwindcss&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-800%2B%20passing-0f6e68?logo=vitest&logoColor=white)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 <img src="docs/images/home-he.jpg" alt="MortgageMentor home page in Hebrew: the headline, a strip with the Bank of Israel rate, prime, CPI change and expected inflation, and a live loan simulator with sliders for amount, term and rate" width="900" />
@@ -71,6 +68,14 @@ MortgageMentor answers that question with the same inputs banks are required to 
 - **CSV export** (Excel-friendly Hebrew, formula-injection safe) and a **printable PDF summary**.
 - **Shareable links:** the whole scenario lives in the URL, and forecast curves are pinned so a shared link reproduces the exact calculation.
 - **Draft recovery:** unsaved inputs survive a reload in the same tab.
+
+### Existing mortgages and refinancing
+
+Signed-in users can upload a bank payoff PDF, review the extracted figures and edit individual tracks before saving. Claude reads the document. The [TypeScript simulation](lib/payoff-report/simulate.ts) builds the payment schedule. Start with the existing mix, change a single track and compare the result against the current loan, including settlement fees paid upfront or financed. Mortgage summaries and comparisons can be exported as images in the browser.
+
+<img src="docs/images/payoff-summary-he.jpg" width="570" alt="Hebrew summary of a fictional mortgage showing three active tracks, the monthly payment, settlement fees and the remaining balance" />
+
+*An exported mortgage summary using the [fictional bank statement fixture](lib/payoff-report/__tests__/fixtures.ts).*
 
 ### Saved scenarios and comparison
 - **Google sign-in** (Supabase Auth) to save, rename, duplicate, edit and delete scenarios.
@@ -314,12 +319,12 @@ Open [http://localhost:3000](http://localhost:3000). It redirects to the Hebrew 
 | `npm test` | Run the full offline test suite once |
 | `npm run test:watch` | Tests in watch mode |
 | `npm run lint` | ESLint |
-| `npm run smoke` | Start a production server and check 27 key routes (run `npm run build` first) |
+| `npm run smoke` | Start a production server and check public and authenticated routes (run `npm run build` first) |
 | `npm run check:data` | Opt-in live check that every official source is reachable and fresh |
 
 ## Testing and quality
 
-- **800+ unit, component and regression tests** with [Vitest](https://vitest.dev). They run offline: network sources are replaced by real in-memory workbooks and recorded responses.
+- **Unit, component and regression tests** with [Vitest](https://vitest.dev). They run offline: network sources are replaced by real in-memory workbooks and recorded responses.
 - **Bank calibration:** every forecast product is compared month by month against Bank Leumi's public calculator. Government-bond tracks match exactly, and Makam and CPI-linked tracks are within ₪0.01 per month. See [`docs/CALIBRATION_TODO.md`](docs/CALIBRATION_TODO.md).
 - **Database tests** for migrations, RLS policies and role management in [`supabase/`](supabase/).
 - **Route smoke tests** against a real production build, including the iOS Home Screen icon.
@@ -329,7 +334,7 @@ Open [http://localhost:3000](http://localhost:3000). It redirects to the Hebrew 
 
 - **Row Level Security** on every table. Users can read and change only their own scenarios. The single owner account can also read scenarios for administration. Admin capabilities are `SECURITY DEFINER` functions that check the caller's role on every call.
 - **No elevated keys.** Every database request runs as the signed-in user, with that user's own session.
-- **Minimal data.** No ID numbers, salaries, banks or addresses are stored, only what is needed to reproduce a scenario.
+- **Payoff reports.** Selected PDF pages (sometimes the full file) are sent to Anthropic for extraction. The app does not store the PDF. Saving a mortgage stores the confirmed loan and track details, which can include the bank name and loan number.
 - **No leaky URLs.** Scenario inputs live in the URL, so `Referrer-Policy: no-referrer` keeps them from being forwarded to other sites.
 - **Safe errors.** Database errors are logged without tokens or financial payloads, and users see only translated, generic messages.
 - **CSV injection protection** on every exported text cell.
@@ -341,6 +346,7 @@ app/
   [locale]/                 Hebrew and English routes (/he, /en)
     calculator/             Mortgage-mix calculator
     compare/                Saved-scenario comparison
+    my-mortgage/            Payoff reports, saved mortgage and refinance comparison
     learn/                  Glossary and Bank of Israel rules
     saved/                  Saved scenarios and scenario detail
     admin/                  Role-based administration
@@ -352,6 +358,7 @@ components/                 React components (client and server)
   home/                     Home simulator, scroll story, market strip, freshness check
 lib/
   mortgage/                 Pure calculation engine: amortization, forecasts, stability
+  payoff-report/            PDF page selection, extraction, validation and existing-loan simulation
   market-data/              Official source adapters, parsing, daily cache, fallbacks
   scenarios/                Save pipeline, payload validation, comparison
   supabase/                 Browser, server and proxy clients
@@ -367,7 +374,7 @@ docs/                       Reviews, calibration, launch and brand notes
 
 MortgageMentor is an **educational tool, not financial advice** and not a binding bank offer.
 
-- It is a monthly simulation. It does not model bank fees, day-count conventions, actual payment dates or early-repayment penalties.
+- The refinance comparison uses fees from the payoff statement and additional costs entered by the user. The monthly simulation does not produce a new bank settlement quote or reproduce daily interest accrual.
 - Forecasts are the Bank of Israel's model forecasts, not predictions of what will happen. Use the stress mode to see a range.
 - The eligibility track (משכנתא בזכאות), balloon and grace repayment are not modelled yet.
 - The stability index is an internal comparison aid, not an official score or a recommendation.
