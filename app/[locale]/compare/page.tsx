@@ -1,3 +1,4 @@
+import { BRAND_NAME } from "@/lib/brand";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -12,7 +13,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   const { locale } = await params;
   if (!isValidLocale(locale)) notFound();
   const dict = await getDictionary(locale);
-  return { title: `${dict.savedComparison.title} | MortgageMentor`, robots: { index: false, follow: false } };
+  return { title: `${dict.savedComparison.title} | ${BRAND_NAME}`, robots: { index: false, follow: false } };
 }
 
 export default async function ComparePage({ params, searchParams }: { params: Promise<{ locale: string }>; searchParams?: Promise<{ mix?: string | string[] }> }) {

@@ -1,3 +1,4 @@
+import { BRAND_NAME } from "@/lib/brand";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -19,7 +20,7 @@ export async function generateMetadata({
 
   const dict = await getDictionary(locale);
   return {
-    title: `${dict.nav.learn} | MortgageMentor`,
+    title: `${dict.nav.learn} | ${BRAND_NAME}`,
     description: dict.learnPage.intro,
     alternates: pageAlternates(locale, "/learn"),
   };

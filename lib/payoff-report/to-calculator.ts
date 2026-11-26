@@ -13,6 +13,7 @@ import {
   type TrackDraft,
 } from "@/lib/mortgage/scenario-form";
 import { remainingPaymentCounts } from "./checks";
+import { trackSettlement } from "./combine";
 import type { PayoffLoan, PayoffTrack } from "./types";
 
 /**
@@ -148,7 +149,8 @@ export function currentMixHref(
     const active = loan.tracks.filter((track) => track.status === "active");
     // Fees charged once per loan ride on its largest track, so the mix
     // still adds up to the loan's balance to settle.
-    const amounts = active.map((track) => track.balance.totalToSettle);
+    // Each track's settlement, from its printed parts when no total is printed.
+    const amounts = active.map(trackSettlement);
     if (!amounts.every((amount): amount is number => amount !== null)) return null;
     const largest = amounts.indexOf(Math.max(...amounts));
     for (const [index, track] of active.entries()) {
