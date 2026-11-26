@@ -60,8 +60,19 @@ it("requires the missing balance date on upload, retains the other loan, then fo
   Element.prototype.scrollIntoView = vi.fn();
   await mount(<MyMortgage {...props} initialSaved={null} readingAvailable />);
   const input = document.querySelector<HTMLInputElement>('input[type="file"]')!;
-  Object.defineProperty(input, "files", { value: [new File(["pdf"], "report.pdf", { type: "application/pdf" })] });
+  // Same setup as the duplicate test: Node's crypto and a readable File, so
+  // the local digest step behaves the same in every test run.
+  vi.stubGlobal("crypto", webcrypto);
+  const pdf = new File(["pdf"], "report.pdf", { type: "application/pdf" });
+  Object.defineProperty(pdf, "arrayBuffer", { value: async () => new TextEncoder().encode("pdf").buffer });
+  Object.defineProperty(input, "files", { value: [pdf] });
+  // Reading is async (hashing, fetch); wait for it rather than for one tick.
   await act(async () => { input.dispatchEvent(new Event("change", { bubbles: true })); });
+  // Reading is async (digest, fetch): let React flush between checks.
+  await vi.waitFor(async () => {
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 10)); });
+    button(labels.confirmButton);
+  });
 
   expect(button(labels.confirmButton).disabled).toBe(true);
   expect(document.querySelector("#existing-forecast-heading")).toBeNull();
