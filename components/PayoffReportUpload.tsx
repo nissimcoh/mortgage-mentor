@@ -73,6 +73,8 @@ export default function PayoffReportUpload({
   onSave,
   hasSaved,
   share,
+  initialLoans,
+  canRead = true,
 }: {
   locale: Locale;
   labels: Labels;
@@ -83,8 +85,14 @@ export default function PayoffReportUpload({
   /** Whether saving replaces an already-saved mortgage. */
   hasSaved: boolean;
   share?: ShareContext;
+  /** Opens on these loans, ready to edit (the saved mortgage). */
+  initialLoans?: PayoffLoan[];
+  /** Whether new reports can be read here; without it, only editing. */
+  canRead?: boolean;
 }) {
-  const [uploads, setUploads] = useState<Upload[]>([]);
+  const [uploads, setUploads] = useState<Upload[]>(() => initialLoans
+    ? [{ id: "saved", name: labels.savedFileName, status: "done", file: prepareForConfirm({ fileName: labels.savedFileName, loans: initialLoans }), hadIssues: false }]
+    : []);
   const [notice, setNotice] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   // The loans as confirmed; any edit or upload clears it.
@@ -229,7 +237,7 @@ export default function PayoffReportUpload({
   return (
     <div className="space-y-6">
       {!confirmed && (<>
-      <div
+      {canRead && <div
         onDragOver={(event) => {
           event.preventDefault();
           setDragging(true);
@@ -276,7 +284,7 @@ export default function PayoffReportUpload({
             {legalLabels[locale].privacy}
           </Link>
         </p>
-      </div>
+      </div>}
 
       {notice && (
         <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">

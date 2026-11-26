@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { combinePayoffFiles, normalizeLoanNumber } from "../combine";
+import { combinePayoffFiles, feesAssumedZero, normalizeLoanNumber, trackFees, trackSettlement } from "../combine";
 import { parsePayoffReportFile } from "../parse";
 import type { PayoffReportFile } from "../types";
 import { cloneRaw, fictionalTwoLoanFile } from "./fixtures";
@@ -36,16 +36,38 @@ describe("combinePayoffFiles", () => {
     });
   });
 
-  it("keeps unknown household amounts distinct from an explicitly reported zero", () => {
+  it("counts fees the report leaves out as 0 and settles a track from its printed parts", () => {
+    const files = splitFiles();
+    const loan = files[1].loans[0];
+    const track = loan.tracks[0];
+    const before = combinePayoffFiles(files).totals;
+    track.balance.totalToSettle = null;
+    track.fees = { ...track.fees, total: null, capitalization: null, notice: null, averageCpi: null, operational: null };
+    loan.reportedTotals.totalToSettle = null;
+    loan.reportedTotals.fees = null;
+    expect(trackFees(track)).toBe(0);
+    const { balance } = track;
+    const parts = [balance.principal, balance.indexation, balance.accruedInterest, balance.futureMonthlyCharge, balance.arrears, balance.otherCharges]
+      .reduce<number>((sum, value) => sum + (value ?? 0), 0);
+    expect(trackSettlement(track)).toBeCloseTo(parts, 2);
+    expect(feesAssumedZero(files.flatMap((file) => file.loans))).toBe(true);
+    const totals = combinePayoffFiles(files).totals;
+    expect(totals.fees).not.toBeNull();
+    expect(totals.fees!).toBeLessThan(before.fees!);
+    expect(totals.totalToSettle).not.toBeNull();
+    // A bank total, when printed, still wins over the parts.
+    loan.reportedTotals.fees = 0;
+    expect(feesAssumedZero(files.flatMap((file) => file.loans))).toBe(false);
+  });
+
+  it("cannot settle a track without its principal", () => {
     const files = splitFiles();
     const loan = files[1].loans[0];
     loan.tracks[0].balance.totalToSettle = null;
-    loan.tracks[0].fees.total = null;
+    loan.tracks[0].balance.principal = null;
     loan.reportedTotals.totalToSettle = null;
-    loan.reportedTotals.fees = null;
-    expect(combinePayoffFiles(files).totals).toMatchObject({ fees: null, totalToSettle: null });
-    loan.reportedTotals.fees = 0;
-    expect(combinePayoffFiles(files).totals.fees).toBe(1612.65);
+    expect(trackSettlement(loan.tracks[0])).toBeNull();
+    expect(combinePayoffFiles(files).totals.totalToSettle).toBeNull();
   });
 
   it("totals active tracks across files plus loan-level fees", () => {

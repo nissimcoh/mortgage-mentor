@@ -1,5 +1,5 @@
 import { checkPayoffLoan, type PayoffCheck } from "./checks";
-import type { IsoDate, PayoffLoan, PayoffReportFile } from "./types";
+import type { IsoDate, PayoffLoan, PayoffReportFile, PayoffTrack } from "./types";
 
 /**
  * Several uploaded files describe one household mortgage: a file may hold
@@ -60,6 +60,44 @@ function completeSum(values: readonly (number | null)[]): number | null {
   return round2(sum);
 }
 
+function sumKnown(values: readonly (number | null)[]): number {
+  return round2(values.reduce<number>((sum, value) => sum + (value ?? 0), 0));
+}
+
+/**
+ * A track's early-repayment fees. When the report prints no fee total, the
+ * printed fee components are used, and with none at all the fee is 0:
+ * reports usually leave out fees that are not charged.
+ */
+export function trackFees(track: PayoffTrack): number {
+  if (track.fees.total !== null) return track.fees.total;
+  const { capitalization, notice, averageCpi, operational } = track.fees;
+  return sumKnown([capitalization, notice, averageCpi, operational]);
+}
+
+/**
+ * What settling a track costs: the printed total, or else its printed parts
+ * (principal, linkage, interest and charges) plus its fees. Null without a
+ * principal, since nothing reliable can stand in for it.
+ */
+export function trackSettlement(track: PayoffTrack): number | null {
+  const { balance } = track;
+  if (balance.totalToSettle !== null) return balance.totalToSettle;
+  if (balance.principal === null) return null;
+  return round2(
+    sumKnown([balance.principal, balance.indexation, balance.accruedInterest, balance.futureMonthlyCharge, balance.arrears, balance.otherCharges]) +
+      trackFees(track),
+  );
+}
+
+/** Whether some active track's fees were not printed and count as 0. */
+export function feesAssumedZero(loans: readonly PayoffLoan[]): boolean {
+  return loans.some((loan) =>
+    loan.reportedTotals.fees === null &&
+    loan.tracks.some((track) => track.status === "active" && track.fees.total === null),
+  );
+}
+
 export function combinePayoffFiles(files: readonly PayoffReportFile[]): CombinedPayoff {
   type Kept = { fileIndex: number; loanIndex: number; fileName: string; loan: PayoffLoan };
   const kept: Kept[] = [];
@@ -107,9 +145,18 @@ export function combinePayoffFiles(files: readonly PayoffReportFile[]): Combined
     const active = loan.tracks.filter((track) => track.status === "active");
     activeTrackCount += active.length;
     payments.push(completeSum(active.map((track) => track.monthlyPayment)) ?? loan.reportedTotals.monthlyPayment);
-    // The bank's loan totals already include the loan-level fees.
-    fees.push(completeSum([loanFees, ...active.map((track) => track.fees.total)]) ?? loan.reportedTotals.fees);
-    balances.push(completeSum([loanFees, ...active.map((track) => track.balance.totalToSettle)]) ?? loan.reportedTotals.totalToSettle);
+    // The bank's loan totals already include the loan-level fees. Printed
+    // figures come first; a fee the report leaves out counts as 0.
+    fees.push(
+      completeSum([loanFees, ...active.map((track) => track.fees.total)]) ??
+        loan.reportedTotals.fees ??
+        sumKnown([loanFees, ...active.map(trackFees)]),
+    );
+    balances.push(
+      completeSum([loanFees, ...active.map((track) => track.balance.totalToSettle)]) ??
+        loan.reportedTotals.totalToSettle ??
+        completeSum([loanFees, ...active.map(trackSettlement)]),
+    );
   }
 
   const asOfDates = [

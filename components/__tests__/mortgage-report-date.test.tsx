@@ -108,17 +108,31 @@ it("repairs a legacy saved mortgage without a reader, keeps the draft on failure
   expect(document.querySelector('input[type="date"]')).toBeNull();
 });
 
-it("keeps an incomplete settlement quote out of refinancing and an incomplete schedule out of forecasts", async () => {
+it("settles a track without a printed total from its parts, and keeps an incomplete schedule out of forecasts", async () => {
   const loans = fixture().loans;
   loans[1].tracks[0].balance.totalToSettle = null;
   loans[1].reportedTotals.totalToSettle = null;
   await mount(<MyMortgage {...props} initialSaved={{ loans, updatedAt: "2026-06-01" }} readingAvailable />);
-  expect(document.body.textContent).toContain(labels.compareIncomplete);
-  expect(document.querySelector('a[href*="track1Amount"]')).toBeNull();
+  expect(document.body.textContent).not.toContain(labels.compareIncomplete);
+  expect(document.querySelector('a[href*="track1Amount"]')).not.toBeNull();
   expect(document.querySelector("#existing-forecast-heading")).not.toBeNull();
   await unmount();
   loans[1].tracks[0].endDate = "2020-01-01";
   await mount(<MyMortgage {...props} initialSaved={{ loans, updatedAt: "2026-06-01" }} readingAvailable />);
   expect(document.body.textContent).toContain(labels.forecastIncomplete);
   expect(document.body.textContent).not.toContain(labels.forecastNextPayment);
+});
+
+it("edits the saved mortgage in place, without a report reader", async () => {
+  const loans = fixture().loans;
+  save.mockResolvedValueOnce({ ok: true, updatedAt: "2026-06-02T00:00:00Z" });
+  await mount(<MyMortgage {...props} initialSaved={{ loans, updatedAt: "2026-06-01T00:00:00Z" }} readingAvailable={false} />);
+  await click(button(labels.editSaved));
+  expect(document.querySelector('input[type="file"]')).toBeNull();
+  expect(document.body.textContent).toContain(labels.savedFileName);
+  await click(button(labels.confirmButton));
+  await click(button(labels.saveReplaceButton));
+  expect(save).toHaveBeenCalledWith(expect.any(Array), "2026-06-01T00:00:00Z");
+  expect(document.querySelector("#existing-forecast-heading")).not.toBeNull();
+  expect(document.querySelector("#payoff-files-heading")).toBeNull();
 });

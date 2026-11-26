@@ -51,6 +51,7 @@ export default function MyMortgage({
 }) {
   const [saved, setSaved] = useState(initialSaved);
   const [replacing, setReplacing] = useState(initialSaved === null);
+  const [editing, setEditing] = useState(false);
   const [deleteStep, setDeleteStep] = useState<"idle" | "confirm" | "deleting" | "error">("idle");
 
   async function save(loans: PayoffLoan[], expectedUpdatedAt?: string): Promise<string | null> {
@@ -58,6 +59,7 @@ export default function MyMortgage({
     if (!result.ok) return result.error;
     setSaved({ loans, updatedAt: result.updatedAt });
     setReplacing(false);
+    setEditing(false);
     return null;
   }
 
@@ -77,6 +79,28 @@ export default function MyMortgage({
     setDeleteStep("idle");
   }
 
+  if (saved !== null && editing) {
+    return (
+      <div className="space-y-4">
+        <button type="button" onClick={() => setEditing(false)} className="text-sm text-slate-500 underline hover:text-slate-900">
+          {labels.cancelReplace}
+        </button>
+        <PayoffReportUpload
+          key={saved.updatedAt}
+          locale={locale}
+          labels={labels}
+          market={market}
+          calculatorLabels={calculatorLabels}
+          onSave={(loans) => save(loans, saved.updatedAt)}
+          hasSaved
+          share={share}
+          initialLoans={saved.loans}
+          canRead={readingAvailable}
+        />
+      </div>
+    );
+  }
+
   if (saved !== null && !replacing) {
     return (
       <div className="space-y-6">
@@ -87,6 +111,13 @@ export default function MyMortgage({
               {fillTemplate(labels.savedUpdated, { date: formatDateOnly(saved.updatedAt, locale) })}
             </p>
           </div>
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="glass-secondary inline-flex min-h-11 items-center px-5 text-sm font-medium"
+          >
+            {labels.editSaved}
+          </button>
           {readingAvailable && (
             <button
               type="button"

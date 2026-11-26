@@ -6,6 +6,7 @@ import type { Dictionary } from "@/app/[locale]/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 import {
   compareRefinance,
+  feesAssumedZero,
   fillTemplate,
   formatMoney,
   type ExistingMortgageSimulation,
@@ -179,6 +180,7 @@ const RefinanceComparison = memo(function RefinanceComparison({
             }} />
           {!extraValid && <span role="alert" className="text-red-700">{labels.compareCostInvalid}</span>}
           <p id="refinance-fee-notice" className="mt-2 max-w-prose leading-6 text-slate-600">{labels.compareFeeNotice}</p>
+          {feesAssumedZero(loans) && <p className="mt-2 max-w-prose leading-6 text-amber-800">{labels.compareFeesAssumedZero}</p>}
         </div>
       )}
 

@@ -1185,7 +1185,7 @@
     "saveError": "Saving didn't work. Try again in a moment.",
     "forecastIncomplete": "Some active tracks could not be simulated. To see the full forecast, check the balance date, end dates, principal amounts and rates against your report and update the figures.",
     "incompleteReportAmount": "Missing report figure",
-    "compareIncomplete": "The full settlement balance or fee total is missing. To compare refinancing costs, update your figures from a report that lists both. If the bank confirms there is no fee, enter 0 in the fee field.",
+    "compareIncomplete": "A track’s principal balance is missing, so the cost of settling the mortgage can’t be calculated. You can fill it in under “Edit figures”.",
     "compareHeading": "Compare with a new mix",
     "compareIntro": "The settlement balance includes the reported fees. Payments on the new loan already include financed fees and interest on them. If the mix borrows less than the settlement balance, the comparison treats the difference as fees paid upfront, up to the fees in the report.",
     "compareChoose": "Mix to compare",
@@ -1211,7 +1211,10 @@
     "compareNewMix": "New mix on the balance ({amount})",
     "compareFromCurrent": "Start from the current mix",
     "compareShortcutsHelp": "The calculator opens with the amount. Build a mix, save it and come back: it will be first in the comparison.",
-    "compareFromCurrentNote": "In the current mix, terms are rounded to the calculator's options and variable rates start their reset cycle today, so it is an approximation."
+    "compareFromCurrentNote": "In the current mix, terms are rounded to the calculator's options and variable rates start their reset cycle today, so it is an approximation.",
+    "editSaved": "Edit figures",
+    "savedFileName": "Saved mortgage",
+    "compareFeesAssumedZero": "The report shows no early repayment fees for some tracks, so they count as 0. If your lender charges a fee, add it under “Edit figures”."
   },
   "shareImage": {
     "summaryButton": "Summary image",
