@@ -30,6 +30,7 @@ import {
 import ExistingMortgageForecast from "./ExistingMortgageForecast";
 import Icon from "./Icon";
 import ReportDateField from "./ReportDateField";
+import type { ShareContext } from "./share-image/types";
 
 type Labels = Dictionary["payoffPage"];
 
@@ -71,6 +72,7 @@ export default function PayoffReportUpload({
   calculatorLabels,
   onSave,
   hasSaved,
+  share,
 }: {
   locale: Locale;
   labels: Labels;
@@ -80,6 +82,7 @@ export default function PayoffReportUpload({
   onSave: (loans: PayoffLoan[]) => Promise<string | null>;
   /** Whether saving replaces an already-saved mortgage. */
   hasSaved: boolean;
+  share?: ShareContext;
 }) {
   const [uploads, setUploads] = useState<Upload[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
@@ -400,6 +403,7 @@ export default function PayoffReportUpload({
               labels={labels}
               calculatorLabels={calculatorLabels}
               locale={locale}
+              share={share}
             />
           )}
         </>

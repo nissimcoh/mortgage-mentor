@@ -14,10 +14,19 @@ import {
 import { currentMixHref, longestRemainingMonths, newMixHref } from "@/lib/payoff-report/to-calculator";
 import type { ComparisonScenario } from "@/lib/scenarios/comparison";
 import { loadComparisonPayments } from "@/lib/scenarios/comparison-actions";
+import { COMPARISON_LINE_STYLES } from "@/lib/scenarios/comparison-chart-data";
+import ComparisonImage from "./share-image/ComparisonImage";
+import ShareImageButton from "./share-image/ShareImageButton";
+import { createdOnText, type ShareContext } from "./share-image/types";
 import ComparisonPaymentCharts from "./ComparisonPaymentCharts";
 
 type Labels = Dictionary["payoffPage"];
 const MY_MORTGAGE_ID = "my-mortgage";
+
+/** Index of the lower value, or null on a tie. */
+function lower(a: number, b: number): number | null {
+  return a === b ? null : a < b ? 0 : 1;
+}
 
 /**
  * The current mortgage, continued as simulated, next to one saved mix taken
@@ -33,6 +42,7 @@ const RefinanceComparison = memo(function RefinanceComparison({
   labels,
   comparisonLabels,
   locale,
+  share,
 }: {
   loans: PayoffLoan[];
   /** Always the official-forecast simulation: saved mixes use the official forecast too. */
@@ -43,6 +53,7 @@ const RefinanceComparison = memo(function RefinanceComparison({
   labels: Labels;
   comparisonLabels: Dictionary["savedComparison"];
   locale: Locale;
+  share?: ShareContext;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(mixes[0]?.id ?? null);
   const [extraCosts, setExtraCosts] = useState<Record<string, string>>({});
@@ -208,6 +219,47 @@ const RefinanceComparison = memo(function RefinanceComparison({
               </p>
             )}
           </div>}
+
+          {share && (
+            <div className="mt-4">
+              <ShareImageButton label={share.labels.comparisonButton} fileName={share.labels.fileComparison} labels={share.labels}>
+                {() => {
+                  const takeaways = result.principalMatches
+                    ? [
+                        fillTemplate(result.difference >= 0 ? labels.compareSaving : labels.compareExtra, { amount: money(Math.abs(result.difference)) }),
+                        ...(result.difference >= 0 && result.breakEvenMonth !== null
+                          ? [fillTemplate(labels.compareBreakEven, { years: (result.breakEvenMonth / 12).toFixed(1) })]
+                          : []),
+                      ]
+                    : [];
+                  return (
+                    <ComparisonImage
+                      locale={locale}
+                      title={share.labels.refinanceTitle}
+                      columns={[
+                        { name: labels.compareCurrent, color: COMPARISON_LINE_STYLES[0].color },
+                        { name: selected.name, color: COMPARISON_LINE_STYLES[1].color },
+                      ]}
+                      headline={{ label: labels.compareRowFirst, values: [money(result.current.firstPayment), money(result.mix.firstPayment)] }}
+                      rows={[
+                        { label: labels.compareRowHighest, values: [money(result.current.highestPayment), money(result.mix.highestPayment)], best: lower(result.current.highestPayment, result.mix.highestPayment) },
+                        { label: labels.compareRowTotal, values: [money(result.current.totalPayment), money(result.mix.totalPayment)] },
+                        ...(result.financedFees > 0 ? [{ label: labels.compareRowFinancedFees, values: ["—", money(result.financedFees)] }] : []),
+                        ...(result.cashFees > 0 ? [{ label: labels.compareRowCashFees, values: ["—", money(result.cashFees)] }] : []),
+                        ...(cashAmount > 0 ? [{ label: labels.compareOtherCosts, values: ["—", money(cashAmount)] }] : []),
+                        { label: labels.compareRowTotalWithFees, values: [money(result.current.totalPayment), money(result.mixTotalWithFees)], best: lower(result.current.totalPayment, result.mixTotalWithFees) },
+                        { label: labels.compareRowYears, values: [(result.current.months / 12).toFixed(1), (result.mix.months / 12).toFixed(1)] },
+                      ]}
+                      takeaways={takeaways}
+                      note={share.labels.comparisonNote}
+                      siteName={share.siteName}
+                      createdOn={createdOnText(share.labels, locale)}
+                    />
+                  );
+                }}
+              </ShareImageButton>
+            </div>
+          )}
 
           {!result.principalMatches && (
             <p className="mt-3 text-sm text-amber-800">

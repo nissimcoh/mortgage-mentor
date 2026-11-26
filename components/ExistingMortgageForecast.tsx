@@ -17,7 +17,11 @@ import {
   type PayoffLoan,
 } from "@/lib/payoff-report";
 
+import { buildMortgageSummary } from "@/lib/share-image/summary";
 import AmortizationSchedule from "./AmortizationSchedule";
+import MortgageSummaryImage from "./share-image/MortgageSummaryImage";
+import ShareImageButton from "./share-image/ShareImageButton";
+import { createdOnText, type ShareContext } from "./share-image/types";
 import PaymentTimeline from "./PaymentTimeline";
 import RefinanceComparison from "./RefinanceComparison";
 import ScheduleSelector from "./ScheduleSelector";
@@ -46,6 +50,7 @@ export default function ExistingMortgageForecast({
   calculatorLabels,
   locale,
   comparison,
+  share,
 }: {
   loans: PayoffLoan[];
   market: ExistingMortgageMarket;
@@ -54,6 +59,8 @@ export default function ExistingMortgageForecast({
   locale: Locale;
   /** Saved mixes to weigh against; omitted where comparing is not offered. */
   comparison?: { mixes: ComparisonScenario[]; labels: Dictionary["savedComparison"] };
+  /** Offers the summary (and comparison) images; omitted, no image buttons. */
+  share?: ShareContext;
 }) {
   const [mode, setMode] = useState<ExistingForecastMode>("official");
   const [scheduleId, setScheduleId] = useState(COMBINED);
@@ -110,6 +117,21 @@ export default function ExistingMortgageForecast({
         <h2 id="existing-forecast-heading" className="text-xl font-semibold tracking-tight">
           {labels.forecastHeading}
         </h2>
+        <div className="flex flex-wrap items-center gap-2">
+        {share && (
+          <ShareImageButton label={share.labels.summaryButton} fileName={share.labels.fileSummary} labels={share.labels}>
+            {() => (
+              <MortgageSummaryImage
+                data={buildMortgageSummary(loans, officialSimulation)}
+                locale={locale}
+                labels={share.labels}
+                kindNames={labels.forecastKinds}
+                siteName={share.siteName}
+                createdOn={createdOnText(share.labels, locale)}
+              />
+            )}
+          </ShareImageButton>
+        )}
         <div role="group" className="inline-flex rounded-full bg-black/5 p-1 text-sm">
           {(["official", "constant"] as const).map((option) => (
             <button
@@ -124,6 +146,7 @@ export default function ExistingMortgageForecast({
               {option === "official" ? labels.forecastModeOfficial : labels.forecastModeConstant}
             </button>
           ))}
+        </div>
         </div>
       </div>
       <p className="mb-5 text-sm leading-6 text-slate-500">{labels.forecastIntro}</p>
@@ -235,6 +258,7 @@ export default function ExistingMortgageForecast({
         labels={labels}
         comparisonLabels={comparison.labels}
         locale={locale}
+        share={share}
       />
     ))}
     </>

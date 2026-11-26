@@ -17,6 +17,7 @@
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.111.0",
     "exceljs": "^4.4.0",
+    "html-to-image": "^1.11.13",
     "next": "16.4.6",
     "pdf-lib": "^1.17.1",
     "react": "19.2.4",

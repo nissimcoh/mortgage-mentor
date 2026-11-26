@@ -92,6 +92,7 @@ export default async function MyMortgagePage({
           readingAvailable={Boolean(process.env.ANTHROPIC_API_KEY)}
           mixes={mixes}
           comparisonLabels={dict.savedComparison}
+          share={{ labels: dict.shareImage, siteName: dict.nav.appName }}
         />
       </section>
     </main>

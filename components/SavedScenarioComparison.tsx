@@ -10,6 +10,9 @@ import { loadComparisonPayments } from "@/lib/scenarios/comparison-actions";
 import { COMPARISON_LINE_STYLES } from "@/lib/scenarios/comparison-chart-data";
 import { comparisonHighlights, cumulativeCrossoverMonth, type ComparisonHighlight } from "@/lib/scenarios/comparison-insights";
 import ComparisonPaymentCharts from "./ComparisonPaymentCharts";
+import ComparisonImage from "./share-image/ComparisonImage";
+import ShareImageButton from "./share-image/ShareImageButton";
+import { createdOnText, type ShareContext } from "./share-image/types";
 
 type Labels = Dictionary["savedComparison"];
 
@@ -46,12 +49,14 @@ function buildInsights(selected: ComparisonScenario[], labels: Labels, money: In
   return { highlights, insights, cheapest };
 }
 
-export default function SavedScenarioComparison({ scenarios, locale, labels, initialIds }: {
+export default function SavedScenarioComparison({ scenarios, locale, labels, initialIds, share }: {
   scenarios: ComparisonScenario[];
   locale: Locale;
   labels: Labels;
   /** Mixes selected on arrival; defaults to the first two. */
   initialIds?: readonly string[];
+  /** Offers a comparison image of the selected mixes. */
+  share?: ShareContext;
 }) {
   const id = useId();
   const [selectedIds, setSelectedIds] = useState(() => {
@@ -161,6 +166,42 @@ export default function SavedScenarioComparison({ scenarios, locale, labels, ini
             );
           })}
         </div>
+        {share && (
+          <div className="mt-4">
+            <ShareImageButton label={share.labels.comparisonButton} fileName={share.labels.fileComparison} labels={share.labels}>
+              {() => {
+                const indexOf = (key: ComparisonHighlight) => {
+                  const index = selected.findIndex(item => item.id === highlights[key]);
+                  return index < 0 ? null : index;
+                };
+                const row = (label: string, value: (item: ComparisonScenario, index: number) => string, best?: ComparisonHighlight) =>
+                  ({ label, values: selected.map(value), best: best ? indexOf(best) : null });
+                return (
+                  <ComparisonImage
+                    locale={locale}
+                    title={share.labels.comparisonTitle}
+                    columns={selected.map((item, index) => ({ name: item.name, color: COMPARISON_LINE_STYLES[index].color }))}
+                    headline={{ label: labels.first, values: selected.map(item => formats.money.format(item.result.firstPayment)) }}
+                    rows={[
+                      row(labels.principal, item => formats.whole.format(item.result.totalPrincipal)),
+                      row(labels.term, item => `${item.years} ${labels.years}`),
+                      row(labels.highest, item => formats.money.format(item.result.highestPayment), "lowestPeak"),
+                      row(labels.total, item => formats.whole.format(item.result.forecastTotalPaid), "lowestTotal"),
+                      row(labels.cost, item => formats.whole.format(item.result.totalInterestOrFinancingCost)),
+                      row(labels.rateExposure, item => formats.percent.format(item.rateExposure)),
+                      row(labels.cpiExposure, item => formats.percent.format(item.cpiExposure)),
+                      row(labels.fixedShare, item => formats.percent.format(item.fixedShare), "mostFixed"),
+                    ]}
+                    takeaways={insights}
+                    note={share.labels.comparisonNote}
+                    siteName={share.siteName}
+                    createdOn={createdOnText(share.labels, locale)}
+                  />
+                );
+              }}
+            </ShareImageButton>
+          </div>
+        )}
         {insights.length > 0 && (
           <div className="glass-track mt-4 p-5">
             <h3 className="text-sm font-semibold text-slate-800">{labels.insightsTitle}</h3>

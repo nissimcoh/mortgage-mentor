@@ -16,6 +16,7 @@ import type { ComparisonScenario } from "@/lib/scenarios/comparison";
 import ExistingMortgageForecast from "./ExistingMortgageForecast";
 import PayoffReportUpload from "./PayoffReportUpload";
 import ReportDateField from "./ReportDateField";
+import type { ShareContext } from "./share-image/types";
 
 type Labels = Dictionary["payoffPage"];
 
@@ -33,6 +34,7 @@ export default function MyMortgage({
   mixes,
   comparisonLabels,
   readingAvailable,
+  share,
 }: {
   locale: Locale;
   labels: Labels;
@@ -44,6 +46,8 @@ export default function MyMortgage({
   comparisonLabels: Dictionary["savedComparison"];
   /** Whether the server can read reports (its API key is configured). */
   readingAvailable: boolean;
+  /** Offers the summary and comparison images. */
+  share?: ShareContext;
 }) {
   const [saved, setSaved] = useState(initialSaved);
   const [replacing, setReplacing] = useState(initialSaved === null);
@@ -114,6 +118,7 @@ export default function MyMortgage({
           calculatorLabels={calculatorLabels}
           locale={locale}
           comparison={{ mixes, labels: comparisonLabels }}
+          share={share}
         />}
       </div>
     );
@@ -146,6 +151,7 @@ export default function MyMortgage({
         calculatorLabels={calculatorLabels}
         onSave={save}
         hasSaved={saved !== null}
+        share={share}
       />
     </div>
   );

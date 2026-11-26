@@ -51,7 +51,8 @@ export default async function ComparePage({ params, searchParams }: { params: Pr
                 <p className="mt-2 text-base text-slate-500">{labels.emptyBody}</p>
                 <Link href={`/${locale}/calculator`} className="mt-5 inline-block rounded-full bg-accent px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-accent-strong">{labels.calculator}</Link>
               </div>
-            ) : <SavedScenarioComparison scenarios={scenarios} locale={locale} labels={labels} initialIds={initialIds} />}
+            ) : <SavedScenarioComparison scenarios={scenarios} locale={locale} labels={labels} initialIds={initialIds}
+              share={{ labels: dict.shareImage, siteName: dict.nav.appName }} />}
             {hasInvalid && <p role="status" className="mt-6 text-sm leading-6 text-slate-500">{labels.invalid}</p>}
           </>
         )}
