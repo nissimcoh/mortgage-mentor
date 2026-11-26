@@ -1,5 +1,7 @@
 "use client";
 
+import { BRAND_NAME } from "@/lib/brand";
+
 import { useEffect, useRef, useState } from "react";
 import { createPortal, flushSync } from "react-dom";
 import type { MortgagePrintReportProps } from "./MortgagePrintReport";
@@ -33,7 +35,7 @@ export default function ExportMortgagePdfButton(props: Omit<MortgagePrintReportP
       if (!mounted.current) return;
       flushSync(() => setReport({ Component, generatedAt: new Date().toISOString() }));
       oldTitle.current = document.title;
-      document.title = "MortgageMentor-summary";
+      document.title = `${BRAND_NAME}-summary`;
       document.body.classList.add("mortgage-printing");
       window.print();
       setPreparing(false);

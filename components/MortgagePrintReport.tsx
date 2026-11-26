@@ -1,3 +1,4 @@
+import { BRAND_NAME } from "@/lib/brand";
 import type { Dictionary } from "@/app/[locale]/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 import { formatDateOnly, formatDateTimeIsrael } from "@/lib/forms/dates";
@@ -35,7 +36,7 @@ export default function MortgagePrintReport({ inputs, summary, marketData, local
   ];
   return (
     <article className="mortgage-print-root" dir={locale === "he" ? "rtl" : "ltr"} lang={locale}>
-      <header><span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><BrandMark /><strong>MortgageMentor</strong></span><h1>{labels.pdfTitle}</h1>
+      <header><span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><BrandMark /><strong>{BRAND_NAME}</strong></span><h1>{labels.pdfTitle}</h1>
         <p>{labels.pdfCreated}: {formatDateTimeIsrael(generatedAt, locale)}</p>
       </header>
       <dl className="mortgage-print-metrics">{metrics.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>

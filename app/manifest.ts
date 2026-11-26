@@ -1,10 +1,11 @@
+import { BRAND_NAME, BRAND_NAME_HE } from "@/lib/brand";
 import type { MetadataRoute } from "next";
 
 /** Lets Android and desktop browsers install the site with its own icon and colors. */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "MortgageMentor — מנטור משכנתא",
-    short_name: "MortgageMentor",
+    name: `${BRAND_NAME} — ${BRAND_NAME_HE}`,
+    short_name: BRAND_NAME,
     description: "סימולטור משכנתאות: תמהיל, תחזית החזר ולוח סילוקין.",
     lang: "he",
     dir: "rtl",

@@ -1,3 +1,4 @@
+import { BRAND_NAME } from "@/lib/brand";
 import type { Metadata, Viewport } from "next";
 import { Heebo } from "next/font/google";
 import { notFound } from "next/navigation";
@@ -49,7 +50,7 @@ export async function generateMetadata({
     // Link previews in WhatsApp, iMessage, Slack and social networks.
     openGraph: {
       type: "website",
-      siteName: "MortgageMentor",
+      siteName: BRAND_NAME,
       locale: locale === "he" ? "he_IL" : "en_US",
       title: dict.metadata.title,
       description: dict.metadata.description,

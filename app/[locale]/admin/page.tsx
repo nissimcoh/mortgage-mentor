@@ -1,3 +1,4 @@
+import { BRAND_NAME } from "@/lib/brand";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -14,7 +15,7 @@ export async function generateMetadata({ params }: {
   const { locale } = await params;
   if (!isValidLocale(locale)) notFound();
   return {
-    title: `${overviewLabels[locale].title} | MortgageMentor`,
+    title: `${overviewLabels[locale].title} | ${BRAND_NAME}`,
     robots: { index: false, follow: false },
   };
 }

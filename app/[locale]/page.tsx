@@ -1,3 +1,4 @@
+import { BRAND_NAME } from "@/lib/brand";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cache, Suspense } from "react";
@@ -95,7 +96,7 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
-    name: "MortgageMentor",
+    name: BRAND_NAME,
     alternateName: dict.metadata.applicationName,
     url: `${SITE_URL}/${locale}`,
     description: dict.metadata.description,
