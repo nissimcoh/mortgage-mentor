@@ -82,16 +82,16 @@ function dateParts(date: IsoDate): [number, number, number] {
  */
 export function remainingPaymentCounts(
   asOfDate: IsoDate,
-  firstPaymentDate: IsoDate,
+  firstPaymentDate: IsoDate | null,
   endDate: IsoDate,
 ): number[] {
   const [asOfYear, asOfMonth, asOfDay] = dateParts(asOfDate);
-  const [firstYear, firstMonth, paymentDay] = dateParts(firstPaymentDate);
+  const [firstYear, firstMonth, paymentDay] = dateParts(firstPaymentDate ?? endDate);
   const [endYear, endMonth] = dateParts(endDate);
 
   let nextYear: number;
   let nextMonth: number;
-  if (firstPaymentDate > asOfDate) {
+  if (firstPaymentDate !== null && firstPaymentDate > asOfDate) {
     [nextYear, nextMonth] = [firstYear, firstMonth];
   } else if (asOfDay < paymentDay) {
     [nextYear, nextMonth] = [asOfYear, asOfMonth];
@@ -100,7 +100,7 @@ export function remainingPaymentCounts(
   }
   const count = (endYear - nextYear) * 12 + (endMonth - nextMonth) + 1;
   const counts = [count];
-  if (asOfDay === paymentDay && firstPaymentDate <= asOfDate) counts.push(count + 1);
+  if (asOfDay === paymentDay && (firstPaymentDate === null || firstPaymentDate <= asOfDate)) counts.push(count + 1);
   return counts.filter((value) => value > 0);
 }
 

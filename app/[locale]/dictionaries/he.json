@@ -1119,6 +1119,7 @@
     },
     "anchorPrinted": "בדוח כתוב: {text}",
     "anchorSuggested": "הוצע לפי ההצמדה ותדירות השינוי. אפשר לשנות.",
+    "invalidResetPeriod": "הזינו מספר שלם של חודשים, גדול מאפס.",
     "missingField": "חסר, יש להשלים",
     "checksHeading": "כדאי לבדוק",
     "checks": {

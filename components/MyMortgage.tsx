@@ -52,7 +52,7 @@ export default function MyMortgage({
   const [saved, setSaved] = useState(initialSaved);
   const [replacing, setReplacing] = useState(initialSaved === null);
   const [editing, setEditing] = useState(false);
-  const [deleteStep, setDeleteStep] = useState<"idle" | "confirm" | "deleting" | "error">("idle");
+  const [deleteStep, setDeleteStep] = useState<"idle" | "confirm" | "deleting" | "error" | "changed">("idle");
 
   async function save(loans: PayoffLoan[], expectedUpdatedAt?: string): Promise<string | null> {
     const result = await saveMyMortgage(loans, expectedUpdatedAt).catch(() => ({ ok: false as const, error: "failed" }));
@@ -69,9 +69,10 @@ export default function MyMortgage({
       return;
     }
     setDeleteStep("deleting");
-    const result = await deleteMyMortgage();
+    if (!saved) return;
+    const result = await deleteMyMortgage(saved.updatedAt).catch(() => ({ ok: false as const, error: "failed" }));
     if (!result.ok) {
-      setDeleteStep("error");
+      setDeleteStep(result.error === "changed" ? "changed" : "error");
       return;
     }
     setSaved(null);
@@ -135,8 +136,8 @@ export default function MyMortgage({
           >
             {deleteStep === "confirm" ? labels.deleteConfirm : labels.deleteSaved}
           </button>
-          {deleteStep === "error" && (
-            <p role="alert" className="w-full text-sm text-red-700">{labels.saveError}</p>
+          {(deleteStep === "error" || deleteStep === "changed") && (
+            <p role="alert" className="w-full text-sm text-red-700">{deleteStep === "changed" ? labels.repairDateChanged : labels.saveError}</p>
           )}
         </div>
         {saved.loans.some(needsReportDate) ? (
@@ -180,7 +181,7 @@ export default function MyMortgage({
         labels={labels}
         market={market}
         calculatorLabels={calculatorLabels}
-        onSave={save}
+        onSave={(loans) => save(loans, saved?.updatedAt)}
         hasSaved={saved !== null}
         share={share}
       />

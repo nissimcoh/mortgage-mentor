@@ -12,7 +12,7 @@ import { spawn } from "node:child_process";
 import assert from "node:assert/strict";
 
 const PORT = process.env.SMOKE_PORT ?? "3100";
-const BASE = `http://localhost:${PORT}`;
+const BASE = `http://127.0.0.1:${PORT}`;
 const IPHONE_SAFARI = "Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1";
 
 /** Every route the calculator must keep serving. */
@@ -122,7 +122,7 @@ async function waitForServer(timeoutMs = 30_000) {
   throw new Error(`Server did not become ready on ${BASE}`);
 }
 
-const server = spawn("npx", ["next", "start", "-p", PORT], {
+const server = spawn("npx", ["next", "start", "-H", "127.0.0.1", "-p", PORT], {
   detached: true, // own process group → we can kill the whole tree
   stdio: "ignore",
 });

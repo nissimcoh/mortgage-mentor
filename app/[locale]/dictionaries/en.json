@@ -1119,6 +1119,7 @@
     },
     "anchorPrinted": "The report says: {text}",
     "anchorSuggested": "Suggested from the linkage and reset period. You can change it.",
+    "invalidResetPeriod": "Enter a whole number of months greater than zero.",
     "missingField": "Missing, please fill in",
     "checksHeading": "Worth checking",
     "checks": {

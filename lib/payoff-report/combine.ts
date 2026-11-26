@@ -94,7 +94,8 @@ export function trackSettlement(track: PayoffTrack): number | null {
 export function feesAssumedZero(loans: readonly PayoffLoan[]): boolean {
   return loans.some((loan) =>
     loan.reportedTotals.fees === null &&
-    loan.tracks.some((track) => track.status === "active" && track.fees.total === null),
+    loan.tracks.some((track) => track.status === "active" &&
+      [track.fees.total, track.fees.capitalization, track.fees.notice, track.fees.averageCpi, track.fees.operational].every((fee) => fee === null)),
   );
 }
 
